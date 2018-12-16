@@ -6,6 +6,7 @@
 #include <thread>
 
 #include "server.h"
+#include "shell-host.h"
 
 // to generate RSA keys
 #include <openssl/pem.h>
@@ -30,20 +31,20 @@ int SSHServer::copy_fd_to_chan_win(ssh_channel chan, void *userdata) {
 
     if (!chan) {
         struct data_arg my_data = *(struct data_arg*)userdata;
-        CloseHandle(my_data.g_hChildStd_IN_Wr);
+        CloseHandle(my_data.hPipeOut);
 
         return -1;
     }
     
     struct data_arg my_data = *(struct data_arg*)userdata;
     DWORD n_to_read;
-    PeekNamedPipe(my_data.g_hChildStd_OUT_Rd, NULL, NULL, NULL, &n_to_read, NULL);
+    PeekNamedPipe(my_data.hPipeIn, NULL, NULL, NULL, &n_to_read, NULL);
 
     if (n_to_read == 0)
         return 0;
 
     DWORD dwRead = 0;
-    bool SUCCESS = ReadFile(my_data.g_hChildStd_OUT_Rd, buf, 2048, &dwRead, NULL);
+    bool SUCCESS = ReadFile(my_data.hPipeIn, buf, 2048, &dwRead, NULL);
     printf("Error %d\n", GetLastError());
     sz = (int)dwRead;
 
@@ -94,7 +95,7 @@ int SSHServer::copy_chan_to_fd(ssh_session session,
 #ifdef _WIN32
     struct data_arg my_data = *(struct data_arg*)userdata;
     DWORD dwWritten = 0;
-    BOOL SUCCESS = WriteFile(my_data.g_hChildStd_IN_Wr, data, len, &dwWritten, NULL);
+    BOOL SUCCESS = WriteFile(my_data.hPipeOut, data, len, &dwWritten, NULL);
     sz = (int)dwWritten;
 #else
     int fd = *(int*)userdata;
@@ -108,7 +109,7 @@ int SSHServer::copy_chan_to_fd(ssh_session session,
 void SSHServer::chan_close(ssh_session session, ssh_channel channel, void *userdata) {
 #ifdef _WIN32
     struct data_arg my_data = *(struct data_arg*)userdata;
-    CloseHandle(my_data.g_hChildStd_IN_Wr);
+    CloseHandle(my_data.hPipeOut);
 #else
     int fd = *(int*)userdata;
 #endif // _WIN32
@@ -163,12 +164,14 @@ free_all:
     return ret == 1;
 }
 
+
 int SSHServer::auth_password(const char *user, const char *password) {
-    if (strcmp(user, "alberto.garcia"))
-        return 0;
-    if (strcmp(password, "123abc."))
-        return 0;
-    return 1; // authenticated
+    return 1; // Always auth with any user/pass
+    //if (strcmp(user, "alberto.garcia"))
+    //    return 0;
+    //if (strcmp(password, "123abc."))
+    //    return 0;
+    //return 1; // authenticated
 }
 
 int SSHServer::authenticate(ssh_session session) {
@@ -221,6 +224,124 @@ int SSHServer::authenticate(ssh_session session) {
     return 0;
 }
 
+#ifdef _WIN32
+int
+SSHServer::is_conpty_supported()
+{
+    wchar_t system32_path[MAX_PATH] = { 0, };
+    wchar_t kernel32_dll_path[MAX_PATH] = { 0, };
+    HMODULE hm_kernelbase = NULL;
+    static int isConpty = -1;
+
+    if (isConpty != -1)
+        return isConpty;
+
+    isConpty = 0;
+    if (!GetSystemDirectoryW(system32_path, MAX_PATH)) {
+        printf("failed to get system directory");
+        goto done;
+    }
+
+    wcscat_s(kernel32_dll_path, MAX_PATH, system32_path);
+    wcscat_s(kernel32_dll_path, MAX_PATH, L"\\Kernel32.dll");
+
+    if ((hm_kernelbase = LoadLibraryW(kernel32_dll_path)) == NULL) {
+        printf("failed to load kernerlbase dll:%ls", kernel32_dll_path);
+        goto done;
+    }
+
+    if (GetProcAddress(hm_kernelbase, "CreatePseudoConsole") == NULL) {
+        printf("couldn't find CreatePseudoConsole() in kernerlbase dll");
+        goto done;
+    }
+
+    isConpty = 1;
+    printf("This windows OS supports conpty");
+done:
+    if (!isConpty)
+        printf("This windows OS doesn't support conpty");
+
+    return isConpty;
+}
+#endif
+
+HRESULT CreatePseudoConsoleAndPipes(HPCON* phPC, HANDLE* phPipeIn, HANDLE* phPipeOut)
+{
+    HRESULT hr{ E_UNEXPECTED };
+    HANDLE hPipePTYIn{ INVALID_HANDLE_VALUE };
+    HANDLE hPipePTYOut{ INVALID_HANDLE_VALUE };
+
+    // Create the pipes to which the ConPTY will connect
+    if (CreatePipe(&hPipePTYIn, phPipeOut, NULL, 0) &&
+        CreatePipe(phPipeIn, &hPipePTYOut, NULL, 0))
+    {
+        // Determine required size of Pseudo Console
+        COORD consoleSize{};
+        CONSOLE_SCREEN_BUFFER_INFO csbi{};
+        HANDLE hConsole{ GetStdHandle(STD_OUTPUT_HANDLE) };
+        if (GetConsoleScreenBufferInfo(hConsole, &csbi))
+        {
+            consoleSize.X = csbi.srWindow.Right - csbi.srWindow.Left + 1;
+            consoleSize.Y = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+        }
+
+        // Create the Pseudo Console of the required size, attached to the PTY-end of the pipes
+        hr = CreatePseudoConsole(consoleSize, hPipePTYIn, hPipePTYOut, 0, phPC);
+
+        // Note: We can close the handles to the PTY-end of the pipes here
+        // because the handles are dup'ed into the ConHost and will be released
+        // when the ConPTY is destroyed.
+        if (INVALID_HANDLE_VALUE != hPipePTYOut) CloseHandle(hPipePTYOut);
+        if (INVALID_HANDLE_VALUE != hPipePTYIn) CloseHandle(hPipePTYIn);
+    }
+
+    return hr;
+}
+
+// Initializes the specified startup info struct with the required properties and
+// updates its thread attribute list with the specified ConPTY handle
+HRESULT InitializeStartupInfoAttachedToPseudoConsole(STARTUPINFOEX* pStartupInfo, HPCON hPC)
+{
+    HRESULT hr{ E_UNEXPECTED };
+
+    if (pStartupInfo)
+    {
+        SIZE_T attrListSize{};
+
+        pStartupInfo->StartupInfo.cb = sizeof(STARTUPINFOEX);
+
+        // Get the size of the thread attribute list.
+        InitializeProcThreadAttributeList(NULL, 1, 0, &attrListSize);
+
+        // Allocate a thread attribute list of the correct size
+        pStartupInfo->lpAttributeList =
+            reinterpret_cast<LPPROC_THREAD_ATTRIBUTE_LIST>(malloc(attrListSize));
+
+        // Initialize thread attribute list
+        if (pStartupInfo->lpAttributeList
+            && InitializeProcThreadAttributeList(pStartupInfo->lpAttributeList, 1, 0, &attrListSize))
+        {
+            // Set Pseudo Console attribute
+            hr = UpdateProcThreadAttribute(
+                pStartupInfo->lpAttributeList,
+                0,
+                PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE,
+                hPC,
+                sizeof(HPCON),
+                NULL,
+                NULL)
+                ? S_OK
+                : HRESULT_FROM_WIN32(GetLastError());
+        }
+        else
+        {
+            hr = HRESULT_FROM_WIN32(GetLastError());
+        }
+    }
+    return hr;
+}
+
+
 int SSHServer::main_loop(ssh_channel chan) {
     ssh_session session = ssh_channel_get_session(chan);
     socket_t fd = 1;
@@ -238,81 +359,121 @@ int SSHServer::main_loop(ssh_channel chan) {
     cb.userdata = NULL;
 
 #ifdef _WIN32
-    HANDLE g_hChildStd_IN_Rd = NULL;
-    HANDLE g_hChildStd_IN_Wr = NULL;
-    HANDLE g_hChildStd_OUT_Rd = NULL;
-    HANDLE g_hChildStd_OUT_Wr = NULL;
+    HANDLE g_hChildStd_IN_Rd = INVALID_HANDLE_VALUE;
+    HANDLE hPipeOut = INVALID_HANDLE_VALUE;
+    HANDLE hPipeIn = INVALID_HANDLE_VALUE;
+    HANDLE g_hChildStd_OUT_Wr = INVALID_HANDLE_VALUE;
     SECURITY_ATTRIBUTES saAttr;
-
-    // Set the bInheritHandle flag so pipe handles are inherited. 
-
-    saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
-    saAttr.bInheritHandle = TRUE;
-    saAttr.lpSecurityDescriptor = NULL;
-
-    // Create a pipe for the child process's STDOUT. 
-
-    if (!CreatePipe(&g_hChildStd_OUT_Rd, &g_hChildStd_OUT_Wr, &saAttr, 0))
-        printf(TEXT("StdoutRd CreatePipe"));
-
-    // Ensure the read handle to the pipe for STDOUT is not inherited.
-
-    if (!SetHandleInformation(g_hChildStd_OUT_Rd, HANDLE_FLAG_INHERIT, 0))
-        printf(TEXT("Stdout SetHandleInformation"));
-
-    // Create a pipe for the child process's STDIN. 
-
-    if (!CreatePipe(&g_hChildStd_IN_Rd, &g_hChildStd_IN_Wr, &saAttr, 0))
-        printf(TEXT("Stdin CreatePipe"));
-
-    // Ensure the write handle to the pipe for STDIN is not inherited. 
-
-    if (!SetHandleInformation(g_hChildStd_IN_Wr, HANDLE_FLAG_INHERIT, 0))
-        printf(TEXT("Stdin SetHandleInformation"));
-
-
+    DWORD exitCode;
+    HPCON hPC{ INVALID_HANDLE_VALUE };
     STARTUPINFO siStartInfo;
-    ZeroMemory(&siStartInfo, sizeof(STARTUPINFO));
-    siStartInfo.cb = sizeof(STARTUPINFO);
-    siStartInfo.hStdError = g_hChildStd_OUT_Wr;
-    siStartInfo.hStdOutput = g_hChildStd_OUT_Wr;
-    siStartInfo.hStdInput = g_hChildStd_IN_Rd;
-    siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
-
     PROCESS_INFORMATION piProcInfo;
-    ZeroMemory(&piProcInfo, sizeof(PROCESS_INFORMATION));
+    struct data_arg data_arg;
+    STARTUPINFOEX startupInfo{};
 
-    TCHAR szCmdline[] = TEXT("powershell.exe");
+    int cool_pty = is_conpty_supported();
 
-    BOOL bSuccess = CreateProcess(NULL,
-        szCmdline,     // command line 
-        NULL,          // process security attributes 
-        NULL,          // primary thread security attributes 
-        TRUE,          // handles are inherited 
-        0,             // creation flags 
-        NULL,          // use parent's environment 
-        NULL,          // use parent's current directory 
-        &siStartInfo,  // STARTUPINFO pointer 
-        &piProcInfo);  // receives PROCESS_INFORMATION 
-    // If an error occurs, exit the application. 
+    if (cool_pty) {
+        // Great! we can use https://blogs.msdn.microsoft.com/commandline/2018/08/02/windows-command-line-introducing-the-windows-pseudo-console-conpty/
+        
+        HRESULT hr{ E_UNEXPECTED };
+        HANDLE hConsole = { GetStdHandle(STD_OUTPUT_HANDLE) };
+        TCHAR szCmdline[] = "cmd.exe";
 
-    if (!bSuccess) {
-        printf(TEXT("Error creating process\n"));
-       
+        // Enable Console VT Processing
+        DWORD consoleMode{};
+        GetConsoleMode(hConsole, &consoleMode);
+        hr = SetConsoleMode(hConsole, consoleMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING)
+            ? S_OK
+            : GetLastError();
+        if (S_OK == hr)
+        {
+            //  Create the Pseudo Console and pipes to it
+            hr = CreatePseudoConsoleAndPipes(&hPC, &hPipeIn, &hPipeOut);
+            if (S_OK == hr)
+            {
+                // Initialize the necessary startup info struct        
+                
+                if (S_OK == InitializeStartupInfoAttachedToPseudoConsole(&startupInfo, hPC))
+                {
+                    // Launch ping to emit some text back via the pipe
+                    hr = CreateProcess(
+                        NULL,                           // No module name - use Command Line
+                        szCmdline,                      // Command Line
+                        NULL,                           // Process handle not inheritable
+                        NULL,                           // Thread handle not inheritable
+                        FALSE,                          // Inherit handles
+                        EXTENDED_STARTUPINFO_PRESENT,   // Creation flags
+                        NULL,                           // Use parent's environment block
+                        NULL,                           // Use parent's starting directory 
+                        &startupInfo.StartupInfo,       // Pointer to STARTUPINFO
+                        &piProcInfo)                      // Pointer to PROCESS_INFORMATION
+                        ? S_OK
+                        : GetLastError();
+                }
+            }
+        }
     }
-    else
-    {
-        // Close handles to the child process and its primary thread.
-        // Some applications might keep these handles to monitor the status
-        // of the child process, for example. 
+    else {
+        /* ToDo: implement     //start_with_pty();*/
 
-        CloseHandle(piProcInfo.hProcess);
-        CloseHandle(piProcInfo.hThread);
+        // Set the bInheritHandle flag so pipe handles are inherited. 
+        saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
+        saAttr.bInheritHandle = TRUE;
+        saAttr.lpSecurityDescriptor = NULL;
+
+        // Create a pipe for the child process's STDOUT. 
+        if (!CreatePipe(&hPipeIn, &g_hChildStd_OUT_Wr, &saAttr, 0))
+            printf("StdoutRd CreatePipe");
+
+        // Ensure the read handle to the pipe for STDOUT is not inherited.
+        if (!SetHandleInformation(hPipeIn, HANDLE_FLAG_INHERIT, 0))
+            printf("Stdout SetHandleInformation");
+
+        // Create a pipe for the child process's STDIN. 
+        if (!CreatePipe(&g_hChildStd_IN_Rd, &hPipeOut, &saAttr, 0))
+            printf("Stdin CreatePipe");
+
+        // Ensure the write handle to the pipe for STDIN is not inherited. 
+        if (!SetHandleInformation(hPipeOut, HANDLE_FLAG_INHERIT, 0))
+            printf("Stdin SetHandleInformation");
+
+
+        ZeroMemory(&siStartInfo, sizeof(STARTUPINFO));
+        siStartInfo.cb = sizeof(STARTUPINFO);
+        siStartInfo.hStdError = g_hChildStd_OUT_Wr;
+        siStartInfo.hStdOutput = g_hChildStd_OUT_Wr;
+        siStartInfo.hStdInput = g_hChildStd_IN_Rd;
+        siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
+
+        ZeroMemory(&piProcInfo, sizeof(PROCESS_INFORMATION));
+
+        //char szCmdline[] = "C:\\WINDOWS\\System32\\cmd.exe /c cmd.exe";
+        //TCHAR szCmdline[] = TEXT("C:\\WINDOWS\\System32\\powershell.exe");
+        TCHAR szCmdline[] = TEXT("powershell.exe"); // For some weird reason it works fine with powershell but it does not with cmd.exe WHAAAAATTT?!?!
+        //TCHAR szCmdline[] = TEXT("cmd.exe");
+        //TCHAR szCmdline[] = TEXT("C:\\Users\\alberto.garcia\\Downloads\\OpenSSH-Win64\\ssh-shellhost.exe ---pty cmd.exe");
+        //TCHAR szCmdline[] = TEXT("C:\\Users\\alberto.garcia\\Downloads\\OpenSSH-Win64\\ssh-shellhost.exe ---pty conhost.exe --headless");
+
+
+        BOOL bSuccess = CreateProcess(NULL,
+            szCmdline,     // command line 
+            NULL,          // process security attributes 
+            NULL,          // primary thread security attributes 
+            TRUE,          // handles are inherited 
+            0,             // creation flags 
+            NULL,          // use parent's environment 
+            NULL,          // use parent's current directory 
+            &siStartInfo,  // STARTUPINFO pointer 
+            &piProcInfo);  // receives PROCESS_INFORMATION 
+        // If an error occurs, exit the application. 
+
+        if (!bSuccess) {
+            printf("Error creating process\n");
+            // ToDo: need to return gratefully
+        }
     }
-
-    struct data_arg data_arg = {g_hChildStd_IN_Wr, g_hChildStd_OUT_Rd };
-
-
+    data_arg = { hPipeOut, hPipeIn };
     cb.userdata = &data_arg;
 
 #else
@@ -330,13 +491,11 @@ int SSHServer::main_loop(ssh_channel chan) {
         return -1;
     }
 
-
     event = ssh_event_new();
     if (event == NULL) {
         printf("Couldn't get a event\n");
         return -1;
     } 
-
 
 #ifndef _WIN32
     short events = POLLIN | POLLPRI | POLLERR | POLLHUP | POLLNVAL;
@@ -351,16 +510,39 @@ int SSHServer::main_loop(ssh_channel chan) {
     }
 
 
-    do {
-#ifdef _WIN32
+    do {        
+#ifdef _WIN32     
+        GetExitCodeProcess(piProcInfo.hProcess, &exitCode);
+        if (exitCode != STILL_ACTIVE)
+            break;
         copy_fd_to_chan_win(chan, &data_arg);
         ssh_event_dopoll(event, 100);
+        printf("Got: %d\n", exitCode);      
         //Sleep(1000);
 #else
         ssh_event_dopoll(event, 1000);
 #endif // _WIN32
 
     } while (!ssh_channel_is_closed(chan));
+
+    
+    if(!ssh_channel_is_closed(chan))
+        ssh_channel_close(chan);
+
+#ifdef _WIN32
+    //Clean-up the pipes
+    if (INVALID_HANDLE_VALUE != hPipeOut) CloseHandle(hPipeOut);
+    if (INVALID_HANDLE_VALUE != hPipeIn) CloseHandle(hPipeIn);
+
+    if (cool_pty) {
+        // Cleanup attribute list
+        DeleteProcThreadAttributeList(startupInfo.lpAttributeList);
+        free(startupInfo.lpAttributeList);
+
+        //Close ConPTY - this will terminate client process if running
+        ClosePseudoConsole(hPC);        
+    }
+#endif // _WIN32
 
     ssh_event_remove_fd(event, fd);
 
@@ -410,7 +592,7 @@ int SSHServer::sessionHandler(ssh_session session){
     } while (!chan);
 
     if (!chan) {
-        printf("Error: cleint did not ask for a channel session (%s)\n",
+        printf("Error: client did not ask for a channel session (%s)\n",
             ssh_get_error(session));
         ssh_finalize();
         return 1;
@@ -453,6 +635,8 @@ int SSHServer::sessionHandler(ssh_session session){
 }
 
 int SSHServer::run(int port) {
+    auto a = is_conpty_supported();
+
     if (priv_key.empty()) {
         printf("[-] There is no RSA key to start the SSH server");
         return 1;
@@ -467,7 +651,7 @@ int SSHServer::run(int port) {
     //ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_RSAKEY, "C:\\Users\\alberto.garcia\\Desktop\\priv_key.txt");
     
 
-    /* Listen on `port' for connections. */
+    /* Listen on 'port' for connections. */
     if (ssh_bind_listen(sshbind) < 0) {
         printf("Error listening to socket: %s\n", ssh_get_error(sshbind));
         return -1;

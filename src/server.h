@@ -30,7 +30,8 @@ private:
     static int main_loop(ssh_channel chan);
 
 #ifdef _WIN32
-    struct data_arg { HANDLE g_hChildStd_IN_Wr; HANDLE g_hChildStd_OUT_Rd; };
+    static int is_conpty_supported();
+    struct data_arg { HANDLE hPipeOut; HANDLE hPipeIn; };
 #endif // _WIN32
 
     static const char* ip;
