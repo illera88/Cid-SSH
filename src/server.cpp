@@ -20,6 +20,12 @@
 std::string SSHServer::priv_key;
 const char* SSHServer::ip="127.0.0.1";
 
+typedef HRESULT(WINAPI *my_CreatePseudoHandle)(_In_ COORD,
+    _In_ HANDLE,
+    _In_ HANDLE,
+    _In_ DWORD,
+    _Out_ HPCON*);
+
 SSHServer::SSHServer()
 {
     if (gen_rsa_keys()) {
@@ -264,9 +270,9 @@ SSHServer::is_conpty_supported()
     isConpty = 1;
     debug("This windows OS supports conpty");
 done:
-    if (!isConpty)
+    if (!isConpty) {
         debug("This windows OS doesn't support conpty");
-
+    }
     return isConpty;
 }
 #endif
@@ -291,8 +297,15 @@ HRESULT CreatePseudoConsoleAndPipes(HPCON* phPC, HANDLE* phPipeIn, HANDLE* phPip
             consoleSize.Y = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
         }
 
+        HMODULE hModule = LoadLibrary(TEXT("Kernel32.dll"));
+
+        my_CreatePseudoHandle my_CreatePseudoConsole_function =
+            (my_CreatePseudoHandle)GetProcAddress(hModule, "CreatePseudoConsole");
+
         // Create the Pseudo Console of the required size, attached to the PTY-end of the pipes
-        hr = CreatePseudoConsole(consoleSize, hPipePTYIn, hPipePTYOut, 0, phPC);
+        hr = my_CreatePseudoConsole_function(consoleSize, hPipePTYIn, hPipePTYOut, 0, phPC);
+
+        FreeLibrary(hModule);
 
         // Note: We can close the handles to the PTY-end of the pipes here
         // because the handles are dup'ed into the ConHost and will be released
@@ -429,21 +442,24 @@ int SSHServer::main_loop(ssh_channel chan) {
         saAttr.lpSecurityDescriptor = NULL;
 
         // Create a pipe for the child process's STDOUT. 
-        if (!CreatePipe(&hPipeIn, &g_hChildStd_OUT_Wr, &saAttr, 0))
+        if (!CreatePipe(&hPipeIn, &g_hChildStd_OUT_Wr, &saAttr, 0)) {
             debug("StdoutRd CreatePipe");
+        }
 
         // Ensure the read handle to the pipe for STDOUT is not inherited.
-        if (!SetHandleInformation(hPipeIn, HANDLE_FLAG_INHERIT, 0))
+        if (!SetHandleInformation(hPipeIn, HANDLE_FLAG_INHERIT, 0)) {
             debug("Stdout SetHandleInformation");
+        }
 
         // Create a pipe for the child process's STDIN. 
-        if (!CreatePipe(&g_hChildStd_IN_Rd, &hPipeOut, &saAttr, 0))
+        if (!CreatePipe(&g_hChildStd_IN_Rd, &hPipeOut, &saAttr, 0)) {
             debug("Stdin CreatePipe");
+        }
 
         // Ensure the write handle to the pipe for STDIN is not inherited. 
-        if (!SetHandleInformation(hPipeOut, HANDLE_FLAG_INHERIT, 0))
+        if (!SetHandleInformation(hPipeOut, HANDLE_FLAG_INHERIT, 0)){
             debug("Stdin SetHandleInformation");
-
+        }
     // Ensure the write handle to the pipe for STDIN is not inherited. 
 
         ZeroMemory(&siStartInfo, sizeof(STARTUPINFO));

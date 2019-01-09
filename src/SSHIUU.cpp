@@ -36,7 +36,7 @@ void help(char* self) {
     printf("Example: %s user@C2_hostname\n", self);
     printf("Example: %s user@C2_hostname 1234\n", self);  
     printf("Example: %s hostname\n", self);
-    printf("Defaults: user is `anonymous` and LOCAL_SSH_SERVER_PORT is 2222\n", self);
+    printf("Defaults: user is `anonymous` and LOCAL_SSH_SERVER_PORT is 2222\n");
     exit(1);
 }
 
