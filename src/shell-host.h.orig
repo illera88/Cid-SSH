@@ -1,6 +1,12 @@
+<<<<<<< HEAD
 #pragma once
 
 #include<Windows.h>
+=======
+#pragma once
+
+#include<Windows.h>
+>>>>>>> afa255141aa50b85370c1690059296997fa5f6a8
 struct thread_args {
     HANDLE pipe_in;
     HANDLE pipe_out;
@@ -16,9 +22,18 @@ struct thread_args {
     HANDLE child_out;
     HANDLE child_in;
     HANDLE child_err;
+<<<<<<< HEAD
 };
 
 #ifdef __cplusplus
 extern "C"
 #endif
 int start_with_pty(struct thread_args* args);
+=======
+};
+
+#ifdef __cplusplus
+extern "C"
+#endif
+int start_with_pty(struct thread_args* args);
+>>>>>>> afa255141aa50b85370c1690059296997fa5f6a8

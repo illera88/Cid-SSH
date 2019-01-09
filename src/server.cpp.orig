@@ -51,7 +51,11 @@ int SSHServer::copy_fd_to_chan_win(ssh_channel chan, void *userdata) {
 
     DWORD dwRead = 0;
     bool SUCCESS = ReadFile(my_data.hPipeIn, buf, 2048, &dwRead, NULL);
+<<<<<<< HEAD
     debug("Error %d\n", GetLastError());
+=======
+    printf("Error %d\n", GetLastError());
+>>>>>>> afa255141aa50b85370c1690059296997fa5f6a8
     sz = (int)dwRead;
 
     if (sz > 0) {
@@ -244,7 +248,11 @@ SSHServer::is_conpty_supported()
 
     isConpty = 0;
     if (!GetSystemDirectoryW(system32_path, MAX_PATH)) {
+<<<<<<< HEAD
         debug("failed to get system directory");
+=======
+        printf("failed to get system directory");
+>>>>>>> afa255141aa50b85370c1690059296997fa5f6a8
         goto done;
     }
 
@@ -252,20 +260,35 @@ SSHServer::is_conpty_supported()
     wcscat_s(kernel32_dll_path, MAX_PATH, L"\\Kernel32.dll");
 
     if ((hm_kernelbase = LoadLibraryW(kernel32_dll_path)) == NULL) {
+<<<<<<< HEAD
         debug("failed to load kernerlbase dll:%ls", kernel32_dll_path);
+=======
+        printf("failed to load kernerlbase dll:%ls", kernel32_dll_path);
+>>>>>>> afa255141aa50b85370c1690059296997fa5f6a8
         goto done;
     }
 
     if (GetProcAddress(hm_kernelbase, "CreatePseudoConsole") == NULL) {
+<<<<<<< HEAD
         debug("couldn't find CreatePseudoConsole() in kernerlbase dll");
+=======
+        printf("couldn't find CreatePseudoConsole() in kernerlbase dll");
+>>>>>>> afa255141aa50b85370c1690059296997fa5f6a8
         goto done;
     }
 
     isConpty = 1;
+<<<<<<< HEAD
     debug("This windows OS supports conpty");
 done:
     if (!isConpty)
         debug("This windows OS doesn't support conpty");
+=======
+    printf("This windows OS supports conpty");
+done:
+    if (!isConpty)
+        printf("This windows OS doesn't support conpty");
+>>>>>>> afa255141aa50b85370c1690059296997fa5f6a8
 
     return isConpty;
 }
@@ -430,6 +453,7 @@ int SSHServer::main_loop(ssh_channel chan) {
 
         // Create a pipe for the child process's STDOUT. 
         if (!CreatePipe(&hPipeIn, &g_hChildStd_OUT_Wr, &saAttr, 0))
+<<<<<<< HEAD
             debug("StdoutRd CreatePipe");
 
         // Ensure the read handle to the pipe for STDOUT is not inherited.
@@ -443,8 +467,22 @@ int SSHServer::main_loop(ssh_channel chan) {
         // Ensure the write handle to the pipe for STDIN is not inherited. 
         if (!SetHandleInformation(hPipeOut, HANDLE_FLAG_INHERIT, 0))
             debug("Stdin SetHandleInformation");
+=======
+            printf("StdoutRd CreatePipe");
 
-    // Ensure the write handle to the pipe for STDIN is not inherited. 
+        // Ensure the read handle to the pipe for STDOUT is not inherited.
+        if (!SetHandleInformation(hPipeIn, HANDLE_FLAG_INHERIT, 0))
+            printf("Stdout SetHandleInformation");
+
+        // Create a pipe for the child process's STDIN. 
+        if (!CreatePipe(&g_hChildStd_IN_Rd, &hPipeOut, &saAttr, 0))
+            printf("Stdin CreatePipe");
+
+        // Ensure the write handle to the pipe for STDIN is not inherited. 
+        if (!SetHandleInformation(hPipeOut, HANDLE_FLAG_INHERIT, 0))
+            printf("Stdin SetHandleInformation");
+>>>>>>> afa255141aa50b85370c1690059296997fa5f6a8
+
 
         ZeroMemory(&siStartInfo, sizeof(STARTUPINFO));
         siStartInfo.cb = sizeof(STARTUPINFO);
@@ -462,8 +500,6 @@ int SSHServer::main_loop(ssh_channel chan) {
         //TCHAR szCmdline[] = TEXT("C:\\Users\\alberto.garcia\\Downloads\\OpenSSH-Win64\\ssh-shellhost.exe ---pty cmd.exe");
         //TCHAR szCmdline[] = TEXT("C:\\Users\\alberto.garcia\\Downloads\\OpenSSH-Win64\\ssh-shellhost.exe ---pty conhost.exe --headless");
 
-    PROCESS_INFORMATION piProcInfo;
-    ZeroMemory(&piProcInfo, sizeof(PROCESS_INFORMATION));
 
         BOOL bSuccess = CreateProcess(NULL,
             szCmdline,     // command line 
@@ -478,7 +514,11 @@ int SSHServer::main_loop(ssh_channel chan) {
         // If an error occurs, exit the application. 
 
         if (!bSuccess) {
+<<<<<<< HEAD
             debug("Error creating process\n");
+=======
+            printf("Error creating process\n");
+>>>>>>> afa255141aa50b85370c1690059296997fa5f6a8
             // ToDo: need to return gratefully
         }
     }
@@ -500,13 +540,11 @@ int SSHServer::main_loop(ssh_channel chan) {
         return -1;
     }
 
-
     event = ssh_event_new();
     if (event == NULL) {
         debug("Couldn't get a event\n");
         return -1;
     } 
-
 
 #ifndef _WIN32
     short events = POLLIN | POLLPRI | POLLERR | POLLHUP | POLLNVAL;
@@ -528,7 +566,11 @@ int SSHServer::main_loop(ssh_channel chan) {
             break;
         copy_fd_to_chan_win(chan, &data_arg);
         ssh_event_dopoll(event, 100);
+<<<<<<< HEAD
         debug("Got: %d\n", exitCode);      
+=======
+        printf("Got: %d\n", exitCode);      
+>>>>>>> afa255141aa50b85370c1690059296997fa5f6a8
         //Sleep(1000);
 #else
         ssh_event_dopoll(event, 1000);
@@ -603,7 +645,11 @@ int SSHServer::sessionHandler(ssh_session session){
     } while (!chan);
 
     if (!chan) {
+<<<<<<< HEAD
         debug("Error: client did not ask for a channel session (%s)\n",
+=======
+        printf("Error: client did not ask for a channel session (%s)\n",
+>>>>>>> afa255141aa50b85370c1690059296997fa5f6a8
             ssh_get_error(session));
         ssh_finalize();
         return 1;
@@ -647,11 +693,14 @@ int SSHServer::sessionHandler(ssh_session session){
 
 int SSHServer::run(int port) {
     auto a = is_conpty_supported();
+<<<<<<< HEAD
 #ifdef IS_DEBUG
     int verbosity = SSH_LOG_PROTOCOL;
 #else
     int verbosity = SSH_LOG_NOLOG;
 #endif // DEBUG
+=======
+>>>>>>> afa255141aa50b85370c1690059296997fa5f6a8
 
     if (priv_key.empty()) {
         debug("[-] There is no RSA key to start the SSH server");
