@@ -152,7 +152,7 @@ static int do_remote_forwarding_loop(ssh_session session,
                         nbytes - tot_sent,
                         MSG_DONTWAIT);
 #endif // _WIN32
-                    
+
                     if (nwritten < 0) {
                         if (errno != EAGAIN
                             && errno != EWOULDBLOCK) {
@@ -309,10 +309,10 @@ int SSHClient::run(const char* username, const char* host, int port)
     int verbosity = SSH_LOG_NOLOG;
 #endif // DEBUG
 
-   
+
     int rc;
 
-    
+
     // Open session and set options
     my_ssh_session = ssh_new();
     if (my_ssh_session == NULL)
@@ -339,10 +339,6 @@ int SSHClient::run(const char* username, const char* host, int port)
         ssh_free(my_ssh_session);
         exit(-1);
     }*/
-    char username[128] = { 0 };
-    char password[128] = { 0 };
-    ssh_getpass("Username:\0", username, sizeof(username), 1, 0);
-    ssh_getpass("Password:\0", password, sizeof(username), 0, 0);
     // Authenticate ourselves
     //rc = ssh_userauth_password(my_ssh_session, username, password);
     rc = ssh_userauth_none(my_ssh_session, username);
@@ -364,4 +360,3 @@ int SSHClient::run(const char* username, const char* host, int port)
     ssh_finalize();
     return 0;
 }
-
