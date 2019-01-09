@@ -35,6 +35,9 @@ Restart sshd:
 ```systemctl restart ssh```
 
 ### Client
+You can just use the prebuilt binaries that are in [Release](https://github.com/illera88/SSHIUU/releases/tag/v1.0). 
+
+If you want to compile from source keep reading:
 Compiling the client is somehow tricky because `libssh` (the library we use to handle SSH communications) does not support creating a SSH server using certificates from memory but they need to exist in disk. Since we are 3l373 hackers we don't want to drop any file to disk so I modified the `libssh` code. 
 
 You can find the modified code [here](https://github.com/illera88/libssh_mod) or getting the prebuilt libraries [here](https://github.com/illera88/PrecompiledLibraries/tree/master/windows/libssh_mod)
@@ -45,6 +48,7 @@ To compile it just make sure you add the includes and libraries for:
 - openssl
 
 You can find all of them already prebuilt for Windows [here](https://github.com/illera88/PrecompiledLibraries/).
+
 
 
 ## Using it
