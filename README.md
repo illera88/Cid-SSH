@@ -11,22 +11,13 @@ This tool can be used as a fast initial compromise tool that can be used not onl
 ### C2 server
 We need to properly configure the SSH server running at the C2 so we don't get hacked.
 
-Run all of this as root
-Create a new user:
-```adduser --disabled-password anonymous```
+Run all of these commands:
 
-Disable his shell
-```usermod -s /bin/false anonymous```
-
-Make the password actually empty:
-
-```sed -i -re 's/^anonymous:[^:]+:/anonymous::/' /etc/passwd /etc/shadow```
-
-Allow blank passwords for SSH sessions in PAM: edit `/etc/pam.d/sshd` and replace the line that reads @include common-auth with:
-```auth [success=1 default=ignore] pam_unix.so nullok
-auth requisite pam_deny.so
-auth required pam_permit.so
 ```
+sudo useradd anonymous
+echo anonymous:U6aMy0wojraho | sudo chpasswd -e
+sudo usermod -s /bin/false anonymous
+``
 
 Allow blank passwords for SSH sessions of anonymous in `/etc/ssh/sshd_config`:
 ```PermitEmptyPasswords yes```
