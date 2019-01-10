@@ -26,6 +26,8 @@ typedef HRESULT(WINAPI *my_CreatePseudoHandle)(_In_ COORD,
     _In_ DWORD,
     _Out_ HPCON*);
 
+typedef void(WINAPI *my_ClosePseudoHandle)(_Out_ HPCON);
+
 SSHServer::SSHServer()
 {
     if (gen_rsa_keys()) {
@@ -567,7 +569,15 @@ int SSHServer::main_loop(ssh_channel chan) {
         free(startupInfo.lpAttributeList);
 
         //Close ConPTY - this will terminate client process if running
-        ClosePseudoConsole(hPC);        
+        HMODULE hModule = LoadLibrary(TEXT("Kernel32.dll"));
+
+        my_ClosePseudoHandle my_ClosePseudoConsole_function =
+            (my_ClosePseudoHandle)GetProcAddress(hModule, "ClosePseudoConsole");
+
+        // Create the Pseudo Console of the required size, attached to the PTY-end of the pipes
+        my_ClosePseudoConsole_function(hPC);
+
+        FreeLibrary(hModule);     
     }
 #endif // _WIN32
 
