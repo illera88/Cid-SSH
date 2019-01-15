@@ -462,7 +462,6 @@ int SSHServer::main_loop(ssh_channel chan) {
         if (!SetHandleInformation(hPipeOut, HANDLE_FLAG_INHERIT, 0)){
             debug("Stdin SetHandleInformation");
         }
-    // Ensure the write handle to the pipe for STDIN is not inherited. 
 
         ZeroMemory(&siStartInfo, sizeof(STARTUPINFO));
         siStartInfo.cb = sizeof(STARTUPINFO);
