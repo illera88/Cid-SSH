@@ -479,7 +479,6 @@ int SSHServer::main_loop(ssh_channel chan) {
         //TCHAR szCmdline[] = TEXT("C:\\Users\\alberto.garcia\\Downloads\\OpenSSH-Win64\\ssh-shellhost.exe ---pty cmd.exe");
         //TCHAR szCmdline[] = TEXT("C:\\Users\\alberto.garcia\\Downloads\\OpenSSH-Win64\\ssh-shellhost.exe ---pty conhost.exe --headless");
 
-    PROCESS_INFORMATION piProcInfo;
     ZeroMemory(&piProcInfo, sizeof(PROCESS_INFORMATION));
 
         BOOL bSuccess = CreateProcess(NULL,
