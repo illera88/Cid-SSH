@@ -10,6 +10,16 @@
 
 class SSHServer
 {
+	typedef HRESULT(WINAPI *my_CreatePseudoConsole)(_In_ COORD,
+		_In_ HANDLE,
+		_In_ HANDLE,
+		_In_ DWORD,
+		_Out_ HPCON*);
+
+	typedef void(WINAPI *my_ResizePseudoConsole)(_In_ HPCON hPC, _In_ COORD size);
+
+	typedef void(WINAPI *my_ClosePseudoConsole)(_Out_ HPCON);
+
 public:
 #ifdef _WIN32
     static int copy_fd_to_chan_win(ssh_channel chan, void * userdata);
@@ -28,15 +38,25 @@ private:
     static int auth_password(const char * user, const char * password);
     static int authenticate(ssh_session session);
 
-    static int main_loop(ssh_channel chan);
+
+	static int my_ssh_channel_pty_window_change_callback(ssh_session session, ssh_channel channel, int width, int height, int pxwidth, int pwheight, void * userdata);
+
+	static int main_loop(ssh_channel chan);
 
 #ifdef _WIN32
-    static int is_conpty_supported();
     struct data_arg { HANDLE hPipeOut; HANDLE hPipeIn; };
+
+	static my_CreatePseudoConsole my_CreatePseudoConsole_function;
+	static my_ResizePseudoConsole my_ResizePseudoConsole_function;
+	static my_ClosePseudoConsole my_ClosePseudoConsole_function;
+	static HRESULT InitializeStartupInfoAttachedToPseudoConsole(STARTUPINFOEX * pStartupInfo, HPCON hPC);
+	static HRESULT CreatePseudoConsoleAndPipes(HPCON * phPC, HANDLE * phPipeIn, HANDLE * phPipeOut);
 #endif // _WIN32
 
+	static int is_pty;
     static const char* ip;
     static std::string priv_key;
+
 
 };
 

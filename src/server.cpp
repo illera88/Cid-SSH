@@ -19,14 +19,14 @@
 
 std::string SSHServer::priv_key;
 const char* SSHServer::ip="127.0.0.1";
+int SSHServer::is_pty=0;
 
-typedef HRESULT(WINAPI *my_CreatePseudoHandle)(_In_ COORD,
-    _In_ HANDLE,
-    _In_ HANDLE,
-    _In_ DWORD,
-    _Out_ HPCON*);
 
-typedef void(WINAPI *my_ClosePseudoHandle)(_Out_ HPCON);
+
+
+SSHServer::my_CreatePseudoConsole SSHServer::my_CreatePseudoConsole_function = nullptr;
+SSHServer::my_ResizePseudoConsole SSHServer::my_ResizePseudoConsole_function = nullptr;
+SSHServer::my_ClosePseudoConsole SSHServer::my_ClosePseudoConsole_function = nullptr;
 
 SSHServer::SSHServer()
 {
@@ -36,6 +36,52 @@ SSHServer::SSHServer()
     else {
         debug("[+] Error generating RSA keys\n");
     }
+
+	/*Here we load dynamically the Windows pseudoTTY APIs*/
+#ifdef _WIN32
+
+	wchar_t system32_path[MAX_PATH] = { 0, };
+	wchar_t kernel32_dll_path[MAX_PATH] = { 0, };
+	HMODULE hm_kernelbase = NULL;
+
+
+	if (!GetSystemDirectoryW(system32_path, MAX_PATH)) {
+		debug("failed to get system directory");
+		is_pty = 0;
+		return;
+	}
+
+	wcscat_s(kernel32_dll_path, MAX_PATH, system32_path);
+	wcscat_s(kernel32_dll_path, MAX_PATH, L"\\Kernel32.dll");
+
+	if ((hm_kernelbase = LoadLibraryW(kernel32_dll_path)) == NULL) {
+		debug("failed to load kernerlbase dll:%ls", kernel32_dll_path);
+		is_pty = 0;
+		return;
+	}
+
+	my_CreatePseudoConsole_function =
+		(my_CreatePseudoConsole)GetProcAddress(hm_kernelbase, "CreatePseudoConsole");
+
+	if (my_CreatePseudoConsole_function == NULL) {
+		debug("couldn't find CreatePseudoConsole() in kernerlbase dll");
+		debug("This windows OS doesn't support conpty");
+		is_pty = 0;
+		return;
+	}
+
+	my_ResizePseudoConsole_function =
+		(my_ResizePseudoConsole)GetProcAddress(hm_kernelbase, "ResizePseudoConsole");
+
+	my_ClosePseudoConsole_function =
+		(my_ClosePseudoConsole)GetProcAddress(hm_kernelbase, "ClosePseudoConsole");
+
+	this->is_pty = 1;
+	debug("This windows OS supports conpty");
+
+	FreeLibrary(hm_kernelbase);
+
+#endif
 }
 
 #ifdef _WIN32
@@ -238,48 +284,9 @@ int SSHServer::authenticate(ssh_session session) {
     return 0;
 }
 
-#ifdef _WIN32
-int
-SSHServer::is_conpty_supported()
-{
-    wchar_t system32_path[MAX_PATH] = { 0, };
-    wchar_t kernel32_dll_path[MAX_PATH] = { 0, };
-    HMODULE hm_kernelbase = NULL;
-    static int isConpty = -1;
 
-    if (isConpty != -1)
-        return isConpty;
 
-    isConpty = 0;
-    if (!GetSystemDirectoryW(system32_path, MAX_PATH)) {
-        debug("failed to get system directory");
-        goto done;
-    }
-
-    wcscat_s(kernel32_dll_path, MAX_PATH, system32_path);
-    wcscat_s(kernel32_dll_path, MAX_PATH, L"\\Kernel32.dll");
-
-    if ((hm_kernelbase = LoadLibraryW(kernel32_dll_path)) == NULL) {
-        debug("failed to load kernerlbase dll:%ls", kernel32_dll_path);
-        goto done;
-    }
-
-    if (GetProcAddress(hm_kernelbase, "CreatePseudoConsole") == NULL) {
-        debug("couldn't find CreatePseudoConsole() in kernerlbase dll");
-        goto done;
-    }
-
-    isConpty = 1;
-    debug("This windows OS supports conpty");
-done:
-    if (!isConpty) {
-        debug("This windows OS doesn't support conpty");
-    }
-    return isConpty;
-}
-#endif
-
-HRESULT CreatePseudoConsoleAndPipes(HPCON* phPC, HANDLE* phPipeIn, HANDLE* phPipeOut)
+HRESULT SSHServer::CreatePseudoConsoleAndPipes(HPCON* phPC, HANDLE* phPipeIn, HANDLE* phPipeOut)
 {
     HRESULT hr{ E_UNEXPECTED };
     HANDLE hPipePTYIn{ INVALID_HANDLE_VALUE };
@@ -299,15 +306,8 @@ HRESULT CreatePseudoConsoleAndPipes(HPCON* phPC, HANDLE* phPipeIn, HANDLE* phPip
             consoleSize.Y = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
         }
 
-        HMODULE hModule = LoadLibrary(TEXT("Kernel32.dll"));
-
-        my_CreatePseudoHandle my_CreatePseudoConsole_function =
-            (my_CreatePseudoHandle)GetProcAddress(hModule, "CreatePseudoConsole");
-
         // Create the Pseudo Console of the required size, attached to the PTY-end of the pipes
-        hr = my_CreatePseudoConsole_function(consoleSize, hPipePTYIn, hPipePTYOut, 0, phPC);
-
-        FreeLibrary(hModule);
+        hr = SSHServer::my_CreatePseudoConsole_function(consoleSize, hPipePTYIn, hPipePTYOut, 0, phPC);
 
         // Note: We can close the handles to the PTY-end of the pipes here
         // because the handles are dup'ed into the ConHost and will be released
@@ -321,7 +321,7 @@ HRESULT CreatePseudoConsoleAndPipes(HPCON* phPC, HANDLE* phPipeIn, HANDLE* phPip
 
 // Initializes the specified startup info struct with the required properties and
 // updates its thread attribute list with the specified ConPTY handle
-HRESULT InitializeStartupInfoAttachedToPseudoConsole(STARTUPINFOEX* pStartupInfo, HPCON hPC)
+HRESULT SSHServer::InitializeStartupInfoAttachedToPseudoConsole(STARTUPINFOEX* pStartupInfo, HPCON hPC)
 {
     HRESULT hr{ E_UNEXPECTED };
 
@@ -363,6 +363,24 @@ HRESULT InitializeStartupInfoAttachedToPseudoConsole(STARTUPINFOEX* pStartupInfo
 }
 
 
+int SSHServer::my_ssh_channel_pty_window_change_callback(ssh_session session,
+	ssh_channel channel,
+	int width, int height,
+	int pxwidth, int pwheight,
+	void *userdata) {
+	// ToDo: We should resize the tty in this callback using ResizePseudoConsole
+#ifdef _WIN32
+	if (SSHServer::is_pty) {
+		// Create the Pseudo Console of the required size, attached to the PTY-end of the pipes
+		COORD cords = { (short)width, (short)height };
+		SSHServer::my_ResizePseudoConsole_function(NULL, cords);
+	}
+	else {}
+
+#endif
+	return 1;
+}
+
 int SSHServer::main_loop(ssh_channel chan) {
     ssh_session session = ssh_channel_get_session(chan);
     socket_t fd = 1;
@@ -377,6 +395,7 @@ int SSHServer::main_loop(ssh_channel chan) {
     cb.channel_data_function = SSHServer::copy_chan_to_fd;
     cb.channel_eof_function = SSHServer::chan_close;
     cb.channel_close_function = SSHServer::chan_close;
+	cb.channel_pty_window_change_function = my_ssh_channel_pty_window_change_callback;
     cb.userdata = NULL;
 
 #ifdef _WIN32
@@ -392,9 +411,7 @@ int SSHServer::main_loop(ssh_channel chan) {
     struct data_arg data_arg;
     STARTUPINFOEX startupInfo{};
 
-    int cool_pty = is_conpty_supported();
-
-    if (cool_pty) {
+    if (is_pty) {
         // Great! we can use https://blogs.msdn.microsoft.com/commandline/2018/08/02/windows-command-line-introducing-the-windows-pseudo-console-conpty/
         
         HRESULT hr{ E_UNEXPECTED };
@@ -561,21 +578,14 @@ int SSHServer::main_loop(ssh_channel chan) {
     if (INVALID_HANDLE_VALUE != hPipeOut) CloseHandle(hPipeOut);
     if (INVALID_HANDLE_VALUE != hPipeIn) CloseHandle(hPipeIn);
 
-    if (cool_pty) {
+    if (is_pty) {
         // Cleanup attribute list
         DeleteProcThreadAttributeList(startupInfo.lpAttributeList);
         free(startupInfo.lpAttributeList);
 
-        //Close ConPTY - this will terminate client process if running
-        HMODULE hModule = LoadLibrary(TEXT("Kernel32.dll"));
-
-        my_ClosePseudoHandle my_ClosePseudoConsole_function =
-            (my_ClosePseudoHandle)GetProcAddress(hModule, "ClosePseudoConsole");
-
         // Create the Pseudo Console of the required size, attached to the PTY-end of the pipes
-        my_ClosePseudoConsole_function(hPC);
+        SSHServer::my_ClosePseudoConsole_function(hPC);
 
-        FreeLibrary(hModule);     
     }
 #endif // _WIN32
 
@@ -670,7 +680,6 @@ int SSHServer::sessionHandler(ssh_session session){
 }
 
 int SSHServer::run(int port) {
-    auto a = is_conpty_supported();
 #ifdef IS_DEBUG
     int verbosity = SSH_LOG_FUNCTIONS;
 #else
