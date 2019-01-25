@@ -672,7 +672,7 @@ int SSHServer::sessionHandler(ssh_session session){
 int SSHServer::run(int port) {
     auto a = is_conpty_supported();
 #ifdef IS_DEBUG
-    int verbosity = SSH_LOG_PROTOCOL;
+    int verbosity = SSH_LOG_FUNCTIONS;
 #else
     int verbosity = SSH_LOG_NOLOG;
 #endif // DEBUG

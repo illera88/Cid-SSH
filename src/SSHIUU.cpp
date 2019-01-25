@@ -100,5 +100,8 @@ int main(int argc, char** argv){
     {
         Sleep(99999);
     }
+
+	ssh_finalize();
+
     return 0;
 }
