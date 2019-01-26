@@ -73,6 +73,7 @@ int SSHClient::do_remote_forwarding_loop(ssh_session session,
 
     sockfd = rc;
 
+	// Set not blocking
 #ifdef _WIN32
     u_long iMode = 1;
     ioctlsocket(sockfd, FIONBIO, &iMode);
@@ -260,8 +261,6 @@ int SSHClient::do_remote_forwarding(ssh_session sess, int lport, int rport)
 {
     debug("[OTCP] Opening port T:%d on server...\n", lport);
     int bounded_port = 0;
-    int nbytes, nwritten;
-    char buffer[256];
 #ifdef IS_DEBUG
 	int remote_liste_port = 1234;
 #else
@@ -318,9 +317,7 @@ int SSHClient::run(const char* username, const char* host, int port)
     int verbosity = SSH_LOG_NOLOG;
 #endif // DEBUG
 
-
     int rc;
-
 
     // Open session and set options
     my_ssh_session = ssh_new();

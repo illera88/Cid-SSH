@@ -19,6 +19,7 @@
 
 std::string SSHServer::priv_key;
 const char* SSHServer::ip="127.0.0.1";
+//const char* SSHServer::ip = "127.0.0.1";
 int SSHServer::is_pty=0;
 
 
@@ -369,6 +370,7 @@ int SSHServer::my_ssh_channel_pty_window_change_callback(ssh_session session,
 	int pxwidth, int pwheight,
 	void *userdata) {
 	// ToDo: We should resize the tty in this callback using ResizePseudoConsole
+	// This callback is not called yet
 #ifdef _WIN32
 	if (SSHServer::is_pty) {
 		// Create the Pseudo Console of the required size, attached to the PTY-end of the pipes
@@ -593,6 +595,7 @@ int SSHServer::main_loop(ssh_channel chan) {
 
     ssh_event_remove_session(event, session);
 
+	ssh_free(session);
     ssh_event_free(event);
     return 0;
 }
@@ -694,7 +697,7 @@ int SSHServer::run(int port) {
     ssh_event event;
     /* Create and configure the ssh session. */
     auto sshbind = ssh_bind_new();
-    ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_BINDADDR, ip);
+    //ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_BINDADDR, ip);
     ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_BINDPORT, &port);
     ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_LOG_VERBOSITY, &verbosity);
     ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_HOSTKEY_MEMORY, priv_key.c_str());
