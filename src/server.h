@@ -31,17 +31,22 @@ public:
     SSHServer();
 
     static int sessionHandler(ssh_session session);
-    static int run(int port);
+	
+	static int run(int port);
 
 private:
     static bool gen_rsa_keys();
-    static int auth_password(const char * user, const char * password);
+    static int auth_password(ssh_session session, const char *user, const char *password, void *userdata);
     static int authenticate(ssh_session session);
 
 
 	static int my_ssh_channel_pty_window_change_callback(ssh_session session, ssh_channel channel, int width, int height, int pxwidth, int pwheight, void * userdata);
 
-	static int main_loop(ssh_channel chan);
+	static int main_loop_shell();
+
+	static int message_callback(ssh_session session, ssh_message message, void * userdata);
+
+	static void conn_loop(ssh_event event, ssh_session session);
 
 #ifdef _WIN32
     struct data_arg { HANDLE hPipeOut; HANDLE hPipeIn; };
@@ -52,6 +57,8 @@ private:
 	static HRESULT InitializeStartupInfoAttachedToPseudoConsole(STARTUPINFOEX * pStartupInfo, HPCON hPC);
 	static HRESULT CreatePseudoConsoleAndPipes(HPCON * phPC, HANDLE * phPipeIn, HANDLE * phPipeOut);
 #endif // _WIN32
+
+	
 
 	static int is_pty;
     static const char* ip;

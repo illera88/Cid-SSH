@@ -23,7 +23,11 @@ const char* SSHServer::ip="127.0.0.1";
 int SSHServer::is_pty=0;
 
 
-
+thread_local ssh_event event_TLS = nullptr;
+thread_local ssh_session session_TLS = nullptr;
+thread_local ssh_channel channel_TLS = nullptr;
+thread_local int authenticated_TLS = 0; // Auth done
+thread_local int stop_TLS = 0; // thread needs to stop
 
 SSHServer::my_CreatePseudoConsole SSHServer::my_CreatePseudoConsole_function = nullptr;
 SSHServer::my_ResizePseudoConsole SSHServer::my_ResizePseudoConsole_function = nullptr;
@@ -47,7 +51,7 @@ SSHServer::SSHServer()
 
 
 	if (!GetSystemDirectoryW(system32_path, MAX_PATH)) {
-		debug("failed to get system directory");
+		debug("failed to get system directory\n");
 		is_pty = 0;
 		return;
 	}
@@ -56,7 +60,7 @@ SSHServer::SSHServer()
 	wcscat_s(kernel32_dll_path, MAX_PATH, L"\\Kernel32.dll");
 
 	if ((hm_kernelbase = LoadLibraryW(kernel32_dll_path)) == NULL) {
-		debug("failed to load kernerlbase dll:%ls", kernel32_dll_path);
+		debug("failed to load kernerlbase dll:%ls\n", kernel32_dll_path);
 		is_pty = 0;
 		return;
 	}
@@ -65,8 +69,8 @@ SSHServer::SSHServer()
 		(my_CreatePseudoConsole)GetProcAddress(hm_kernelbase, "CreatePseudoConsole");
 
 	if (my_CreatePseudoConsole_function == NULL) {
-		debug("couldn't find CreatePseudoConsole() in kernerlbase dll");
-		debug("This windows OS doesn't support conpty");
+		debug("couldn't find CreatePseudoConsole() in kernerlbase dll\n");
+		debug("This windows OS doesn't support conpty\n");
 		is_pty = 0;
 		return;
 	}
@@ -78,7 +82,7 @@ SSHServer::SSHServer()
 		(my_ClosePseudoConsole)GetProcAddress(hm_kernelbase, "ClosePseudoConsole");
 
 	this->is_pty = 1;
-	debug("This windows OS supports conpty");
+	debug("This windows OS supports conpty\n");
 
 	FreeLibrary(hm_kernelbase);
 
@@ -226,64 +230,61 @@ free_all:
 }
 
 
-int SSHServer::auth_password(const char *user, const char *password) {
-    return 1; // Always auth with any user/pass
-    //if (strcmp(user, "alberto.garcia"))
-    //    return 0;
-    //if (strcmp(password, "123abc."))
-    //    return 0;
-    //return 1; // authenticated
+int SSHServer::auth_password(ssh_session session, const char *user,
+	const char *password, void *userdata) {
+	authenticated_TLS = 1;
+    return SSH_AUTH_SUCCESS; // Always auth with any user/pass
 }
 
-int SSHServer::authenticate(ssh_session session) {
-    ssh_message message;
-
-    do {
-        message = ssh_message_get(session);
-        if (!message)
-            break;
-        switch (ssh_message_type(message)) {
-        case SSH_REQUEST_AUTH:
-            switch (ssh_message_subtype(message)) {
-            case SSH_AUTH_METHOD_PASSWORD:
-                debug("User %s wants to auth with pass %s\n",
-                    ssh_message_auth_user(message),
-                    ssh_message_auth_password(message));
-                if (auth_password(ssh_message_auth_user(message),
-                    ssh_message_auth_password(message))) {
-                    ssh_message_auth_reply_success(message, 0);
-                    ssh_message_free(message);
-                    return 1;
-                }
-                ssh_message_auth_set_methods(message,
-                    SSH_AUTH_METHOD_PASSWORD |
-                    SSH_AUTH_METHOD_INTERACTIVE);
-                // not authenticated, send default message
-                ssh_message_reply_default(message);
-                break;
-
-            case SSH_AUTH_METHOD_NONE:
-            default:
-                debug("User %s wants to auth with unknown auth %d\n",
-                    ssh_message_auth_user(message),
-                    ssh_message_subtype(message));
-                ssh_message_auth_set_methods(message,
-                    SSH_AUTH_METHOD_PASSWORD |
-                    SSH_AUTH_METHOD_INTERACTIVE);
-                ssh_message_reply_default(message);
-                break;
-            }
-            break;
-        default:
-            ssh_message_auth_set_methods(message,
-                SSH_AUTH_METHOD_PASSWORD |
-                SSH_AUTH_METHOD_INTERACTIVE);
-            ssh_message_reply_default(message);
-        }
-        ssh_message_free(message);
-    } while (1);
-    return 0;
-}
+//int SSHServer::authenticate(ssh_session session) {
+//    ssh_message message;
+//
+//    do {
+//        message = ssh_message_get(session);
+//        if (!message)
+//            break;
+//        switch (ssh_message_type(message)) {
+//        case SSH_REQUEST_AUTH:
+//            switch (ssh_message_subtype(message)) {
+//            case SSH_AUTH_METHOD_PASSWORD:
+//                debug("User %s wants to auth with pass %s\n",
+//                    ssh_message_auth_user(message),
+//                    ssh_message_auth_password(message));
+//                if (auth_password(ssh_message_auth_user(message),
+//                    ssh_message_auth_password(message))) {
+//                    ssh_message_auth_reply_success(message, 0);
+//                    ssh_message_free(message);
+//                    return 1;
+//                }
+//                ssh_message_auth_set_methods(message,
+//                    SSH_AUTH_METHOD_PASSWORD |
+//                    SSH_AUTH_METHOD_INTERACTIVE);
+//                // not authenticated, send default message
+//                ssh_message_reply_default(message);
+//                break;
+//
+//            case SSH_AUTH_METHOD_NONE:
+//            default:
+//                debug("User %s wants to auth with unknown auth %d\n",
+//                    ssh_message_auth_user(message),
+//                    ssh_message_subtype(message));
+//                ssh_message_auth_set_methods(message,
+//                    SSH_AUTH_METHOD_PASSWORD |
+//                    SSH_AUTH_METHOD_INTERACTIVE);
+//                ssh_message_reply_default(message);
+//                break;
+//            }
+//            break;
+//        default:
+//            ssh_message_auth_set_methods(message,
+//                SSH_AUTH_METHOD_PASSWORD |
+//                SSH_AUTH_METHOD_INTERACTIVE);
+//            ssh_message_reply_default(message);
+//        }
+//        ssh_message_free(message);
+//    } while (1);
+//    return 0;
+//}
 
 
 
@@ -383,8 +384,8 @@ int SSHServer::my_ssh_channel_pty_window_change_callback(ssh_session session,
 	return 1;
 }
 
-int SSHServer::main_loop(ssh_channel chan) {
-    ssh_session session = ssh_channel_get_session(chan);
+int SSHServer::main_loop_shell() {
+   // ssh_session session = ssh_channel_get_session(chan);
     socket_t fd = 1;
     struct termios *term = NULL;
     struct winsize *win = NULL;
@@ -530,11 +531,10 @@ int SSHServer::main_loop(ssh_channel chan) {
 #endif // _WIN32
 
     ssh_callbacks_init(&cb);
-    if (ssh_set_channel_callbacks(chan, &cb) == SSH_ERROR) {
+    if (ssh_set_channel_callbacks(channel_TLS, &cb) == SSH_ERROR) {
         debug("Couldn't set callbacks\n");
         return -1;
     }
-
 
     event = ssh_event_new();
     if (event == NULL) {
@@ -550,7 +550,7 @@ int SSHServer::main_loop(ssh_channel chan) {
         return -1;
     }
 #endif
-    if (ssh_event_add_session(event, session) != SSH_OK) {
+    if (ssh_event_add_session(event, session_TLS) != SSH_OK) {
         debug("Couldn't add the session to the event\n");
         return -1;
     }
@@ -561,7 +561,7 @@ int SSHServer::main_loop(ssh_channel chan) {
         GetExitCodeProcess(piProcInfo.hProcess, &exitCode);
         if (exitCode != STILL_ACTIVE)
             break;
-        copy_fd_to_chan_win(chan, &data_arg);
+        copy_fd_to_chan_win(channel_TLS, &data_arg);
         ssh_event_dopoll(event, 100);
         debug("Got: %d\n", exitCode);      
         //Sleep(1000);
@@ -569,11 +569,11 @@ int SSHServer::main_loop(ssh_channel chan) {
         ssh_event_dopoll(event, 1000);
 #endif // _WIN32
 
-    } while (!ssh_channel_is_closed(chan));
+    } while (!ssh_channel_is_closed(channel_TLS));
 
     
-    if(!ssh_channel_is_closed(chan))
-        ssh_channel_close(chan);
+    if(!ssh_channel_is_closed(channel_TLS))
+        ssh_channel_close(channel_TLS);
 
 #ifdef _WIN32
     //Clean-up the pipes
@@ -593,94 +593,442 @@ int SSHServer::main_loop(ssh_channel chan) {
 
     ssh_event_remove_fd(event, fd);
 
-    ssh_event_remove_session(event, session);
+    ssh_event_remove_session(event, session_TLS);
 
-	ssh_free(session);
+	ssh_free(session_TLS);
     ssh_event_free(event);
     return 0;
 }
 
-int SSHServer::sessionHandler(ssh_session session){
-    ssh_message message;
-    ssh_channel chan = 0;
-    int shell = 0;
-    int auth = 0;
+//int SSHServer::sessionHandler(ssh_session session){
+//    ssh_message message;
+//    ssh_channel chan = 0;
+//    int shell = 0;
+//    int auth = 0;
+//
+//    if (ssh_handle_key_exchange(session)) {
+//        debug("ssh_handle_key_exchange: %s\n", ssh_get_error(session));
+//        return 1;
+//    }
+//
+//    /* proceed to authentication */
+//    auth = SSHServer::authenticate(session);
+//    if (!auth) {
+//        debug("Authentication error: %s\n", ssh_get_error(session));
+//        ssh_disconnect(session);
+//        return 1;
+//    }
+//
+//    /* wait for a channel session */
+//    do {
+//        message = ssh_message_get(session);
+//        if (message) {
+//            if (ssh_message_type(message) == SSH_REQUEST_CHANNEL_OPEN &&
+//                ssh_message_subtype(message) == SSH_CHANNEL_SESSION) {
+//                chan = ssh_message_channel_request_open_reply_accept(message);
+//                ssh_message_free(message);
+//                break;
+//            }
+//            else {
+//                ssh_message_reply_default(message);
+//                ssh_message_free(message);
+//            }
+//        }
+//        else {
+//            break;
+//        }
+//    } while (!chan);
+//
+//    if (!chan) {
+//        debug("Error: client did not ask for a channel session (%s)\n",
+//            ssh_get_error(session));
+//        ssh_finalize();
+//        return 1;
+//    }
+//
+//
+//    /* wait for a shell */
+//    do {
+//        message = ssh_message_get(session);
+//        if (message != NULL) {
+//            if (ssh_message_type(message) == SSH_REQUEST_CHANNEL) {
+//                if (ssh_message_subtype(message) == SSH_CHANNEL_REQUEST_SHELL) {
+//                    shell = 1;
+//                    ssh_message_channel_request_reply_success(message);
+//                    ssh_message_free(message);
+//                    break;
+//                }
+//                else if (ssh_message_subtype(message) == SSH_CHANNEL_REQUEST_PTY) {
+//                    ssh_message_channel_request_reply_success(message);
+//                    ssh_message_free(message);
+//                    continue;
+//                }
+//            }
+//            ssh_message_reply_default(message);
+//            ssh_message_free(message);
+//        }
+//        else {
+//            break;
+//        }
+//    } while (!shell);
+//
+//    if (!shell) {
+//        debug("Error: No shell requested (%s)\n", ssh_get_error(session));
+//        return 1;
+//    }
+//
+//    debug("Connected \n");
+//
+//    return SSHServer::main_loop(chan);
+//}
+//
 
-    if (ssh_handle_key_exchange(session)) {
-        debug("ssh_handle_key_exchange: %s\n", ssh_get_error(session));
-        return 1;
-    }
-
-    /* proceed to authentication */
-    auth = SSHServer::authenticate(session);
-    if (!auth) {
-        debug("Authentication error: %s\n", ssh_get_error(session));
-        ssh_disconnect(session);
-        return 1;
-    }
-
-    /* wait for a channel session */
-    do {
-        message = ssh_message_get(session);
-        if (message) {
-            if (ssh_message_type(message) == SSH_REQUEST_CHANNEL_OPEN &&
-                ssh_message_subtype(message) == SSH_CHANNEL_SESSION) {
-                chan = ssh_message_channel_request_open_reply_accept(message);
-                ssh_message_free(message);
-                break;
-            }
-            else {
-                ssh_message_reply_default(message);
-                ssh_message_free(message);
-            }
-        }
-        else {
-            break;
-        }
-    } while (!chan);
-
-    if (!chan) {
-        debug("Error: client did not ask for a channel session (%s)\n",
-            ssh_get_error(session));
-        ssh_finalize();
-        return 1;
-    }
 
 
-    /* wait for a shell */
-    do {
-        message = ssh_message_get(session);
-        if (message != NULL) {
-            if (ssh_message_type(message) == SSH_REQUEST_CHANNEL) {
-                if (ssh_message_subtype(message) == SSH_CHANNEL_REQUEST_SHELL) {
-                    shell = 1;
-                    ssh_message_channel_request_reply_success(message);
-                    ssh_message_free(message);
-                    break;
-                }
-                else if (ssh_message_subtype(message) == SSH_CHANNEL_REQUEST_PTY) {
-                    ssh_message_channel_request_reply_success(message);
-                    ssh_message_free(message);
-                    continue;
-                }
-            }
-            ssh_message_reply_default(message);
-            ssh_message_free(message);
-        }
-        else {
-            break;
-        }
-    } while (!shell);
 
-    if (!shell) {
-        debug("Error: No shell requested (%s)\n", ssh_get_error(session));
-        return 1;
-    }
+static void my_channel_close_function(ssh_session session, ssh_channel channel, void *userdata) {
+	(void)session;
+	(void)userdata;
+#ifdef _WIN32
+	SOCKET fd = *((SOCKET *)userdata);
+#else
+	int fd = *((int *)userdata);
+#endif
 
-    debug("Connected \n");
+	//printf("Channel %d:%d closed by remote. State=%d\n", channel->local_channel, channel->remote_channel, channel->state);
+	// Done by lib
+	/*if(ssh_channel_is_open(channel)) {
+		ssh_channel_close(channel);
+		printf("Closing channel\n");
+	}*/
 
-    return SSHServer::main_loop(chan);
+#ifdef _WIN32
+	closesocket(fd);
+#else
+	close(fd);
+#endif
+
 }
+
+static void my_channel_eof_function(ssh_session session, ssh_channel channel, void *userdata) {
+	(void)session;
+	//(void)userdata;
+	int fd = *((int *)userdata);
+	//printf("Got EOF on channel %d:%d. Shuting down write on socket (fd = %d).\n", channel->local_channel, channel->remote_channel, fd);
+	//ssh_event_remove_fd(mainloop, fd);
+
+#ifdef _WIN32
+	if (-1 == shutdown(fd, SD_SEND)) {
+#elif
+	if (-1 == shutdown(fd, SHUT_WR)) {
+#endif // DEBUG	
+		perror("Shutdown socket for writing");
+	}
+	}
+
+static int my_channel_data_function(ssh_session session, ssh_channel channel, void *data, uint32_t len, int is_stderr, void *userdata) {
+	int i = 0;
+	int fd = *((int *)userdata);
+
+	//printf("%d bytes waiting on channel %d:%d for reading. Fd = %d\n", len, channel->local_channel, channel->remote_channel, fd);
+	if (len > 0) {
+		i = send(fd, (const char*)data, len, 0);
+	}
+	if (i < 0) {
+#ifdef _WIN32
+		int err = WSAGetLastError();
+		switch (err)
+		{
+		case WSAECONNABORTED:
+			printf("Software caused connection abort.\
+				An established connection was aborted by the software in your host computer, possibly due to a data transmission time - out or protocol error.\n");
+			break;
+		default:
+			break;
+		}
+		printf("Error Reading from tcp socket. Error %d\n", err);
+
+		ssh_event_remove_fd(event_TLS, fd);
+		closesocket(fd);
+#else
+		perror("Error writting from tcp socket: ");
+		ssh_event_remove_fd(mainloop, fd);
+		close(fd);
+#endif	
+
+		ssh_channel_send_eof(channel);
+	}
+	else {
+		printf("Sent %d bytes\n", i);
+	}
+	return i;
+}
+
+static int cb_readsock(socket_t fd, int revents, void *userdata) {
+	ssh_channel channel = (ssh_channel)userdata;
+	ssh_session session;
+	int len, i, wr;
+	char buf[16384];
+	int	blocking;
+
+	if (channel == NULL) {
+		fprintf(stderr, "channel == NULL!\n");
+	}
+
+	session = ssh_channel_get_session(channel);
+
+	blocking = ssh_is_blocking(session);
+	ssh_set_blocking(session, 0);
+
+	//printf("Trying to read from tcp socket fd = %d... (Channel %d:%d state=%d)\n", fd, channel->local_channel, channel->remote_channel, channel->state);
+
+	// ToDo: what if read data is > 16384 ??
+#ifdef _WIN32
+	struct sockaddr from;
+	int fromlen = sizeof(from);
+	len = recvfrom(fd, buf, sizeof(buf), 0, &from, &fromlen);
+#else
+	len = recv(fd, buf, sizeof(buf), 0);
+#endif // _WIN32
+
+	if (len < 0) {
+#ifdef _WIN32
+		printf("Error Reading from tcp socket. Error %d\n", WSAGetLastError());
+
+		ssh_event_remove_fd(event_TLS, fd);
+		closesocket(fd);
+#else
+		perror("Error Reading from tcp socket: ");
+		ssh_event_remove_fd(mainloop, fd);
+		close(fd);
+#endif		
+		ssh_channel_send_eof(channel);
+	}
+	else if (len > 0) {
+		if (ssh_channel_is_open(channel)) {
+			wr = 0;
+			do {
+				printf("channel_write (wr=%d)\n", wr);
+				i = ssh_channel_write(channel, buf, len);
+				if (i < 0) {
+					fprintf(stderr, "Error writing on the direct-tcpip channel: %d\n", i);
+					len = wr;
+					break;
+				}
+				wr += i;
+			} while (i > 0 && wr < len);
+		}
+		else {
+			fprintf(stderr, "Can't write on closed channel!\n");
+		}
+	}
+	else {
+		printf("The destination host has disconnected!\n");
+		ssh_event_remove_fd(event_TLS, fd);
+#ifdef _WIN32
+		shutdown(fd, SD_RECEIVE);
+#elif
+		shutdown(fd, SHUT_RD);
+#endif // _WIN32
+
+		if (ssh_channel_is_open(channel))
+			ssh_channel_close(channel);
+	}
+	ssh_set_blocking(session, blocking);
+
+	return len;
+}
+
+
+
+
+#ifdef _WIN32
+SOCKET open_tcp_socket(ssh_message msg) {
+	struct sockaddr_in sin;
+	SOCKET forwardsock = 0;
+#else
+int open_tcp_socket(ssh_message msg) {
+	struct sockaddr_in sin;
+	int forwardsock = -1;
+#endif
+
+	struct hostent *host;
+	const char *dest_hostname;
+	int dest_port;
+
+	forwardsock = socket(AF_INET, SOCK_STREAM, 0);
+
+	if (forwardsock < 0) {
+		perror("ERROR opening socket");
+		return -1;
+	}
+
+	dest_hostname = ssh_message_channel_request_open_destination(msg);
+	dest_port = ssh_message_channel_request_open_destination_port(msg);
+
+	printf("Connecting to %s on port %d\n", dest_hostname, dest_port);
+
+	host = gethostbyname(dest_hostname);
+	if (host == NULL) {
+		fprintf(stderr, "ERROR, no such host: %s\n", dest_hostname);
+		return -1;
+	}
+
+	memset((char *)&sin, '\0', sizeof(sin));
+	sin.sin_family = AF_INET;
+	memcpy((char *)&sin.sin_addr.s_addr, (char *)host->h_addr, host->h_length);
+	sin.sin_port = htons(dest_port);
+
+	if (connect(forwardsock, (struct sockaddr *)&sin, sizeof(sin)) < 0) {
+		perror("ERROR connecting");
+		return -1;
+	}
+
+	printf("Connected.\n");
+	return forwardsock;
+}
+
+
+/* Return 1 if you want libshh to handle the message properly. 0 if you did*/
+int SSHServer::message_callback(ssh_session session, ssh_message message, void *userdata) {
+	(void)session;
+	(void)message;
+	(void)userdata;
+	ssh_channel channel;
+#ifdef _WIN32
+	SOCKET *pFd;
+#else
+	int *pFd;
+#endif
+	struct ssh_channel_callbacks_struct *cb_chan;
+
+	//int dest_port;
+	auto type = ssh_message_type(message);
+	auto subtype = ssh_message_subtype(message);
+	printf("Message type: %d\n", type);
+	printf("Message Subtype: %d\n", subtype);
+	switch (type)
+	{
+	case SSH_REQUEST_CHANNEL_OPEN: {
+		printf("SSH_REQUEST_CHANNEL_OPEN\n");
+		switch (subtype)
+		{
+		case SSH_CHANNEL_DIRECT_TCPIP: {
+			channel = ssh_message_channel_request_open_reply_accept(message);
+
+			//	return 0;
+			if (channel == NULL) {
+				printf("Accepting direct-tcpip channel failed!\n");
+				return 1;
+			}
+			else {
+				printf("Connected to channel!\n");
+				pFd = (SOCKET*)malloc(sizeof(int));
+				cb_chan = (ssh_channel_callbacks_struct *)malloc(sizeof(struct ssh_channel_callbacks_struct));
+
+				*pFd = open_tcp_socket(message);
+				if (-1 == *pFd) {
+					return 1;
+				}
+
+				cb_chan->userdata = pFd;
+				cb_chan->channel_eof_function = my_channel_eof_function;
+				cb_chan->channel_close_function = my_channel_close_function;
+				cb_chan->channel_data_function = my_channel_data_function;
+
+				ssh_callbacks_init(cb_chan);
+				ssh_set_channel_callbacks(channel, cb_chan);
+
+				ssh_event_add_fd(event_TLS, (socket_t)*pFd, POLLIN, cb_readsock, channel);
+
+				return 0;
+			}
+			break;
+		}
+		case SSH_CHANNEL_SESSION: {
+			printf("SSH_CHANNEL_SESSION\n");
+			channel_TLS = ssh_message_channel_request_open_reply_accept(message);
+			if (!channel_TLS) {
+				return 1;
+			}
+			return 0;
+		}
+		default:
+			//ssh_message_reply_default(message);
+			//printf("Other type of channel\n");
+			return 1;
+			break;
+		}
+
+	}
+	case SSH_REQUEST_CHANNEL: {
+		printf("SSH_REQUEST_CHANNEL\n");
+		switch (subtype)
+		{
+		case SSH_CHANNEL_REQUEST_SHELL: {
+			ssh_message_channel_request_reply_success(message);
+
+			//std::thread(main_loop_shell).detach();
+			main_loop_shell();
+			return 0;
+		}
+		case SSH_CHANNEL_REQUEST_PTY: {
+			ssh_message_channel_request_reply_success(message);
+			return 0;
+		}
+		default:
+			return 1;
+		}
+	}
+	default:
+		return 1;
+		break;
+	}
+	return 1;
+}
+
+
+
+void SSHServer::conn_loop(ssh_event event, ssh_session session) {
+	// Save session and event in TLS
+	session_TLS = session;
+	event_TLS = event;
+
+	struct ssh_server_callbacks_struct cb = { NULL };
+	cb.userdata = NULL;
+	cb.auth_password_function = auth_password;
+	ssh_callbacks_init(&cb);
+	ssh_set_server_callbacks(session, &cb);
+
+	ssh_set_message_callback(session, message_callback, (void *)NULL);
+
+	if (ssh_handle_key_exchange(session)) {
+		printf("ssh_handle_key_exchange: %s\n", ssh_get_error(session));
+		//ret = 1;
+		//goto shutdown;
+	}
+	ssh_set_auth_methods(session, SSH_AUTH_METHOD_PASSWORD);
+	ssh_event_add_session(event, session);
+
+	while (!authenticated_TLS) {
+		if (ssh_event_dopoll(event_TLS, 10) == SSH_ERROR) {
+			printf("Error : %s\n", ssh_get_error(session));
+			stop_TLS = 1;
+			break;
+		}
+	}
+
+	while (!stop_TLS) {
+		if (ssh_event_dopoll(event_TLS, 100) == SSH_ERROR) {
+			printf("Error : %s\n", ssh_get_error(session));
+			break;
+		}
+	}
+	//shutdown:
+	// Do all the cleaning
+
+}
+
 
 int SSHServer::run(int port) {
 #ifdef IS_DEBUG
@@ -694,14 +1042,16 @@ int SSHServer::run(int port) {
         return 1;
     }
 
+	int ret;
     ssh_event event;
+	ssh_session session;
+
     /* Create and configure the ssh session. */
-    auto sshbind = ssh_bind_new();
+    ssh_bind sshbind = ssh_bind_new();
     //ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_BINDADDR, ip);
     ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_BINDPORT, &port);
     ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_LOG_VERBOSITY, &verbosity);
     ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_HOSTKEY_MEMORY, priv_key.c_str());
-    //ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_RSAKEY, "C:\\Users\\alberto.garcia\\Desktop\\priv_key.txt");
     
 
     /* Listen on 'port' for connections. */
@@ -713,15 +1063,24 @@ int SSHServer::run(int port) {
 
     /* Loop forever, waiting for and handling connection attempts. */
     while (1) {    
-        ssh_session session = ssh_new();
+        session = ssh_new();
+		event = ssh_event_new();
         if (ssh_bind_accept(sshbind, session) == SSH_ERROR) {
             debug("Error accepting a connection: %s'.\n", ssh_get_error(sshbind));
             return -1;
         }
         if (true) { debug("Accepted a connection.\n"); }
-        event = ssh_event_new();
-        std::thread(SSHServer::sessionHandler, session).detach();
+        
+		std::thread(conn_loop, event, session).detach();
+
+        //std::thread(SSHServer::sessionHandler, session).detach();
     }
+
+shutdown:
+	ssh_disconnect(session);
+	ssh_bind_free(sshbind);
+	ssh_finalize();
+	return ret;
 }
 
 

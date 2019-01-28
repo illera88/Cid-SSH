@@ -326,7 +326,7 @@ static int message_callback(ssh_session session, ssh_message message, void *user
 	return 1;
 }
 
-int main(int argc, char **argv) {
+int main2(int argc, char **argv) {
 	ssh_session session;
 	ssh_bind sshbind;
 	struct ssh_server_callbacks_struct cb = {
