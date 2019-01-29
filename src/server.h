@@ -1,12 +1,38 @@
 #pragma once
 #include <string>
-
+#include <list>
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN // revisar
 #include <Windows.h>
 #endif // _WIN32
 
+#include <libssh/callbacks.h>
 
+struct my_ssh_thread_args {
+	ssh_session session;
+	ssh_event event;
+	ssh_channel channel;
+	bool authenticated;
+	bool stop;
+#ifdef _WIN32
+	SOCKET fd;
+#else
+	int fd;
+#endif
+};
+
+struct my_SOCKS_callback_args {
+	ssh_channel channel;
+	ssh_event event;
+#ifdef _WIN32
+	SOCKET fd;
+#else
+	int fd;
+#endif
+	struct my_SOCKS_callback_args* args_SOCKS_ptr; // to free
+	ssh_channel_callbacks_struct* cb_chan_ptr; // to free
+
+};
 
 class SSHServer
 {
@@ -42,7 +68,7 @@ private:
 
 	static int my_ssh_channel_pty_window_change_callback(ssh_session session, ssh_channel channel, int width, int height, int pxwidth, int pwheight, void * userdata);
 
-	static int main_loop_shell();
+	static int main_loop_shell(ssh_session session, ssh_channel channel);
 
 	static int message_callback(ssh_session session, ssh_message message, void * userdata);
 

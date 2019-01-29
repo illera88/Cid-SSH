@@ -19,15 +19,7 @@
 
 std::string SSHServer::priv_key;
 const char* SSHServer::ip="127.0.0.1";
-//const char* SSHServer::ip = "127.0.0.1";
 int SSHServer::is_pty=0;
-
-
-thread_local ssh_event event_TLS = nullptr;
-thread_local ssh_session session_TLS = nullptr;
-thread_local ssh_channel channel_TLS = nullptr;
-thread_local int authenticated_TLS = 0; // Auth done
-thread_local int stop_TLS = 0; // thread needs to stop
 
 SSHServer::my_CreatePseudoConsole SSHServer::my_CreatePseudoConsole_function = nullptr;
 SSHServer::my_ResizePseudoConsole SSHServer::my_ResizePseudoConsole_function = nullptr;
@@ -110,8 +102,8 @@ int SSHServer::copy_fd_to_chan_win(ssh_channel chan, void *userdata) {
 
     DWORD dwRead = 0;
     bool SUCCESS = ReadFile(my_data.hPipeIn, buf, 2048, &dwRead, NULL);
-    debug("Error %d\n", GetLastError());
-    sz = (int)dwRead;
+
+	sz = (int)dwRead;
 
     if (sz > 0) {
         ssh_channel_write(chan, buf, sz);
@@ -232,7 +224,8 @@ free_all:
 
 int SSHServer::auth_password(ssh_session session, const char *user,
 	const char *password, void *userdata) {
-	authenticated_TLS = 1;
+	struct my_ssh_thread_args* args = (struct my_ssh_thread_args*) userdata;
+	args->authenticated = 1;
     return SSH_AUTH_SUCCESS; // Always auth with any user/pass
 }
 
@@ -384,8 +377,8 @@ int SSHServer::my_ssh_channel_pty_window_change_callback(ssh_session session,
 	return 1;
 }
 
-int SSHServer::main_loop_shell() {
-   // ssh_session session = ssh_channel_get_session(chan);
+int SSHServer::main_loop_shell(ssh_session session, ssh_channel channel) {
+   //ssh_session session = ssh_channel_get_session(chan);
     socket_t fd = 1;
     struct termios *term = NULL;
     struct winsize *win = NULL;
@@ -531,7 +524,7 @@ int SSHServer::main_loop_shell() {
 #endif // _WIN32
 
     ssh_callbacks_init(&cb);
-    if (ssh_set_channel_callbacks(channel_TLS, &cb) == SSH_ERROR) {
+    if (ssh_set_channel_callbacks(channel, &cb) == SSH_ERROR) {
         debug("Couldn't set callbacks\n");
         return -1;
     }
@@ -550,7 +543,7 @@ int SSHServer::main_loop_shell() {
         return -1;
     }
 #endif
-    if (ssh_event_add_session(event, session_TLS) != SSH_OK) {
+    if (ssh_event_add_session(event, session) != SSH_OK) {
         debug("Couldn't add the session to the event\n");
         return -1;
     }
@@ -561,19 +554,19 @@ int SSHServer::main_loop_shell() {
         GetExitCodeProcess(piProcInfo.hProcess, &exitCode);
         if (exitCode != STILL_ACTIVE)
             break;
-        copy_fd_to_chan_win(channel_TLS, &data_arg);
+        copy_fd_to_chan_win(channel, &data_arg);
         ssh_event_dopoll(event, 100);
-        debug("Got: %d\n", exitCode);      
+        //debug("Got: %d\n", exitCode);      
         //Sleep(1000);
 #else
         ssh_event_dopoll(event, 1000);
 #endif // _WIN32
 
-    } while (!ssh_channel_is_closed(channel_TLS));
+    } while (!ssh_channel_is_closed(channel));
 
     
-    if(!ssh_channel_is_closed(channel_TLS))
-        ssh_channel_close(channel_TLS);
+    if(!ssh_channel_is_closed(channel))
+        ssh_channel_close(channel);
 
 #ifdef _WIN32
     //Clean-up the pipes
@@ -593,9 +586,9 @@ int SSHServer::main_loop_shell() {
 
     ssh_event_remove_fd(event, fd);
 
-    ssh_event_remove_session(event, session_TLS);
+    ssh_event_remove_session(event, session);
 
-	ssh_free(session_TLS);
+	ssh_free(session);
     ssh_event_free(event);
     return 0;
 }
@@ -689,50 +682,46 @@ int SSHServer::main_loop_shell() {
 static void my_channel_close_function(ssh_session session, ssh_channel channel, void *userdata) {
 	(void)session;
 	(void)userdata;
-#ifdef _WIN32
-	SOCKET fd = *((SOCKET *)userdata);
-#else
-	int fd = *((int *)userdata);
-#endif
 
-	//printf("Channel %d:%d closed by remote. State=%d\n", channel->local_channel, channel->remote_channel, channel->state);
+	struct my_SOCKS_callback_args* args = (struct my_SOCKS_callback_args*)userdata;
 	// Done by lib
-	/*if(ssh_channel_is_open(channel)) {
+	if(ssh_channel_is_open(channel)) {
 		ssh_channel_close(channel);
-		printf("Closing channel\n");
-	}*/
+		debug("SOCKS channel closed\n");
+	}
 
-#ifdef _WIN32
-	closesocket(fd);
-#else
-	close(fd);
-#endif
-
+	// free the allocated structs
+	if (args->args_SOCKS_ptr != nullptr) {
+		free(args->args_SOCKS_ptr);
+		args->args_SOCKS_ptr = nullptr;
+	}
+	if (args->cb_chan_ptr != nullptr) {
+		free(args->cb_chan_ptr);
+		args->cb_chan_ptr = nullptr;
+	}
 }
 
 static void my_channel_eof_function(ssh_session session, ssh_channel channel, void *userdata) {
 	(void)session;
 	//(void)userdata;
-	int fd = *((int *)userdata);
-	//printf("Got EOF on channel %d:%d. Shuting down write on socket (fd = %d).\n", channel->local_channel, channel->remote_channel, fd);
+	struct my_SOCKS_callback_args* args = (struct my_SOCKS_callback_args*) userdata;
 	//ssh_event_remove_fd(mainloop, fd);
 
 #ifdef _WIN32
-	if (-1 == shutdown(fd, SD_SEND)) {
+	if (-1 == shutdown(args->fd, SD_SEND)) {
 #elif
-	if (-1 == shutdown(fd, SHUT_WR)) {
-#endif // DEBUG	
+	if (-1 == shutdown(args->fd, SHUT_WR)) {
+#endif // _WIN32	
 		perror("Shutdown socket for writing");
 	}
-	}
+}
 
 static int my_channel_data_function(ssh_session session, ssh_channel channel, void *data, uint32_t len, int is_stderr, void *userdata) {
 	int i = 0;
-	int fd = *((int *)userdata);
+	struct my_SOCKS_callback_args* args = (struct my_SOCKS_callback_args*) userdata;
 
-	//printf("%d bytes waiting on channel %d:%d for reading. Fd = %d\n", len, channel->local_channel, channel->remote_channel, fd);
 	if (len > 0) {
-		i = send(fd, (const char*)data, len, 0);
+		i = send(args->fd, (const char*)data, len, 0);
 	}
 	if (i < 0) {
 #ifdef _WIN32
@@ -740,39 +729,41 @@ static int my_channel_data_function(ssh_session session, ssh_channel channel, vo
 		switch (err)
 		{
 		case WSAECONNABORTED:
-			printf("Software caused connection abort.\
+			debug("Software caused connection abort.\
 				An established connection was aborted by the software in your host computer, possibly due to a data transmission time - out or protocol error.\n");
 			break;
 		default:
 			break;
 		}
-		printf("Error Reading from tcp socket. Error %d\n", err);
+		debug("Error Reading from tcp socket. Error %d\n", err);
 
-		ssh_event_remove_fd(event_TLS, fd);
-		closesocket(fd);
+		ssh_event_remove_fd(args->event, args->fd);
+		closesocket(args->fd);
 #else
 		perror("Error writting from tcp socket: ");
-		ssh_event_remove_fd(mainloop, fd);
-		close(fd);
+		ssh_event_remove_fd(mainloop, args->fd);
+		close(args->fd);
 #endif	
 
 		ssh_channel_send_eof(channel);
 	}
 	else {
-		printf("Sent %d bytes\n", i);
+		debug("Sent %d bytes\n", i);
 	}
 	return i;
 }
 
 static int cb_readsock(socket_t fd, int revents, void *userdata) {
-	ssh_channel channel = (ssh_channel)userdata;
+	struct my_SOCKS_callback_args* args = (struct my_SOCKS_callback_args*) userdata;
+	ssh_channel channel = args->channel;
+	ssh_event event = args->event;
 	ssh_session session;
 	int len, i, wr;
 	char buf[16384];
 	int	blocking;
 
 	if (channel == NULL) {
-		fprintf(stderr, "channel == NULL!\n");
+		debug("channel == NULL!\n");
 	}
 
 	session = ssh_channel_get_session(channel);
@@ -793,9 +784,9 @@ static int cb_readsock(socket_t fd, int revents, void *userdata) {
 
 	if (len < 0) {
 #ifdef _WIN32
-		printf("Error Reading from tcp socket. Error %d\n", WSAGetLastError());
+		debug("Error Reading from tcp socket. Error %d\n", WSAGetLastError());
 
-		ssh_event_remove_fd(event_TLS, fd);
+		ssh_event_remove_fd(event, fd);
 		closesocket(fd);
 #else
 		perror("Error Reading from tcp socket: ");
@@ -808,10 +799,10 @@ static int cb_readsock(socket_t fd, int revents, void *userdata) {
 		if (ssh_channel_is_open(channel)) {
 			wr = 0;
 			do {
-				printf("channel_write (wr=%d)\n", wr);
+				debug("channel_write (wr=%d)\n", wr);
 				i = ssh_channel_write(channel, buf, len);
 				if (i < 0) {
-					fprintf(stderr, "Error writing on the direct-tcpip channel: %d\n", i);
+					debug("Error writing on the direct-tcpip channel: %d\n", i);
 					len = wr;
 					break;
 				}
@@ -819,12 +810,12 @@ static int cb_readsock(socket_t fd, int revents, void *userdata) {
 			} while (i > 0 && wr < len);
 		}
 		else {
-			fprintf(stderr, "Can't write on closed channel!\n");
+			debug("Can't write on closed channel!\n");
 		}
 	}
 	else {
-		printf("The destination host has disconnected!\n");
-		ssh_event_remove_fd(event_TLS, fd);
+		debug("The destination host has disconnected!\n");
+		ssh_event_remove_fd(event, fd);
 #ifdef _WIN32
 		shutdown(fd, SD_RECEIVE);
 #elif
@@ -866,11 +857,11 @@ int open_tcp_socket(ssh_message msg) {
 	dest_hostname = ssh_message_channel_request_open_destination(msg);
 	dest_port = ssh_message_channel_request_open_destination_port(msg);
 
-	printf("Connecting to %s on port %d\n", dest_hostname, dest_port);
+	debug("Connecting to %s on port %d\n", dest_hostname, dest_port);
 
 	host = gethostbyname(dest_hostname);
 	if (host == NULL) {
-		fprintf(stderr, "ERROR, no such host: %s\n", dest_hostname);
+		debug("ERROR, no such host: %s\n", dest_hostname);
 		return -1;
 	}
 
@@ -884,7 +875,7 @@ int open_tcp_socket(ssh_message msg) {
 		return -1;
 	}
 
-	printf("Connected.\n");
+	debug("Connected.\n");
 	return forwardsock;
 }
 
@@ -894,7 +885,9 @@ int SSHServer::message_callback(ssh_session session, ssh_message message, void *
 	(void)session;
 	(void)message;
 	(void)userdata;
-	ssh_channel channel;
+
+	struct my_ssh_thread_args* args = (struct my_ssh_thread_args*) userdata;
+
 #ifdef _WIN32
 	SOCKET *pFd;
 #else
@@ -905,71 +898,79 @@ int SSHServer::message_callback(ssh_session session, ssh_message message, void *
 	//int dest_port;
 	auto type = ssh_message_type(message);
 	auto subtype = ssh_message_subtype(message);
-	printf("Message type: %d\n", type);
-	printf("Message Subtype: %d\n", subtype);
+	debug("Message type: %d\n", type);
+	debug("Message Subtype: %d\n", subtype);
 	switch (type)
 	{
 	case SSH_REQUEST_CHANNEL_OPEN: {
-		printf("SSH_REQUEST_CHANNEL_OPEN\n");
+		debug("SSH_REQUEST_CHANNEL_OPEN\n");
 		switch (subtype)
 		{
-		case SSH_CHANNEL_DIRECT_TCPIP: {
-			channel = ssh_message_channel_request_open_reply_accept(message);
+		case SSH_CHANNEL_DIRECT_TCPIP: { //SOCKS5
+			ssh_channel channel = ssh_message_channel_request_open_reply_accept(message); // needs calling ssh_channel_free()
 
-			//	return 0;
 			if (channel == NULL) {
-				printf("Accepting direct-tcpip channel failed!\n");
+				debug("Accepting direct-tcpip channel failed!\n");
 				return 1;
 			}
 			else {
-				printf("Connected to channel!\n");
-				pFd = (SOCKET*)malloc(sizeof(int));
-				cb_chan = (ssh_channel_callbacks_struct *)malloc(sizeof(struct ssh_channel_callbacks_struct));
 
-				*pFd = open_tcp_socket(message);
-				if (-1 == *pFd) {
+				auto fd = open_tcp_socket(message);
+				if (-1 == fd) {
 					return 1;
 				}
 
-				cb_chan->userdata = pFd;
+				debug("Connected to channel!\n");
+				cb_chan = (ssh_channel_callbacks_struct *)malloc(sizeof(struct ssh_channel_callbacks_struct));
+				struct my_SOCKS_callback_args* args_SOCKS = (struct my_SOCKS_callback_args*)malloc(sizeof(struct my_SOCKS_callback_args));
+
+				if (cb_chan == NULL || args_SOCKS == NULL) {
+					debug("Can't allocate memory\n");
+					return 1;
+				}	
+
+				args_SOCKS->fd = fd;
+				args_SOCKS->channel = channel;
+				args_SOCKS->event = args->event;
+				// to free when my_channel_close_function is called
+				args_SOCKS->cb_chan_ptr = cb_chan;
+				args_SOCKS->args_SOCKS_ptr = args_SOCKS;
+
+				cb_chan->userdata = args_SOCKS;
 				cb_chan->channel_eof_function = my_channel_eof_function;
 				cb_chan->channel_close_function = my_channel_close_function;
 				cb_chan->channel_data_function = my_channel_data_function;
 
 				ssh_callbacks_init(cb_chan);
 				ssh_set_channel_callbacks(channel, cb_chan);
-
-				ssh_event_add_fd(event_TLS, (socket_t)*pFd, POLLIN, cb_readsock, channel);
-
+				ssh_event_add_fd(args->event, args_SOCKS->fd, POLLIN, cb_readsock, args_SOCKS);
 				return 0;
 			}
 			break;
 		}
+
 		case SSH_CHANNEL_SESSION: {
-			printf("SSH_CHANNEL_SESSION\n");
-			channel_TLS = ssh_message_channel_request_open_reply_accept(message);
-			if (!channel_TLS) {
+			debug("SSH_CHANNEL_SESSION\n");
+			ssh_channel channel = ssh_message_channel_request_open_reply_accept(message);			
+			if (!channel) {
 				return 1;
 			}
+			args->channel = channel;
 			return 0;
 		}
 		default:
-			//ssh_message_reply_default(message);
-			//printf("Other type of channel\n");
 			return 1;
-			break;
 		}
-
+		break;
 	}
 	case SSH_REQUEST_CHANNEL: {
-		printf("SSH_REQUEST_CHANNEL\n");
+		debug("SSH_REQUEST_CHANNEL\n");
 		switch (subtype)
 		{
 		case SSH_CHANNEL_REQUEST_SHELL: {
 			ssh_message_channel_request_reply_success(message);
 
-			//std::thread(main_loop_shell).detach();
-			main_loop_shell();
+			std::thread(main_loop_shell, session, args->channel).detach();
 			return 0;
 		}
 		case SSH_CHANNEL_REQUEST_PTY: {
@@ -987,39 +988,39 @@ int SSHServer::message_callback(ssh_session session, ssh_message message, void *
 	return 1;
 }
 
-
-
 void SSHServer::conn_loop(ssh_event event, ssh_session session) {
-	// Save session and event in TLS
-	session_TLS = session;
-	event_TLS = event;
-
 	struct ssh_server_callbacks_struct cb = { NULL };
-	cb.userdata = NULL;
+	ssh_channel channel = nullptr;
+	bool authenticated = false;
+	bool stop = false;
+	struct my_ssh_thread_args args = { session, event, channel, authenticated, stop };
+
+	cb.userdata = &args;
 	cb.auth_password_function = auth_password;
 	ssh_callbacks_init(&cb);
 	ssh_set_server_callbacks(session, &cb);
 
-	ssh_set_message_callback(session, message_callback, (void *)NULL);
+	ssh_set_message_callback(session, message_callback, &args);
 
 	if (ssh_handle_key_exchange(session)) {
-		printf("ssh_handle_key_exchange: %s\n", ssh_get_error(session));
+		debug("ssh_handle_key_exchange: %s\n", ssh_get_error(session));
 		//ret = 1;
 		//goto shutdown;
 	}
 	ssh_set_auth_methods(session, SSH_AUTH_METHOD_PASSWORD);
 	ssh_event_add_session(event, session);
 
-	while (!authenticated_TLS) {
-		if (ssh_event_dopoll(event_TLS, 10) == SSH_ERROR) {
-			printf("Error : %s\n", ssh_get_error(session));
-			stop_TLS = 1;
+	while (!args.authenticated) {
+		if (ssh_event_dopoll(event, 10) == SSH_ERROR) {
+			auto a = ssh_get_error(session);
+			debug("Error : %s\n", ssh_get_error(session));
+			stop = 1;
 			break;
 		}
 	}
 
-	while (!stop_TLS) {
-		if (ssh_event_dopoll(event_TLS, 100) == SSH_ERROR) {
+	while (!args.stop) {
+		if (ssh_event_dopoll(event, 100) == SSH_ERROR) {
 			printf("Error : %s\n", ssh_get_error(session));
 			break;
 		}
@@ -1077,7 +1078,7 @@ int SSHServer::run(int port) {
     }
 
 shutdown:
-	ssh_disconnect(session);
+	//ssh_disconnect(session);
 	ssh_bind_free(sshbind);
 	ssh_finalize();
 	return ret;
