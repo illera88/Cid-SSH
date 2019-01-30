@@ -1,12 +1,14 @@
 #pragma once
 #include <string>
-#include <list>
+#include <mutex>
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN // revisar
 #include <Windows.h>
 #endif // _WIN32
 
 #include <libssh/callbacks.h>
+
+#define EXIT_CMD "tomate"
 
 struct my_ssh_thread_args {
 	ssh_session session;
@@ -56,14 +58,12 @@ public:
     static void chan_close(ssh_session session, ssh_channel channel, void * userdata);
     SSHServer();
 
-    static int sessionHandler(ssh_session session);
 	
 	static int run(int port);
 
 private:
     static bool gen_rsa_keys();
     static int auth_password(ssh_session session, const char *user, const char *password, void *userdata);
-    static int authenticate(ssh_session session);
 
 
 	static int my_ssh_channel_pty_window_change_callback(ssh_session session, ssh_channel channel, int width, int height, int pxwidth, int pwheight, void * userdata);
@@ -75,7 +75,7 @@ private:
 	static void conn_loop(ssh_event event, ssh_session session);
 
 #ifdef _WIN32
-    struct data_arg { HANDLE hPipeOut; HANDLE hPipeIn; };
+	struct data_arg { HANDLE hPipeOut; HANDLE hPipeIn; char last_command[sizeof(EXIT_CMD) + 1]; int index; };
 
 	static my_CreatePseudoConsole my_CreatePseudoConsole_function;
 	static my_ResizePseudoConsole my_ResizePseudoConsole_function;
@@ -85,7 +85,7 @@ private:
 #endif // _WIN32
 
 	
-
+	static std::recursive_mutex mtx;
 	static int is_pty;
     static const char* ip;
     static std::string priv_key;
