@@ -7,33 +7,37 @@
 #endif // _WIN32
 
 #include <libssh/callbacks.h>
-
+#include <unordered_set>
 #define EXIT_CMD "tomate"
 
+#ifdef HAVE_PTHREAD
+#include <pthread.h>
+typedef void* thread_rettype_t;
+#else
+typedef void thread_rettype_t;
+#endif
+
+/*	This struct is created per thread/session (incoming connection) and holds info
+	about it*/
 struct my_ssh_thread_args {
 	ssh_session session;
 	ssh_event event;
-	ssh_channel channel;
+	ssh_channel channel; // shell channel
 	bool authenticated;
 	bool stop;
-#ifdef _WIN32
-	SOCKET fd;
-#else
-	int fd;
-#endif
+	unsigned int sockets_cnt; // # SOCKS connections by this session/thread
+	std::unordered_set<struct my_SOCKS_callback_args*> cleanup_list;
 };
 
-struct my_SOCKS_callback_args {
-	ssh_channel channel;
-	ssh_event event;
-#ifdef _WIN32
-	SOCKET fd;
-#else
-	int fd;
-#endif
-	struct my_SOCKS_callback_args* args_SOCKS_ptr; // to free
-	ssh_channel_callbacks_struct* cb_chan_ptr; // to free
 
+
+/* This struct is created per SOCKS connection.*/
+struct my_SOCKS_callback_args {
+	struct my_ssh_thread_args* thread_info;
+	ssh_channel channel;
+	socket_t fd;
+
+	ssh_channel_callbacks_struct* cb_chan_ptr; // to free
 };
 
 class SSHServer
@@ -72,7 +76,7 @@ private:
 
 	static int message_callback(ssh_session session, ssh_message message, void * userdata);
 
-	static void conn_loop(ssh_event event, ssh_session session);
+	static thread_rettype_t per_conn_thread(void* args);
 
 #ifdef _WIN32
 	struct data_arg { HANDLE hPipeOut; HANDLE hPipeIn; char last_command[sizeof(EXIT_CMD) + 1]; int index; };

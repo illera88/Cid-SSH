@@ -1,0 +1,150 @@
+#include "sts_queue.h"
+#include <stdlib.h>
+#ifdef _WIN32
+#include <windows.h>
+#define pthread_mutex_t CRITICAL_SECTION
+#define pthread_mutex_lock EnterCriticalSection
+#define pthread_mutex_unlock LeaveCriticalSection
+#define pthread_mutex_destroy DeleteCriticalSection
+#else
+#include <pthread.h>
+#endif // _WIN32
+
+
+
+typedef struct StsElement {
+    void* next;
+    void* value;
+} StsElement;
+
+struct StsHeader {
+    StsElement* head;
+    StsElement* tail;
+    StsElement* iterator;
+    pthread_mutex_t mutex;
+};
+
+static StsHeader* create();
+static StsHeader* create() {
+    StsHeader* handle = malloc(sizeof(*handle));
+    handle->head = NULL;
+    handle->tail = NULL;
+
+#ifdef _WIN32
+    InitializeCriticalSection(&handle->mutex);
+#else
+    pthread_mutex_init(&handle->mutex, NULL);
+#endif // _WIN32
+
+    return handle;
+}
+
+static void destroy(StsHeader* header);
+static void destroy(StsHeader* header) {
+    /*I think there is a mem leak because we haven't ssh_channel_free(channel)*/
+    pthread_mutex_destroy(&header->mutex);
+
+    // Let's free all the elements in the queue
+    StsElement* head = header->head;
+    while (1) {
+        if (head == NULL) {
+            // its empty already
+            break;
+        }
+        else {
+            StsElement* to_free = head;
+            head = head->next;
+            free(to_free);
+        }
+    }
+    free(header);
+    header = NULL;
+}
+
+static void push(StsHeader* header, void* elem);
+static void push(StsHeader* header, void* elem) {
+    // Create new element
+    StsElement* element = malloc(sizeof(*element));
+    element->value = elem;
+    element->next = NULL;
+
+    pthread_mutex_lock(&header->mutex);
+    // Is list empty
+    if (header->head == NULL) {
+        header->head = element;
+        header->tail = element;
+    }
+    else {
+        // Rewire
+        StsElement* oldTail = header->tail;
+        oldTail->next = element;
+        header->tail = element;
+    }
+    // Reset iterator
+    header->iterator = header->head;
+    pthread_mutex_unlock(&header->mutex);
+}
+
+static void* pop(StsHeader* header);
+static void* pop(StsHeader* header) {
+    pthread_mutex_lock(&header->mutex);
+    StsElement* head = header->head;
+
+    // Is empty?
+    if (head == NULL) {
+        pthread_mutex_unlock(&header->mutex);
+        return NULL;
+    }
+    else {
+        // Rewire
+        header->head = head->next;
+
+        // Get head and free element memory
+        void* value = head->value;
+        free(head);
+
+        pthread_mutex_unlock(&header->mutex);
+        return value;
+    }
+}
+
+static void* iterate(StsHeader* header);
+static void* iterate(StsHeader* header) {
+    pthread_mutex_lock(&header->mutex);
+    void* value = header->iterator->value;
+    if (header->iterator) {
+        header->iterator = header->iterator->next;
+    }
+    pthread_mutex_unlock(&header->mutex);
+    return value;
+}
+
+static void reset(StsHeader* header);
+static void reset(StsHeader* header) {
+    pthread_mutex_lock(&header->mutex);
+    header->iterator = header->head;
+    pthread_mutex_unlock(&header->mutex);
+}
+
+static void dump(StsHeader* header, void(*cb)(void*));
+static void dump(StsHeader* header, void(*cb)(void*)) {
+    pthread_mutex_lock(&header->mutex);
+    StsElement* head = header->head;
+
+    while (cb && head != NULL) {
+        cb(head->value);
+        head = head->next;
+    }
+    pthread_mutex_unlock(&header->mutex);
+}
+
+
+_StsQueue const StsQueue = {
+  create,
+  destroy,
+  push,
+  pop,
+  iterate,
+  reset,
+  dump
+};

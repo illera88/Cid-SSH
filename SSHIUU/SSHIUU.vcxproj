@@ -78,10 +78,10 @@
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <AdditionalIncludeDirectories>C:\Users\alberto.garcia\Documents\code\libssh_mod\build_x86;C:\Users\alberto.garcia\Documents\code\PrecompiledLibraries\windows\openssl\2017\include;C:\Users\alberto.garcia\Documents\code\libssh\include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>IS_DEBUG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;LIBSSH_STATIC;IS_DEBUG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>legacy_stdio_definitions.lib;Ws2_32.lib;Crypt32.lib;"C:\Users\alberto.garcia\Documents\code\PrecompiledLibraries\windows\openssl\2017\lib\libsslMT.lib";"C:\Users\alberto.garcia\Documents\code\PrecompiledLibraries\windows\openssl\2017\lib\libcryptoMT.lib";"C:\Users\alberto.garcia\Documents\code\PrecompiledLibraries\windows\libssh_mod\libs\ssh_MT_x86_d.lib";"C:\Users\alberto.garcia\Documents\code\PrecompiledLibraries\windows\zlib\VS2017\zlib_MT_x86.lib";%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>legacy_stdio_definitions.lib;Ws2_32.lib;Crypt32.lib;"C:\Users\alberto.garcia\Documents\code\PrecompiledLibraries\windows\openssl\2017\lib\libsslMT.lib";"C:\Users\alberto.garcia\Documents\code\PrecompiledLibraries\windows\openssl\2017\lib\libcryptoMT.lib";C:\Users\alberto.garcia\Documents\code\libssh_mod\build_x86\src\static\Debug\ssh.lib;"C:\Users\alberto.garcia\Documents\code\PrecompiledLibraries\windows\zlib\VS2017\zlib_MT_x86.lib";%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -136,14 +136,17 @@
     <ClCompile Include="..\src\client.cpp" />
     <ClCompile Include="..\src\server.cpp" />
     <ClCompile Include="..\src\shell-host.c" />
+    <ClCompile Include="..\src\socks_proxy.c" />
     <ClCompile Include="..\src\SSHIUU.cpp" />
-    <ClCompile Include="test.c" />
+    <ClCompile Include="..\src\sts_queue.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\client.h" />
     <ClInclude Include="..\src\server.h" />
     <ClInclude Include="..\src\shell-host.h" />
+    <ClInclude Include="..\src\socks_proxy.h" />
     <ClInclude Include="..\src\SSHIUU.h" />
+    <ClInclude Include="..\src\sts_queue.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
