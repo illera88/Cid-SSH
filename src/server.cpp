@@ -264,7 +264,7 @@ free_all:
 
 int SSHServer::auth_password(ssh_session session, const char *user,
 	const char *password, void *userdata) {
-	struct my_ssh_thread_args* args = (struct my_ssh_thread_args*) userdata;
+	struct thread_info_struct* args = (struct thread_info_struct*) userdata;
 	args->authenticated = 1;
     return SSH_AUTH_SUCCESS; // Always auth with any user/pass
 }
@@ -375,12 +375,7 @@ int SSHServer::main_loop_shell(ssh_session session, ssh_channel channel) {
 #endif
     ssh_event event;
     
-    struct ssh_channel_callbacks_struct cb;
-    cb.channel_data_function = SSHServer::copy_chan_to_fd;
-    cb.channel_eof_function = SSHServer::chan_close;
-    cb.channel_close_function = SSHServer::chan_close;
-	cb.channel_pty_window_change_function = my_ssh_channel_pty_window_change_callback;
-    cb.userdata = NULL;
+    
 
 	// We will use this to store the commands executed to look for exit one
 	std::string command_storage;
@@ -397,6 +392,7 @@ int SSHServer::main_loop_shell(ssh_session session, ssh_channel channel) {
     STARTUPINFO siStartInfo;
     PROCESS_INFORMATION piProcInfo;
     struct data_arg data_arg;
+    struct ssh_channel_callbacks_struct cb;
     STARTUPINFOEX startupInfo{};
 
     if (is_pty) {
@@ -484,7 +480,7 @@ int SSHServer::main_loop_shell(ssh_session session, ssh_channel channel) {
         //TCHAR szCmdline[] = TEXT("C:\\Users\\alberto.garcia\\Downloads\\OpenSSH-Win64\\ssh-shellhost.exe ---pty cmd.exe");
         //TCHAR szCmdline[] = TEXT("C:\\Users\\alberto.garcia\\Downloads\\OpenSSH-Win64\\ssh-shellhost.exe ---pty conhost.exe --headless");
 
-    ZeroMemory(&piProcInfo, sizeof(PROCESS_INFORMATION));
+        ZeroMemory(&piProcInfo, sizeof(PROCESS_INFORMATION));
 
         BOOL bSuccess = CreateProcess(NULL,
             szCmdline,     // command line 
@@ -504,9 +500,19 @@ int SSHServer::main_loop_shell(ssh_session session, ssh_channel channel) {
         }
     }
 
-
+    memset(&cb, '\x00', sizeof cb);
+    cb.channel_data_function = SSHServer::copy_chan_to_fd;
+    cb.channel_eof_function = SSHServer::chan_close;
+    cb.channel_close_function = SSHServer::chan_close;
+    cb.channel_pty_window_change_function = my_ssh_channel_pty_window_change_callback;   
 	data_arg = { hPipeOut, hPipeIn, {NULL}, 0 };
     cb.userdata = &data_arg;
+    ssh_callbacks_init(&cb);
+
+    if (ssh_set_channel_callbacks(channel, &cb) == SSH_ERROR) {
+        debug("Couldn't set callbacks\n");
+        return -1;
+    }
 
 #else
     childpid = forkpty(&fd, NULL, term, win);
@@ -517,11 +523,6 @@ int SSHServer::main_loop_shell(ssh_session session, ssh_channel channel) {
     SSHServer::cb.userdata = &fd;
 #endif // _WIN32
 
-    ssh_callbacks_init(&cb);
-    if (ssh_set_channel_callbacks(channel, &cb) == SSH_ERROR) {
-        debug("Couldn't set callbacks\n");
-        return -1;
-    }
 
     event = ssh_event_new();
     if (event == NULL) {
@@ -629,7 +630,10 @@ int SSHServer::message_callback(ssh_session session, ssh_message message, void *
 		{
 		case SSH_CHANNEL_REQUEST_SHELL: {
 			ssh_message_channel_request_reply_success(message);
-
+            if (thread_info->channel == NULL) {
+                debug("Weird that we are getting SSH_CHANNEL_REQUEST_SHELL and we did not get SSH_CHANNEL_SESSION before\n");
+                return 1;
+            }
 			std::thread(main_loop_shell, session, thread_info->channel).detach();
 			return 0;
 		}
@@ -643,7 +647,6 @@ int SSHServer::message_callback(ssh_session session, ssh_message message, void *
 	}
 	default:
 		return 1;
-		break;
 	}
 	return 1;
 }
@@ -663,15 +666,17 @@ thread_rettype_t SSHServer::per_conn_thread(void* args){
     info.session = (ssh_session)args;
 
     struct ssh_server_callbacks_struct cb;
+    memset(&cb, '\x00', sizeof (cb));
     cb.userdata = &info;
     cb.auth_password_function = auth_password;
 #ifdef WITH_GSSAPI
     cb.auth_gssapi_mic_function = auth_gssapi_mic;
 #endif
-    cb.channel_open_request_session_function = new_session_channel;
-    cb.service_request_function = service_request;
+    //cb.channel_open_request_session_function = new_session_channel;
+    //cb.service_request_function = service_request;
 
     struct ssh_callbacks_struct cb_gen;
+    memset(&cb_gen, '\x00', sizeof(cb_gen));
     cb_gen.userdata = NULL;
     cb_gen.global_request_function = global_request;
 
@@ -798,8 +803,6 @@ int SSHServer::run(int port) {
 #else
         _beginthread(per_conn_thread, 0, session);
 #endif // HAVE_PTHREAD
-
-
     }
 
 shutdown:

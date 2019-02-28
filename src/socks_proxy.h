@@ -51,9 +51,6 @@ struct cleanup_node_struct {
 };
 
 struct pending_conn_data_struct {
-    //socket_t fd;
-    //ssh_channel channel;
-    //ssh_session session;
     int port;
     char hostname[MAX_HOSTNAME_LEN];
     int tries;
@@ -63,7 +60,13 @@ struct pending_conn_data_struct {
     int buflen;
 };
 
+static int verbosity = SSH_LOG_FUNCTIONS;
 
+static void _close_socket(struct event_fd_data_struct event_fd_data);
+static socket_t open_tcp_socket(const char* dest_hostname, int dest_port, float timeout, struct thread_info_struct* thread_info, int no_blocking);
+static int set_callbacks(struct event_fd_data_struct* event_fd_data, struct thread_info_struct* thread_info);
+
+void _close_socket(struct event_fd_data_struct event_fd_data);
 
 thread_rettype_t connect_thread_worker(void* userdata);
 

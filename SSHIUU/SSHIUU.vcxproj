@@ -81,7 +81,7 @@
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;LIBSSH_STATIC;IS_DEBUG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>legacy_stdio_definitions.lib;Ws2_32.lib;Crypt32.lib;"C:\Users\alberto.garcia\Documents\code\PrecompiledLibraries\windows\openssl\2017\lib\libsslMT.lib";"C:\Users\alberto.garcia\Documents\code\PrecompiledLibraries\windows\openssl\2017\lib\libcryptoMT.lib";C:\Users\alberto.garcia\Documents\code\libssh_mod\build_x86\src\static\Debug\ssh.lib;"C:\Users\alberto.garcia\Documents\code\PrecompiledLibraries\windows\zlib\VS2017\zlib_MT_x86.lib";%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>legacy_stdio_definitions.lib;Ws2_32.lib;Crypt32.lib;$(SolutionDir)libs\libssh_x86_MT_Debug.lib;"C:\Users\alberto.garcia\Documents\code\PrecompiledLibraries\windows\openssl\2017\lib\libsslMT.lib";"C:\Users\alberto.garcia\Documents\code\PrecompiledLibraries\windows\openssl\2017\lib\libcryptoMT.lib";"C:\Users\alberto.garcia\Documents\code\PrecompiledLibraries\windows\zlib\VS2017\zlib_MT_x86.lib";%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -112,7 +112,7 @@
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>legacy_stdio_definitions.lib;Ws2_32.lib;Crypt32.lib;"C:\Users\alberto.garcia\Documents\code\PrecompiledLibraries\windows\openssl\2017\lib\libsslMT.lib";"C:\Users\alberto.garcia\Documents\code\PrecompiledLibraries\windows\openssl\2017\lib\libcryptoMT.lib";"C:\Users\alberto.garcia\Documents\code\PrecompiledLibraries\windows\libssh_mod\libs\ssh_MT_x86.lib";"C:\Users\alberto.garcia\Documents\code\PrecompiledLibraries\windows\zlib\VS2017\zlib_MT_x86.lib";%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>legacy_stdio_definitions.lib;Ws2_32.lib;Crypt32.lib;$(SolutionDir)libs\libssh_x86_MT_Release.lib;"C:\Users\alberto.garcia\Documents\code\PrecompiledLibraries\windows\openssl\2017\lib\libsslMT.lib";"C:\Users\alberto.garcia\Documents\code\PrecompiledLibraries\windows\openssl\2017\lib\libcryptoMT.lib";"C:\Users\alberto.garcia\Documents\code\PrecompiledLibraries\windows\zlib\VS2017\zlib_MT_x86.lib";%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">

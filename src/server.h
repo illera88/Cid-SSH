@@ -19,15 +19,15 @@ typedef void thread_rettype_t;
 
 /*	This struct is created per thread/session (incoming connection) and holds info
 	about it*/
-struct my_ssh_thread_args {
-	ssh_session session;
-	ssh_event event;
-	ssh_channel channel; // shell channel
-	bool authenticated;
-	bool stop;
-	unsigned int sockets_cnt; // # SOCKS connections by this session/thread
-	std::unordered_set<struct my_SOCKS_callback_args*> cleanup_list;
-};
+//struct my_ssh_thread_args {
+//	ssh_session session;
+//	ssh_event event;
+//	ssh_channel channel; // shell channel
+//	bool authenticated;
+//	bool stop;
+//	unsigned int sockets_cnt; // # SOCKS connections by this session/thread
+//	std::unordered_set<struct my_SOCKS_callback_args*> cleanup_list;
+//};
 
 
 

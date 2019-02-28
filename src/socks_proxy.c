@@ -29,23 +29,18 @@ clients must be made or how a client should react.
 #include <string.h>
 #include <stdio.h>
 #include <fcntl.h>
+#include <assert.h>
 
 #ifdef _WIN32
 #include <ws2tcpip.h>
-#include <process.h> 
+#include <winsock2.h>
+#include <process.h>
+#include <Windows.h>
+#define SEND_FLAGS 0
 #else
 #include <poll.h>
 #endif // _WIN32
 
-
-#define USER "user"
-#define PASSWORD "pwd"
-
-static int verbosity = SSH_LOG_FUNCTIONS;
-
-static void _close_socket(struct event_fd_data_struct event_fd_data);
-static socket_t open_tcp_socket(const char* dest_hostname, int dest_port, float timeout, struct thread_info_struct* thread_info, int no_blocking);
-static int set_callbacks(struct event_fd_data_struct* event_fd_data, struct thread_info_struct* thread_info);
 
 static void cleanup_push(struct cleanup_node_struct** head_ref, struct event_fd_data_struct* new_data) {
     // Allocate memory for node 
@@ -72,7 +67,7 @@ void do_cleanup(struct cleanup_node_struct** head_ref) {
         //fprintf(stderr, "#%d curr: %p curr->next %p sockets_cnt = %d\n", cnt, (void *)current, (void *)current->next, sockets_cnt);
         cnt++;
 
-        if (ssh_channel_is_closed(current->data->channel)) {
+        if (current->data->channel == NULL || ssh_channel_is_closed(current->data->channel)) {
             if (current == (*head_ref)) {
                 (*head_ref) = current->next;
             }
@@ -83,25 +78,29 @@ void do_cleanup(struct cleanup_node_struct** head_ref) {
             current = current->next;
 
             if (gone->data->channel) {
-                fprintf(stderr, "Trying to free %p\n", (void*)gone->data);
-                if (gone->data->fd != SSH_INVALID_SOCKET) {
-                    _close_socket(*gone->data);
-                }
+                _ssh_log(SSH_LOG_PROTOCOL, "=== do_cleanup", "Freeing Channel %d:%d",
+                    gone->data->channel->local_channel, gone->data->channel->remote_channel);
+
                 ssh_remove_channel_callbacks(gone->data->channel, gone->data->cb_chan);
                 ssh_channel_free(gone->data->channel);
                 gone->data->channel = NULL;
-
-                //fprintf(stderr, "#%d prev: %p curr %p gone %p sockets_cnt = %d\n", 
-                //			cnt, (void *)previous, (void *)current, (void *)gone, sockets_cnt);
-
-                SAFE_FREE(gone->data->cb_chan);
-                //fprintf(stderr, "#%d free %p\n", sockets_cnt, (void *)gone->data);
-                SAFE_FREE(gone->data);
-                SAFE_FREE(gone);
             }
             else {
                 fprintf(stderr, "channel already freed!\n");
             }
+
+            if (gone->data->fd != SSH_INVALID_SOCKET) {
+                _close_socket(*gone->data);
+            }
+
+            //fprintf(stderr, "#%d prev: %p curr %p gone %p sockets_cnt = %d\n", 
+            //			cnt, (void *)previous, (void *)current, (void *)gone, sockets_cnt);
+            fprintf(stderr, "Trying to free %p\n", (void*)gone->data);
+            SAFE_FREE(gone->data->cb_chan);
+            //fprintf(stderr, "#%d free %p\n", sockets_cnt, (void *)gone->data);
+            SAFE_FREE(gone->data);
+            SAFE_FREE(gone);
+
             _ssh_log(SSH_LOG_FUNCTIONS, "=== do_cleanup", "Freed.");
         }
         else {
@@ -144,23 +143,10 @@ static int subsystem_request(ssh_session session, ssh_channel channel, const cha
     return 0;
 }
 
-struct ssh_channel_callbacks_struct channel_cb = {
-    .channel_subsystem_request_function = subsystem_request
-};
-
-
 ssh_channel new_session_channel(ssh_session session, void* userdata) {
     (void)session;
     (void)userdata;
     _ssh_log(SSH_LOG_PROTOCOL, "=== subsystem_request", "Session channel request");
-    /* For TCP forward only there seems to be no need for a session channel */
-    /*if(chan != NULL)
-        return NULL;
-    printf("Session channel request\n");
-    chan = ssh_channel_new(session);
-    ssh_callbacks_init(&channel_cb);
-    ssh_set_channel_callbacks(chan, &channel_cb);
-    return chan;*/
     return NULL;
 }
 
@@ -172,12 +158,11 @@ static void stack_socket_close(struct event_fd_data_struct * event_fd_data) {
     }
 }
 
-static void _close_socket(struct event_fd_data_struct event_fd_data) {
+void _close_socket(struct event_fd_data_struct event_fd_data) {
     _ssh_log(SSH_LOG_FUNCTIONS, "=== close_socket", "Closing fd = %d sockets_cnt = %d", event_fd_data.fd, event_fd_data.thread_info->sockets_cnt);
-    //ssh_session session = ssh_channel_get_session(event_fd_data.channel);
-    //ssh_event_remove_session(mainloop, session);
+    assert(event_fd_data.fd != SSH_INVALID_SOCKET);
+
     ssh_event_remove_fd(event_fd_data.thread_info->event, event_fd_data.fd);
-    //ssh_event_add_session(mainloop, session);
     event_fd_data.thread_info->sockets_cnt--;
 #ifdef _WIN32
     closesocket(event_fd_data.fd);
@@ -222,9 +207,12 @@ static void my_channel_close_function(ssh_session session, ssh_channel channel, 
     stack_socket_close(event_fd_data);
 }
 
-static void my_channel_wait_eof_function(ssh_session session, ssh_channel channel, void* userdata) {
+void my_channel_wait_eof_function(ssh_session session, ssh_channel channel, void* userdata) {
     (void)session;
     struct pending_conn_data_struct* pending_conn_data = (struct pending_conn_data_struct*)userdata;
+    //_ssh_log(SSH_LOG_PROTOCOL, "=== my_channel_WAIT_eof_function", "Got EOF on channel %d:%d. Shuting down write on socket (fd = %d).",
+    //    channel->local_channel, channel->remote_channel, pending_conn_data->event_fd_data->fd);
+
     if (pending_conn_data->event_fd_data == NULL) {
         SAFE_FREE(pending_conn_data->buf);
         _ssh_log(SSH_LOG_PROTOCOL, "=== my_channel_WAIT_eof_function", "Got EOF on channel %d:%d. Struct is not filled. Weird",
@@ -273,7 +261,7 @@ static int my_channel_data_function(ssh_session session, ssh_channel channel, vo
 
     _ssh_log(SSH_LOG_PROTOCOL, "=== my_channel_data_function", "%d bytes waiting on channel %d:%d for reading. Fd = %d", len, channel->local_channel, channel->remote_channel, event_fd_data->fd);
     if (len > 0) {
-        i = send(event_fd_data->fd, data, len, 0);
+        i = send(event_fd_data->fd, data, len, SEND_FLAGS);
     }
     if (i < 0) {
         _ssh_log(SSH_LOG_WARNING, "=== my_channel_data_function", "Writing to tcp socket %d: %s", event_fd_data->fd, strerror(errno));
@@ -384,28 +372,30 @@ thread_rettype_t connect_thread_worker(void* userdata) {
     struct thread_info_struct* thread_info = (struct thread_info_struct*)userdata;
 
     ssh_set_log_level(verbosity);
+    struct pending_conn_data_struct* incomming_request;
 
     while (!thread_info->error) {
-        struct pending_conn_data_struct* item;
-        while ((item = StsQueue.pop(thread_info->queue)) != NULL) {
-            if (item->event_fd_data->fd == SSH_INVALID_SOCKET) {
-                item->tries++;
-                item->event_fd_data->fd = open_tcp_socket(item->hostname, item->port, item->tries * TIMEOUT, thread_info, NON_BLOCKING);
-                if ((item->event_fd_data->fd == SSH_INVALID_SOCKET && item->tries > MAX_TRIES) || item->closed == 1) {
-                    if (item->buflen > 0 && item->buf != NULL) {
+        incomming_request = StsQueue.pop(thread_info->queue);
+        if (incomming_request != NULL) {
+            if (incomming_request->event_fd_data->fd == SSH_INVALID_SOCKET) {
+                incomming_request->tries++;
+                incomming_request->event_fd_data->fd = open_tcp_socket(incomming_request->hostname, incomming_request->port, incomming_request->tries * TIMEOUT, thread_info, NON_BLOCKING);
+                if ((incomming_request->event_fd_data->fd == SSH_INVALID_SOCKET && incomming_request->tries > MAX_TRIES) || incomming_request->closed == 1) {
+                    /*if (item->buflen > 0 && item->buf != NULL) {
                         SAFE_FREE(item->buf);
-                    }
-                    stack_socket_close(item->event_fd_data);
+                    }*/
+                    stack_socket_close(incomming_request->event_fd_data);
                     //SAFE_FREE(item);
-#ifdef _WIN32
-                    Sleep(50);
-#else
-                    usleep(50000);
-#endif // _WIN32
                     continue;
                 }
+
             }
-            StsQueue.push(thread_info->queue, item);
+            StsQueue.push(thread_info->queue, incomming_request);
+#ifdef _WIN32
+            Sleep(50);
+#else
+            usleep(50000);
+#endif // _WIN32
         }
 #ifdef _WIN32
         Sleep(100);
@@ -666,6 +656,7 @@ static int set_callbacks(struct event_fd_data_struct * event_fd_data, struct thr
     _ssh_log(SSH_LOG_FUNCTIONS, "=== set_callbacks", "SET for sock %d, Thread %p", event_fd_data->fd, thread_info);
 
     cb_chan = malloc(sizeof * cb_chan);
+    memset(cb_chan, '\x00', sizeof * cb_chan);
     ssh_callbacks_init(cb_chan);
     cb_chan->userdata = event_fd_data;
     cb_chan->channel_eof_function = my_channel_eof_function;
@@ -689,75 +680,78 @@ static int set_callbacks(struct event_fd_data_struct * event_fd_data, struct thr
     return 0;
 }
 
-static int message_callback(ssh_session session, ssh_message message, void* userdata) {
-    (void)session;
-    ssh_channel channel;
-    struct ssh_channel_callbacks_struct* cb_chan;
-    struct event_fd_data_struct* event_fd_data;
-    struct thread_info_struct* thread_info = (struct thread_info_struct*)userdata;
-    struct pending_conn_data_struct* new_data;
-
-    _ssh_log(SSH_LOG_PACKET, "=== message_callback", "Message type: %d, subtype %d",
-        ssh_message_type(message), ssh_message_subtype(message));
-    if (ssh_message_type(message) == SSH_REQUEST_CHANNEL_OPEN) {
-        _ssh_log(SSH_LOG_PROTOCOL, "=== message_callback", "channel_request_open From: %s:%d To: %s:%d",
-            ssh_message_channel_request_open_originator(message), ssh_message_channel_request_open_originator_port(message),
-            ssh_message_channel_request_open_destination(message), ssh_message_channel_request_open_destination_port(message));
-
-        if (ssh_message_subtype(message) == SSH_CHANNEL_DIRECT_TCPIP) {
-            //ssh_message_get(session);
-            channel = ssh_message_channel_request_open_reply_accept(message);
-
-            if (channel == NULL) {
-                _ssh_log(SSH_LOG_WARNING, "=== message_callback", "Accepting direct-tcpip channel failed!");
-                return 1;
-            }
-            else {
-                _ssh_log(SSH_LOG_PROTOCOL, "=== message_callback", "Connected to channel!");
-
-
-                const char* dest_hostname = ssh_message_channel_request_open_destination(message);
-                int dest_port = ssh_message_channel_request_open_destination_port(message);
-
-                event_fd_data = malloc(sizeof * event_fd_data);
-                cb_chan = malloc(sizeof * cb_chan);
-                new_data = malloc(sizeof * new_data);
-
-                event_fd_data->channel = channel;
-                event_fd_data->fd = SSH_INVALID_SOCKET;
-                event_fd_data->thread_info = thread_info;
-                event_fd_data->stacked = 0;
-                event_fd_data->cb_chan = cb_chan;
-
-                cb_chan->userdata = new_data;
-                cb_chan->channel_data_function = my_channel_data_wait_function;
-                cb_chan->channel_close_function = my_channel_wait_close_function;
-                cb_chan->channel_eof_function = my_channel_wait_eof_function;
-
-                new_data->event_fd_data = event_fd_data;
-                new_data->tries = 0;
-                new_data->closed = 0;
-                new_data->port = dest_port;
-                new_data->hostname[0] = '\0';
-                strncpy(new_data->hostname, dest_hostname, MAX_HOSTNAME_LEN);
-                StsQueue.push(thread_info->queue, new_data);
-                new_data->buf = NULL;
-                new_data->buflen = 0;
-
-                ssh_callbacks_init(cb_chan);
-                if (ssh_set_channel_callbacks(channel, cb_chan) != SSH_OK) {
-                    _ssh_log(SSH_LOG_FUNCTIONS, "=== message_callback", "ERROR ssh_set_channel_callbacks failed");
-                    return 1;
-                }
-
-                _ssh_log(SSH_LOG_PROTOCOL, "=== message_callback", "Added %s:%d to connecting queue", dest_hostname, dest_port);
-
-                return 0;
-            }
-        }
-    }
-    return 1;
-}
+//static int message_callback(ssh_session session, ssh_message message, void* userdata) {
+//    (void)session;
+//    ssh_channel channel;
+//    struct ssh_channel_callbacks_struct* cb_chan;
+//    struct event_fd_data_struct* event_fd_data;
+//    struct thread_info_struct* thread_info = (struct thread_info_struct*)userdata;
+//    struct pending_conn_data_struct* new_data;
+//
+//    _ssh_log(SSH_LOG_PACKET, "=== message_callback", "Message type: %d, subtype %d",
+//        ssh_message_type(message), ssh_message_subtype(message));
+//    if (ssh_message_type(message) == SSH_REQUEST_CHANNEL_OPEN) {
+//        _ssh_log(SSH_LOG_PROTOCOL, "=== message_callback", "channel_request_open From: %s:%d To: %s:%d",
+//            ssh_message_channel_request_open_originator(message), ssh_message_channel_request_open_originator_port(message),
+//            ssh_message_channel_request_open_destination(message), ssh_message_channel_request_open_destination_port(message));
+//
+//        if (ssh_message_subtype(message) == SSH_CHANNEL_DIRECT_TCPIP) {
+//            //ssh_message_get(session);
+//            channel = ssh_message_channel_request_open_reply_accept(message);
+//
+//            if (channel == NULL) {
+//                _ssh_log(SSH_LOG_WARNING, "=== message_callback", "Accepting direct-tcpip channel failed!");
+//                return 1;
+//            }
+//            else {
+//                _ssh_log(SSH_LOG_PROTOCOL, "=== message_callback", "Connected to channel!");
+//
+//
+//                const char* dest_hostname = ssh_message_channel_request_open_destination(message);
+//                int dest_port = ssh_message_channel_request_open_destination_port(message);
+//
+//                event_fd_data = malloc(sizeof * event_fd_data);
+//                memset(event_fd_data, '\x00', sizeof * event_fd_data);
+//                cb_chan = malloc(sizeof * cb_chan);
+//                memset(cb_chan, '\x00', sizeof * cb_chan);
+//                new_data = malloc(sizeof * new_data);
+//                memset(new_data, '\x00', sizeof * new_data);
+//
+//                event_fd_data->channel = channel;
+//                event_fd_data->fd = SSH_INVALID_SOCKET;
+//                event_fd_data->thread_info = thread_info;
+//                event_fd_data->stacked = 0;
+//                event_fd_data->cb_chan = cb_chan;
+//
+//                cb_chan->userdata = new_data;
+//                cb_chan->channel_data_function = my_channel_data_wait_function;
+//                cb_chan->channel_close_function = my_channel_wait_close_function;
+//                cb_chan->channel_eof_function = my_channel_wait_eof_function;
+//
+//                new_data->event_fd_data = event_fd_data;
+//                new_data->tries = 0;
+//                new_data->closed = 0;
+//                new_data->port = dest_port;
+//                new_data->hostname[0] = '\0';
+//                strncpy(new_data->hostname, dest_hostname, MAX_HOSTNAME_LEN);
+//                StsQueue.push(thread_info->queue, new_data);
+//                new_data->buf = NULL;
+//                new_data->buflen = 0;
+//
+//                ssh_callbacks_init(cb_chan);
+//                if (ssh_set_channel_callbacks(channel, cb_chan) != SSH_OK) {
+//                    _ssh_log(SSH_LOG_FUNCTIONS, "=== message_callback", "ERROR ssh_set_channel_callbacks failed");
+//                    return 1;
+//                }
+//
+//                _ssh_log(SSH_LOG_PROTOCOL, "=== message_callback", "Added %s:%d to connecting queue", dest_hostname, dest_port);
+//
+//                return 0;
+//            }
+//        }
+//    }
+//    return 1;
+//}
 
 
 int handle_socks_connection(ssh_message message, struct thread_info_struct* thread_info) {
@@ -765,7 +759,7 @@ int handle_socks_connection(ssh_message message, struct thread_info_struct* thre
     ssh_channel channel;
     struct ssh_channel_callbacks_struct* cb_chan;
     struct event_fd_data_struct* event_fd_data;
-    struct pending_conn_data_struct* new_data;
+    struct pending_conn_data_struct* incomming_request;
 
     channel = ssh_message_channel_request_open_reply_accept(message);
 
@@ -780,9 +774,13 @@ int handle_socks_connection(ssh_message message, struct thread_info_struct* thre
         const char* dest_hostname = ssh_message_channel_request_open_destination(message);
         int dest_port = ssh_message_channel_request_open_destination_port(message);
 
-        struct event_fd_data_struct* event_fd_data = malloc(sizeof * event_fd_data);
+        event_fd_data = malloc(sizeof * event_fd_data);
+        memset(event_fd_data, '\x00', sizeof *event_fd_data);
+
         cb_chan = malloc(sizeof * cb_chan);
-        new_data = malloc(sizeof * new_data);
+        memset(cb_chan, '\x00', sizeof * cb_chan);
+        incomming_request = malloc(sizeof * incomming_request);
+        memset(incomming_request, '\x00', sizeof * incomming_request);
 
         event_fd_data->channel = channel;
         event_fd_data->fd = SSH_INVALID_SOCKET;
@@ -790,20 +788,22 @@ int handle_socks_connection(ssh_message message, struct thread_info_struct* thre
         event_fd_data->stacked = 0;
         event_fd_data->cb_chan = cb_chan;
 
-        cb_chan->userdata = new_data;
+        cb_chan->userdata = incomming_request;
         cb_chan->channel_data_function = my_channel_data_wait_function;
         cb_chan->channel_close_function = my_channel_wait_close_function;
         cb_chan->channel_eof_function = my_channel_wait_eof_function;
 
-        new_data->event_fd_data = event_fd_data;
-        new_data->tries = 0;
-        new_data->closed = 0;
-        new_data->port = dest_port;
-        new_data->hostname[0] = '\0';
-        strncpy(new_data->hostname, dest_hostname, MAX_HOSTNAME_LEN);
-        StsQueue.push(thread_info->queue, new_data);
-        new_data->buf = NULL;
-        new_data->buflen = 0;
+        incomming_request->event_fd_data = event_fd_data;
+        incomming_request->tries = 0;
+        incomming_request->closed = 0;
+        incomming_request->port = dest_port;
+        incomming_request->hostname[0] = '\0';
+        strncpy(incomming_request->hostname, dest_hostname, MAX_HOSTNAME_LEN);
+        incomming_request->buf = NULL;
+        incomming_request->buflen = 0;
+
+        StsQueue.push(thread_info->queue, incomming_request);
+
 
         ssh_callbacks_init(cb_chan);
         if (ssh_set_channel_callbacks(channel, cb_chan) != SSH_OK) {
