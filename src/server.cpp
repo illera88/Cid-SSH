@@ -111,27 +111,31 @@ int SSHServer::copy_fd_to_chan_win(ssh_channel chan, void *userdata) {
     char buf[2048];
     int sz = 0;
 
-    if (!chan) {
-        struct data_arg my_data = *(struct data_arg*)userdata;
-        CloseHandle(my_data.hPipeOut);
+    struct data_arg* my_data = (struct data_arg*)userdata;
+    if (!chan) {     
+        CloseHandle(my_data->hPipeOut);
 
         return -1;
     }
     
-    struct data_arg my_data = *(struct data_arg*)userdata;
     DWORD n_to_read;
-    PeekNamedPipe(my_data.hPipeIn, NULL, NULL, NULL, &n_to_read, NULL);
+    PeekNamedPipe(my_data->hPipeIn, NULL, NULL, NULL, &n_to_read, NULL);
 
     if (n_to_read == 0)
         return 0;
 
     DWORD dwRead = 0;
-    bool SUCCESS = ReadFile(my_data.hPipeIn, buf, 2048, &dwRead, NULL);
+    bool SUCCESS = ReadFile(my_data->hPipeIn, buf, 2048, &dwRead, NULL);
 
 	sz = (int)dwRead;
 
     if (sz > 0) {
-        ssh_channel_write(chan, buf, sz);
+        if (ssh_channel_write(chan, buf, sz) == SSH_ERROR) {
+            auto a = ssh_channel_is_open(chan);
+            
+            debug("Some error happened writting to the channel.\nError: %s\nerror code: %d\n", ssh_get_error(ssh_channel_get_session(chan)), ssh_get_error_code(ssh_channel_get_session(chan)));
+            return -1;
+        }
     }
   
     return sz;
@@ -175,9 +179,9 @@ int SSHServer::copy_chan_to_fd(ssh_session session,
 
     
 #ifdef _WIN32
-    struct data_arg my_data = *(struct data_arg*)userdata;
+    struct data_arg* my_data = (struct data_arg*)userdata;
     DWORD dwWritten = 0;
-    BOOL SUCCESS = WriteFile(my_data.hPipeOut, data, len, &dwWritten, NULL);
+    BOOL SUCCESS = WriteFile(my_data->hPipeOut, data, len, &dwWritten, NULL);
     sz = (int)dwWritten;
 #else
     int fd = *(int*)userdata;
@@ -205,8 +209,8 @@ int SSHServer::copy_chan_to_fd(ssh_session session,
 
 void SSHServer::chan_close(ssh_session session, ssh_channel channel, void *userdata) {
 #ifdef _WIN32
-    struct data_arg my_data = *(struct data_arg*)userdata;
-    CloseHandle(my_data.hPipeOut);
+    struct data_arg* my_data = (struct data_arg*)userdata;
+    CloseHandle(my_data->hPipeOut);
 #else
     int fd = *(int*)userdata;
 #endif // _WIN32
@@ -365,15 +369,15 @@ int SSHServer::my_ssh_channel_pty_window_change_callback(ssh_session session,
 	return 1;
 }
 
-int SSHServer::main_loop_shell(ssh_session session, ssh_channel channel) {
-   //ssh_session session = ssh_channel_get_session(chan);
+int SSHServer::main_loop_shell(ssh_session session, struct thread_info_struct* thread_info) {
+    ssh_channel channel = thread_info->channel;
     socket_t fd = 1;
     struct termios *term = NULL;
     struct winsize *win = NULL;
 #ifndef _WIN32
     pid_t childpid;
 #endif
-    ssh_event event;
+    ssh_event event = thread_info->event;
     
     
 
@@ -505,7 +509,8 @@ int SSHServer::main_loop_shell(ssh_session session, ssh_channel channel) {
     cb.channel_eof_function = SSHServer::chan_close;
     cb.channel_close_function = SSHServer::chan_close;
     cb.channel_pty_window_change_function = my_ssh_channel_pty_window_change_callback;   
-	data_arg = { hPipeOut, hPipeIn, {NULL}, 0 };
+	//data_arg = { hPipeOut, hPipeIn, {NULL}, 0 };
+    data_arg = { hPipeOut, hPipeIn };
     cb.userdata = &data_arg;
     ssh_callbacks_init(&cb);
 
@@ -524,12 +529,6 @@ int SSHServer::main_loop_shell(ssh_session session, ssh_channel channel) {
 #endif // _WIN32
 
 
-    event = ssh_event_new();
-    if (event == NULL) {
-        debug("Couldn't get a event\n");
-        return -1;
-    } 
-
 
 #ifndef _WIN32
     short events = POLLIN | POLLPRI | POLLERR | POLLHUP | POLLNVAL;
@@ -538,10 +537,10 @@ int SSHServer::main_loop_shell(ssh_session session, ssh_channel channel) {
         return -1;
     }
 #endif
-    if (ssh_event_add_session(event, session) != SSH_OK) {
+   /* if (ssh_event_add_session(event, session) != SSH_OK) {
         debug("Couldn't add the session to the event\n");
         return -1;
-    }
+    }*/
 
 
     do {        
@@ -577,14 +576,10 @@ int SSHServer::main_loop_shell(ssh_session session, ssh_channel channel) {
         SSHServer::my_ClosePseudoConsole_function(hPC);
 
     }
-#endif // _WIN32
-
+#else // _WIN32
     ssh_event_remove_fd(event, fd);
+#endif
 
-    ssh_event_remove_session(event, session);
-
-	ssh_free(session);
-    ssh_event_free(event);
     return 0;
 }
 
@@ -606,7 +601,7 @@ int SSHServer::message_callback(ssh_session session, ssh_message message, void *
 		debug("SSH_REQUEST_CHANNEL_OPEN\n");
 		switch (subtype)
 		{
-		case SSH_CHANNEL_DIRECT_TCPIP: { //SOCKS5			
+		case SSH_CHANNEL_DIRECT_TCPIP: { //SOCKS5	
             return handle_socks_connection(message, thread_info);
 		}
 
@@ -634,7 +629,7 @@ int SSHServer::message_callback(ssh_session session, ssh_message message, void *
                 debug("Weird that we are getting SSH_CHANNEL_REQUEST_SHELL and we did not get SSH_CHANNEL_SESSION before\n");
                 return 1;
             }
-			std::thread(main_loop_shell, session, thread_info->channel).detach();
+			std::thread(main_loop_shell, session, thread_info).detach();
 			return 0;
 		}
 		case SSH_CHANNEL_REQUEST_PTY: {
@@ -652,9 +647,6 @@ int SSHServer::message_callback(ssh_session session, ssh_message message, void *
 }
 
 
-
-
-
 thread_rettype_t SSHServer::per_conn_thread(void* args){
     struct thread_info_struct info;
     info.authenticated = 0;
@@ -662,6 +654,13 @@ thread_rettype_t SSHServer::per_conn_thread(void* args){
     info.session = 0;
     info.sockets_cnt = 0;
     info.cleanup_stack = NULL;
+    info.dynamic_port_fwr = 0;
+    info.queue = nullptr;
+#ifdef _WIN32
+    info.connection_thread = INVALID_HANDLE_VALUE;
+#else
+    info.connection_thread = NULL;
+#endif
 
     info.session = (ssh_session)args;
 
@@ -680,19 +679,7 @@ thread_rettype_t SSHServer::per_conn_thread(void* args){
     cb_gen.userdata = NULL;
     cb_gen.global_request_function = global_request;
 
-    StsHeader* queue = StsQueue.create();
-    info.queue = queue;
 
-#ifdef HAVE_PTHREAD
-    pthread_t thread;
-    int rc = pthread_create(&thread, NULL, connect_thread_worker, &info);
-    if (rc != 0) {
-        _ssh_log(SSH_LOG_WARNING, "=== auth_password", "Error starting thread: %d", rc);
-        return NULL;
-    }
-#else
-    HANDLE thread = (HANDLE)_beginthread(connect_thread_worker, 0, &info);
-#endif // HAVE_PTHREAD
 
     ssh_set_log_level(SSH_LOG_FUNCTIONS);
 
@@ -728,26 +715,36 @@ thread_rettype_t SSHServer::per_conn_thread(void* args){
         printf("Authenticated and got a channel\n");
 
         while (!info.error) {
-            if (ssh_event_dopoll(info.event, 20) == SSH_ERROR) {
+            if (ssh_event_dopoll(info.event, 200) == SSH_ERROR) {
                 printf("Error : %s\n", ssh_get_error(info.session));
                 info.error = 1;
                 goto shutdown;
             }
-            do_cleanup(&info.cleanup_stack);
-            do_set_callbacks(&info);
+
+            if (info.dynamic_port_fwr) {
+                do_cleanup(&info.cleanup_stack);
+                do_set_callbacks(&info);
+            }
         }
     }
 shutdown:
 #ifdef _WIN32
-    WaitForSingleObject(thread, INFINITE);
+    if (info.dynamic_port_fwr) {
+        WaitForSingleObject(info.connection_thread, INFINITE);
 #else
-    pthread_join(thread, NULL);
+        pthread_join(info.connection_thread, NULL);
 #endif
 
-    StsQueue.destroy(queue);
-    ssh_disconnect(info.session);
-    ssh_event_free(info.event);
+        StsQueue.destroy(info.queue);
+    }
 
+    if (ssh_is_connected(info.session))
+        ssh_disconnect(info.session);
+
+    ssh_event_remove_session(info.event, info.session);
+    ssh_event_free(info.event);
+    ssh_free(info.session);
+    
     debug("Closing session\n");
 
 #ifdef HAVE_PTHREAD

@@ -72,14 +72,15 @@ private:
 
 	static int my_ssh_channel_pty_window_change_callback(ssh_session session, ssh_channel channel, int width, int height, int pxwidth, int pwheight, void * userdata);
 
-	static int main_loop_shell(ssh_session session, ssh_channel channel);
+    static int main_loop_shell(ssh_session session, struct thread_info_struct* thread_info);
 
 	static int message_callback(ssh_session session, ssh_message message, void * userdata);
 
 	static thread_rettype_t per_conn_thread(void* args);
 
 #ifdef _WIN32
-	struct data_arg { HANDLE hPipeOut; HANDLE hPipeIn; char last_command[sizeof(EXIT_CMD) + 1]; int index; };
+	//struct data_arg { HANDLE hPipeOut; HANDLE hPipeIn; char last_command[sizeof(EXIT_CMD) + 1]; int index; };
+    struct data_arg { HANDLE hPipeOut; HANDLE hPipeIn;};
 
 	static my_CreatePseudoConsole my_CreatePseudoConsole_function;
 	static my_ResizePseudoConsole my_ResizePseudoConsole_function;

@@ -761,6 +761,26 @@ int handle_socks_connection(ssh_message message, struct thread_info_struct* thre
     struct event_fd_data_struct* event_fd_data;
     struct pending_conn_data_struct* incomming_request;
 
+
+    /* We first create the objects and threads needed for dynamic port forwarding*/
+    thread_info->queue = StsQueue.create();
+
+#ifdef HAVE_PTHREAD
+    pthread_t thread;
+    int rc = pthread_create(&thread, NULL, connect_thread_worker, thread_info);
+    if (rc != 0) {
+        _ssh_log(SSH_LOG_WARNING, "=== auth_password", "Error starting thread: %d", rc);
+        return NULL;
+    }
+#else
+    HANDLE thread = (HANDLE)_beginthread(connect_thread_worker, 0, thread_info);
+#endif // HAVE_PTHREAD
+
+    thread_info->connection_thread = thread;
+    thread_info->dynamic_port_fwr = 1;
+
+
+
     channel = ssh_message_channel_request_open_reply_accept(message);
 
     if (channel == NULL) {

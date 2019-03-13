@@ -35,6 +35,13 @@ struct thread_info_struct {
     int error;
     int sockets_cnt;
     struct cleanup_node_struct* cleanup_stack;
+    int dynamic_port_fwr; // This flag will be set if -D is used
+#ifdef _WIN32
+    HANDLE connection_thread;
+#else
+    pthread_t connection_thread;
+#endif
+
 };
 
 struct event_fd_data_struct {
