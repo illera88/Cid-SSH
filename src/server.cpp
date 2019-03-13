@@ -668,25 +668,20 @@ thread_rettype_t SSHServer::per_conn_thread(void* args){
     memset(&cb, '\x00', sizeof (cb));
     cb.userdata = &info;
     cb.auth_password_function = auth_password;
-#ifdef WITH_GSSAPI
-    cb.auth_gssapi_mic_function = auth_gssapi_mic;
-#endif
-    //cb.channel_open_request_session_function = new_session_channel;
-    //cb.service_request_function = service_request;
 
-    struct ssh_callbacks_struct cb_gen;
+    /*struct ssh_callbacks_struct cb_gen;
     memset(&cb_gen, '\x00', sizeof(cb_gen));
     cb_gen.userdata = NULL;
-    cb_gen.global_request_function = global_request;
+    cb_gen.global_request_function = global_request;*/
 
 
 
     ssh_set_log_level(SSH_LOG_FUNCTIONS);
 
     ssh_callbacks_init(&cb);
-    ssh_callbacks_init(&cb_gen);
+   // ssh_callbacks_init(&cb_gen);
     ssh_set_server_callbacks(info.session, &cb);
-    ssh_set_callbacks(info.session, &cb_gen);
+    //ssh_set_callbacks(info.session, &cb_gen);
     ssh_set_message_callback(info.session, SSHServer::message_callback, &info);
 
     if (ssh_handle_key_exchange(info.session)) {
@@ -715,8 +710,9 @@ thread_rettype_t SSHServer::per_conn_thread(void* args){
         printf("Authenticated and got a channel\n");
 
         while (!info.error) {
-            if (ssh_event_dopoll(info.event, 200) == SSH_ERROR) {
+            if (ssh_event_dopoll(info.event, 1200) == SSH_ERROR) {
                 printf("Error : %s\n", ssh_get_error(info.session));
+                auto a = WSAGetLastError();
                 info.error = 1;
                 goto shutdown;
             }
