@@ -4,6 +4,7 @@
 #include <libssh/callbacks.h>
 
 #include <thread>
+#include <chrono>
 
 #include "server.h"
 #include "shell-host.h"
@@ -107,7 +108,7 @@ SSHServer::SSHServer()
 }
 
 #ifdef _WIN32
-int SSHServer::copy_fd_to_chan_win(ssh_channel chan, void *userdata) {
+int SSHServer::windows_poll_channel(ssh_channel chan, void *userdata) {
     char buf[2048];
     int sz = 0;
 
@@ -130,9 +131,10 @@ int SSHServer::copy_fd_to_chan_win(ssh_channel chan, void *userdata) {
 	sz = (int)dwRead;
 
     if (sz > 0) {
-        if (ssh_channel_write(chan, buf, sz) == SSH_ERROR) {
-            auto a = ssh_channel_is_open(chan);
-            
+        pthread_mutex_lock(&my_data->thread_info->mutex);
+        int size = ssh_channel_write(chan, buf, sz);
+        pthread_mutex_unlock(&my_data->thread_info->mutex);
+        if (size == SSH_ERROR) {  
             debug("Some error happened writting to the channel.\nError: %s\nerror code: %d\n", ssh_get_error(ssh_channel_get_session(chan)), ssh_get_error_code(ssh_channel_get_session(chan)));
             return -1;
         }
@@ -510,7 +512,7 @@ int SSHServer::main_loop_shell(ssh_session session, struct thread_info_struct* t
     cb.channel_close_function = SSHServer::chan_close;
     cb.channel_pty_window_change_function = my_ssh_channel_pty_window_change_callback;   
 	//data_arg = { hPipeOut, hPipeIn, {NULL}, 0 };
-    data_arg = { hPipeOut, hPipeIn };
+    data_arg = { hPipeOut, hPipeIn, thread_info };
     cb.userdata = &data_arg;
     ssh_callbacks_init(&cb);
 
@@ -548,19 +550,24 @@ int SSHServer::main_loop_shell(ssh_session session, struct thread_info_struct* t
         GetExitCodeProcess(piProcInfo.hProcess, &exitCode);
         if (exitCode != STILL_ACTIVE)
             break;
-        copy_fd_to_chan_win(channel, &data_arg);
-        ssh_event_dopoll(event, 100);
-        //debug("Got: %d\n", exitCode);      
-        //Sleep(1000);
+
+        windows_poll_channel(channel, &data_arg);
+
+        
+        //ssh_event_dopoll(event, 100);
+
 #else
-        ssh_event_dopoll(event, 1000);
+        //ssh_event_dopoll(event, 1000);
 #endif // _WIN32
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     } while (!ssh_channel_is_closed(channel));
 
     
     if(!ssh_channel_is_closed(channel))
         ssh_channel_close(channel);
+    
+    ssh_remove_channel_callbacks(channel, &cb);
 
 #ifdef _WIN32
     //Clean-up the pipes
@@ -629,6 +636,7 @@ int SSHServer::message_callback(ssh_session session, ssh_message message, void *
                 debug("Weird that we are getting SSH_CHANNEL_REQUEST_SHELL and we did not get SSH_CHANNEL_SESSION before\n");
                 return 1;
             }
+            thread_info->borrame = 1;
 			std::thread(main_loop_shell, session, thread_info).detach();
 			return 0;
 		}
@@ -656,6 +664,9 @@ thread_rettype_t SSHServer::per_conn_thread(void* args){
     info.cleanup_stack = NULL;
     info.dynamic_port_fwr = 0;
     info.queue = nullptr;
+    info.borrame = 0;
+    info.channel = nullptr;
+    InitializeCriticalSection(&info.mutex);
 #ifdef _WIN32
     info.connection_thread = INVALID_HANDLE_VALUE;
 #else
@@ -710,7 +721,12 @@ thread_rettype_t SSHServer::per_conn_thread(void* args){
         printf("Authenticated and got a channel\n");
 
         while (!info.error) {
-            if (ssh_event_dopoll(info.event, 1200) == SSH_ERROR) {
+            /* */
+            pthread_mutex_lock(&info.mutex);
+            int err = ssh_event_dopoll(info.event, 200);
+            pthread_mutex_unlock(&info.mutex);
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            if (err == SSH_ERROR) {
                 printf("Error : %s\n", ssh_get_error(info.session));
                 auto a = WSAGetLastError();
                 info.error = 1;
@@ -734,11 +750,15 @@ shutdown:
         StsQueue.destroy(info.queue);
     }
 
+    pthread_mutex_destroy(&info.mutex);
     if (ssh_is_connected(info.session))
         ssh_disconnect(info.session);
 
     ssh_event_remove_session(info.event, info.session);
+    if (info.channel != NULL)
+        ssh_channel_free(info.channel);
     ssh_event_free(info.event);
+    
     ssh_free(info.session);
     
     debug("Closing session\n");

@@ -22,32 +22,32 @@
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{3AB1BF1F-E4C8-4639-A926-8AF82D168E8C}</ProjectGuid>
     <RootNamespace>SSHIUU</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
@@ -77,11 +77,11 @@
       <SDLCheck>false</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalIncludeDirectories>C:\Users\alberto.garcia\Documents\code\libssh_mod\build_x86;C:\Users\alberto.garcia\Documents\code\PrecompiledLibraries\windows\openssl\2017\include;C:\Users\alberto.garcia\Documents\code\libssh\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\alberto.garcia\Documents\code\PrecompiledLibraries\windows\libssh_mod\include;C:\Users\alberto.garcia\Documents\code\PrecompiledLibraries\windows\openssl\2017\include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;LIBSSH_STATIC;IS_DEBUG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>legacy_stdio_definitions.lib;Ws2_32.lib;Crypt32.lib;$(SolutionDir)libs\$(PlatformTarget)\$(TargetedSDKConfiguration)\libssh_x86_MT_Debug.lib;$(SolutionDir)libs\$(PlatformTarget)\Release\libsslMT.lib;$(SolutionDir)libs\$(PlatformTarget)\Release\libcryptoMT.lib;$(SolutionDir)libs\$(PlatformTarget)\Release\zlib_MT_x86.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>legacy_stdio_definitions.lib;Ws2_32.lib;Crypt32.lib;"C:\Users\alberto.garcia\Documents\code\PrecompiledLibraries\windows\openssl\2017\lib\libsslMT.lib";"C:\Users\alberto.garcia\Documents\code\PrecompiledLibraries\windows\openssl\2017\lib\libcryptoMT.lib";"C:\Users\alberto.garcia\Documents\code\PrecompiledLibraries\windows\libssh_mod\libs\ssh_MT_x86_d.lib";"C:\Users\alberto.garcia\Documents\code\PrecompiledLibraries\windows\zlib\VS2017\zlib_MT_x86.lib";%(AdditionalDependencies)</AdditionalDependencies>
       <Profile>true</Profile>
     </Link>
   </ItemDefinitionGroup>

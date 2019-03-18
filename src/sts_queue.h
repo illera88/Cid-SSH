@@ -1,6 +1,11 @@
 #ifndef STS_QUEUE_H
 #define STS_QUEUE_H
 
+#define pthread_mutex_t CRITICAL_SECTION
+#define pthread_mutex_lock EnterCriticalSection
+#define pthread_mutex_unlock LeaveCriticalSection
+#define pthread_mutex_destroy DeleteCriticalSection
+
 /*
  * Simple thread safe queue (StsQueue) is just an experiment with
  * simulated "namespaces" in C.

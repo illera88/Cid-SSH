@@ -2,10 +2,6 @@
 #include <stdlib.h>
 #ifdef _WIN32
 #include <windows.h>
-#define pthread_mutex_t CRITICAL_SECTION
-#define pthread_mutex_lock EnterCriticalSection
-#define pthread_mutex_unlock LeaveCriticalSection
-#define pthread_mutex_destroy DeleteCriticalSection
 #else
 #include <pthread.h>
 #endif // _WIN32

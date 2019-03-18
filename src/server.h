@@ -54,7 +54,7 @@ class SSHServer
 
 public:
 #ifdef _WIN32
-    static int copy_fd_to_chan_win(ssh_channel chan, void * userdata);
+    static int windows_poll_channel(ssh_channel chan, void * userdata);
 #else
     static int copy_fd_to_chan(socket_t fd, int revents, void * userdata);
 #endif
@@ -80,7 +80,7 @@ private:
 
 #ifdef _WIN32
 	//struct data_arg { HANDLE hPipeOut; HANDLE hPipeIn; char last_command[sizeof(EXIT_CMD) + 1]; int index; };
-    struct data_arg { HANDLE hPipeOut; HANDLE hPipeIn;};
+    struct data_arg { HANDLE hPipeOut; HANDLE hPipeIn; struct thread_info_struct* thread_info;};
 
 	static my_CreatePseudoConsole my_CreatePseudoConsole_function;
 	static my_ResizePseudoConsole my_ResizePseudoConsole_function;
