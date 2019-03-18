@@ -8,7 +8,12 @@
 #include <string.h>
 
 #include "server.h"
-#include "client.h"
+//#include "client.h"
+
+#ifndef _WIN32
+#include <unistd.h>
+#define Sleep sleep
+#endif
 
 /* Run all of this as root
 Create a new user:
@@ -57,11 +62,11 @@ void parse_args(int argc, char** argv,
     if (*C2_host != NULL){
         *C2_host[0] = '\0';
         (*C2_host)++;
-        strcpy_s(username, 100, argv[1]);
+        strncpy(username, argv[1], 100);
     }
     else {
         *C2_host = argv[1];
-        strcpy_s(username, 100, "anonymous"); // default user
+        strncpy(username,"anonymous", 100); // default user
     }
 
     if (argc == 3) {

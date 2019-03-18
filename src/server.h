@@ -42,6 +42,7 @@ struct my_SOCKS_callback_args {
 
 class SSHServer
 {
+	#ifdef _WIN32
 	typedef HRESULT(WINAPI *my_CreatePseudoConsole)(_In_ COORD,
 		_In_ HANDLE,
 		_In_ HANDLE,
@@ -51,7 +52,7 @@ class SSHServer
 	typedef void(WINAPI *my_ResizePseudoConsole)(_In_ HPCON hPC, _In_ COORD size);
 
 	typedef void(WINAPI *my_ClosePseudoConsole)(_Out_ HPCON);
-
+	#endif
 public:
 #ifdef _WIN32
     static int windows_poll_channel(ssh_channel chan, void * userdata);

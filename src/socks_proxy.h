@@ -1,6 +1,6 @@
 #pragma once
 
-#include <config.h>
+//#include <config.h>
 
 #include <libssh/libssh.h>
 
@@ -20,6 +20,8 @@ typedef void thread_rettype_t;
 #endif // !MAX_HOSTNAME_LEN
 
 #define NON_BLOCKING 1
+
+#define SAFE_FREE(x) do { if ((x) != NULL) {free(x); x=NULL;} } while(0)
 
 #ifdef __cplusplus
 extern "C"

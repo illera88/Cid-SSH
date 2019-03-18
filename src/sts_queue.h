@@ -1,10 +1,12 @@
 #ifndef STS_QUEUE_H
 #define STS_QUEUE_H
 
+#ifdef _WIN32
 #define pthread_mutex_t CRITICAL_SECTION
 #define pthread_mutex_lock EnterCriticalSection
 #define pthread_mutex_unlock LeaveCriticalSection
 #define pthread_mutex_destroy DeleteCriticalSection
+#endif
 
 /*
  * Simple thread safe queue (StsQueue) is just an experiment with

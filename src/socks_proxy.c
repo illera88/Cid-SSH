@@ -23,7 +23,7 @@ clients must be made or how a client should react.
 #include <libssh/libssh.h>
 #include <libssh/server.h>
 #include <libssh/callbacks.h>
-#include <libssh/channels.h>
+//#include <libssh/channels.h>
 
 #include <stdlib.h>
 #include <string.h>
@@ -31,14 +31,16 @@ clients must be made or how a client should react.
 #include <fcntl.h>
 #include <assert.h>
 
+#define SEND_FLAGS 0
+
 #ifdef _WIN32
 #include <ws2tcpip.h>
 #include <winsock2.h>
 #include <process.h>
 #include <Windows.h>
-#define SEND_FLAGS 0
 #else
 #include <poll.h>
+#include <errno.h>
 #endif // _WIN32
 
 
@@ -78,8 +80,7 @@ void do_cleanup(struct cleanup_node_struct** head_ref) {
             current = current->next;
 
             if (gone->data->channel) {
-                _ssh_log(SSH_LOG_PROTOCOL, "=== do_cleanup", "Freeing Channel %d:%d",
-                    gone->data->channel->local_channel, gone->data->channel->remote_channel);
+                //_ssh_log(SSH_LOG_PROTOCOL, "=== do_cleanup", "Freeing Channel %d:%d", gone->data->channel->local_channel, gone->data->channel->remote_channel);
 
                 ssh_remove_channel_callbacks(gone->data->channel, gone->data->cb_chan);
                 ssh_channel_free(gone->data->channel);
@@ -189,7 +190,7 @@ static void my_channel_wait_close_function(ssh_session session, ssh_channel chan
     (void)session;
 
     struct pending_conn_data_struct* pending_conn_data = (struct pending_conn_data_struct*)userdata;
-    _ssh_log(SSH_LOG_PROTOCOL, "=== my_channel_WAIT_close_function", "Channel %d:%d closed by remote. State=%d", channel->local_channel, channel->remote_channel, channel->state);
+    //_ssh_log(SSH_LOG_PROTOCOL, "=== my_channel_WAIT_close_function", "Channel %d:%d closed by remote. State=%d", channel->local_channel, channel->remote_channel, channel->state);
 
     if (pending_conn_data->event_fd_data != NULL && pending_conn_data->buf != NULL) {
         // We may have dealt with it at my_channel_wait_eof_function
@@ -202,7 +203,7 @@ static void my_channel_close_function(ssh_session session, ssh_channel channel, 
     (void)session;
 
     struct event_fd_data_struct* event_fd_data = (struct event_fd_data_struct*)userdata;
-    _ssh_log(SSH_LOG_PROTOCOL, "=== my_channel_close_function", "Channel %d:%d closed by remote. State=%d", channel->local_channel, channel->remote_channel, channel->state);
+    //_ssh_log(SSH_LOG_PROTOCOL, "=== my_channel_close_function", "Channel %d:%d closed by remote. State=%d", channel->local_channel, channel->remote_channel, channel->state);
 
     stack_socket_close(event_fd_data);
 }
@@ -215,12 +216,12 @@ void my_channel_wait_eof_function(ssh_session session, ssh_channel channel, void
 
     if (pending_conn_data->event_fd_data == NULL) {
         SAFE_FREE(pending_conn_data->buf);
-        _ssh_log(SSH_LOG_PROTOCOL, "=== my_channel_WAIT_eof_function", "Got EOF on channel %d:%d. Struct is not filled. Weird",
-            channel->local_channel, channel->remote_channel);
+        // _ssh_log(SSH_LOG_PROTOCOL, "=== my_channel_WAIT_eof_function", "Got EOF on channel %d:%d. Struct is not filled. Weird",
+        //     channel->local_channel, channel->remote_channel);
     }
     else {
-        _ssh_log(SSH_LOG_PROTOCOL, "=== my_channel_WAIT_eof_function", "Got EOF on channel %d:%d. Shuting down write on socket (fd = %d).",
-            channel->local_channel, channel->remote_channel, pending_conn_data->event_fd_data->fd);
+        // _ssh_log(SSH_LOG_PROTOCOL, "=== my_channel_WAIT_eof_function", "Got EOF on channel %d:%d. Shuting down write on socket (fd = %d).",
+        //     channel->local_channel, channel->remote_channel, pending_conn_data->event_fd_data->fd);
 
         //stack_socket_close(pending_conn_data->event_fd_data); <<== Dangeous!
         pending_conn_data->closed = 1;
@@ -230,7 +231,7 @@ void my_channel_wait_eof_function(ssh_session session, ssh_channel channel, void
 static void my_channel_eof_function(ssh_session session, ssh_channel channel, void* userdata) {
     (void)session;
     struct event_fd_data_struct* event_fd_data = (struct event_fd_data_struct*)userdata;
-    _ssh_log(SSH_LOG_PROTOCOL, "=== my_channel_eof_function", "Got EOF on channel %d:%d. Shuting down write on socket (fd = %d).", channel->local_channel, channel->remote_channel, event_fd_data->fd);
+    // _ssh_log(SSH_LOG_PROTOCOL, "=== my_channel_eof_function", "Got EOF on channel %d:%d. Shuting down write on socket (fd = %d).", channel->local_channel, channel->remote_channel, event_fd_data->fd);
 
     stack_socket_close(event_fd_data);
 }
@@ -238,7 +239,7 @@ static void my_channel_eof_function(ssh_session session, ssh_channel channel, vo
 static void my_channel_exit_status_function(ssh_session session, ssh_channel channel, int exit_status, void* userdata) {
     (void)session;
     struct event_fd_data_struct* event_fd_data = (struct event_fd_data_struct*)userdata;
-    _ssh_log(SSH_LOG_PROTOCOL, "=== my_channel_exit_status_function", "Got exit status %d on channel %d:%d fd = %d.", exit_status, channel->local_channel, channel->remote_channel, event_fd_data->fd);
+    // _ssh_log(SSH_LOG_PROTOCOL, "=== my_channel_exit_status_function", "Got exit status %d on channel %d:%d fd = %d.", exit_status, channel->local_channel, channel->remote_channel, event_fd_data->fd);
 }
 
 static int my_channel_data_wait_function(ssh_session session, ssh_channel channel, void* data, uint32_t len, int is_stderr, void* userdata) {
@@ -259,12 +260,12 @@ static int my_channel_data_function(ssh_session session, ssh_channel channel, vo
         return 0;
     }
 
-    _ssh_log(SSH_LOG_PROTOCOL, "=== my_channel_data_function", "%d bytes waiting on channel %d:%d for reading. Fd = %d", len, channel->local_channel, channel->remote_channel, event_fd_data->fd);
+    //_ssh_log(SSH_LOG_PROTOCOL, "=== my_channel_data_function", "%d bytes waiting on channel %d:%d for reading. Fd = %d", len, channel->local_channel, channel->remote_channel, event_fd_data->fd);
     if (len > 0) {
         i = send(event_fd_data->fd, data, len, SEND_FLAGS);
     }
     if (i < 0) {
-        _ssh_log(SSH_LOG_WARNING, "=== my_channel_data_function", "Writing to tcp socket %d: %s", event_fd_data->fd, strerror(errno));
+        // _ssh_log(SSH_LOG_WARNING, "=== my_channel_data_function", "Writing to tcp socket %d: %s", event_fd_data->fd, strerror(errno));
         stack_socket_close(event_fd_data);
     }
     else {
@@ -320,8 +321,8 @@ static int my_fd_data_function(socket_t fd, int revents, void* userdata) {
     blocking = ssh_is_blocking(session);
     ssh_set_blocking(session, 0);
 
-    _ssh_log(SSH_LOG_FUNCTIONS, "=== my_fd_data_function", "Trying to read from tcp socket fd = %d... (Channel %d:%d state=%d)",
-        event_fd_data->fd, channel->local_channel, channel->remote_channel, channel->state);
+    // _ssh_log(SSH_LOG_FUNCTIONS, "=== my_fd_data_function", "Trying to read from tcp socket fd = %d... (Channel %d:%d state=%d)",
+    //     event_fd_data->fd, channel->local_channel, channel->remote_channel, channel->state);
 #ifdef _WIN32
     struct sockaddr from;
     int fromlen = sizeof(from);
@@ -330,7 +331,7 @@ static int my_fd_data_function(socket_t fd, int revents, void* userdata) {
     len = recv(event_fd_data->fd, buf, sizeof(buf), 0);
 #endif // _WIN32
     if (len < 0) {
-        _ssh_log(SSH_LOG_WARNING, "=== my_fd_data_function", "Reading from tcp socket: %s", strerror(errno));
+        // _ssh_log(SSH_LOG_WARNING, "=== my_fd_data_function", "Reading from tcp socket: %s", strerror(errno));
 
         ssh_channel_send_eof(channel);
     }
@@ -770,7 +771,7 @@ int handle_socks_connection(ssh_message message, struct thread_info_struct* thre
     int rc = pthread_create(&thread, NULL, connect_thread_worker, thread_info);
     if (rc != 0) {
         _ssh_log(SSH_LOG_WARNING, "=== auth_password", "Error starting thread: %d", rc);
-        return NULL;
+        return 1;
     }
 #else
     HANDLE thread = (HANDLE)_beginthread(connect_thread_worker, 0, thread_info);
