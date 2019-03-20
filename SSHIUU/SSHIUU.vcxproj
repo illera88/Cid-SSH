@@ -76,12 +76,12 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <AdditionalIncludeDirectories>C:\Users\alberto.garcia\Documents\code\PrecompiledLibraries\windows\libssh_mod\include;C:\Users\alberto.garcia\Documents\code\PrecompiledLibraries\windows\openssl\2017\include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;LIBSSH_STATIC;IS_DEBUG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>legacy_stdio_definitions.lib;Ws2_32.lib;Crypt32.lib;"C:\Users\alberto.garcia\Documents\code\PrecompiledLibraries\windows\openssl\2017\lib\libsslMT.lib";"C:\Users\alberto.garcia\Documents\code\PrecompiledLibraries\windows\openssl\2017\lib\libcryptoMT.lib";"C:\Users\alberto.garcia\Documents\code\PrecompiledLibraries\windows\libssh_mod\libs\ssh_MT_x86_d.lib";"C:\Users\alberto.garcia\Documents\code\PrecompiledLibraries\windows\zlib\VS2017\zlib_MT_x86.lib";%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>legacy_stdio_definitions.lib;Ws2_32.lib;Crypt32.lib;msvcrtd.lib;"C:\Users\alberto.garcia\Documents\code\PrecompiledLibraries\windows\openssl\2017\lib\libsslMT.lib";"C:\Users\alberto.garcia\Documents\code\PrecompiledLibraries\windows\openssl\2017\lib\libcryptoMT.lib";"C:\Users\alberto.garcia\Documents\code\PrecompiledLibraries\windows\libssh_mod\libs\ssh_MT_x86_d.lib";"C:\Users\alberto.garcia\Documents\code\PrecompiledLibraries\windows\zlib\VS2017\zlib_MT_x86.lib";%(AdditionalDependencies)</AdditionalDependencies>
       <Profile>true</Profile>
     </Link>
   </ItemDefinitionGroup>

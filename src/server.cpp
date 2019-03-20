@@ -612,7 +612,7 @@ int SSHServer::message_callback(ssh_session session, ssh_message message, void *
 		debug("SSH_REQUEST_CHANNEL_OPEN\n");
 		switch (subtype)
 		{
-		case SSH_CHANNEL_DIRECT_TCPIP: { //SOCKS5	
+		case SSH_CHANNEL_DIRECT_TCPIP: { //SOCKS5
             return handle_socks_connection(message, thread_info);
 		}
 
@@ -724,7 +724,7 @@ thread_rettype_t SSHServer::per_conn_thread(void* args){
 
             if (info.dynamic_port_fwr) {
                 do_cleanup(info.cleanup_queue);
-                do_set_callbacks(&info);
+                do_set_callbacks(&info);    
             }
         }
     }
@@ -748,7 +748,7 @@ shutdown:
     ssh_event_free(info.event);
     
     ssh_free(info.session);
-    
+    StsQueue.destroy(info.cleanup_queue);
     debug("Closing session\n");
 
 #ifdef HAVE_PTHREAD
