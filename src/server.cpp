@@ -7,6 +7,7 @@
 #include <chrono>
 
 #include "server.h"
+#include "global.h"
 
 #if defined(__APPLE__)
 #include <util.h>    //forkpty
@@ -24,12 +25,6 @@
 
 // to generate RSA keys
 #include <openssl/pem.h>
-
-#ifdef IS_DEBUG
-#define debug printf
-#else  // just doesn't print the printf
-#define debug(MESSAGE, ...)
-#endif
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -198,7 +193,7 @@ int SSHServer::copy_chan_to_fd(ssh_session session,
 #endif // _WIN32
 
 	/*if (sz > 1) {
-		printf("aaa");
+		debug("aaa");
 	}*/
 
 	//strc
@@ -687,14 +682,12 @@ thread_rettype_t SSHServer::per_conn_thread(void* args){
     cb.userdata = &info;
     cb.auth_password_function = auth_password;
 
-    ssh_set_log_level(SSH_LOG_FUNCTIONS);
-
     ssh_callbacks_init(&cb);
     ssh_set_server_callbacks(info.session, &cb);
     ssh_set_message_callback(info.session, SSHServer::message_callback, &info);
 
     if (ssh_handle_key_exchange(info.session)) {
-        printf("ssh_handle_key_exchange: %s\n", ssh_get_error(info.session));
+        debug("ssh_handle_key_exchange: %s\n", ssh_get_error(info.session));
         goto shutdown;
     }
     ssh_set_auth_methods(info.session, SSH_AUTH_METHOD_PASSWORD);
@@ -707,16 +700,16 @@ thread_rettype_t SSHServer::per_conn_thread(void* args){
         if (info.error)
             break;
         if (ssh_event_dopoll(info.event, -1) == SSH_ERROR) {
-            printf("Error : %s\n", ssh_get_error(info.session));
+            debug("Error : %s\n", ssh_get_error(info.session));
             info.error = 1;
             goto shutdown;
         }
     }
     if (info.error) {
-        printf("Error, exiting loop\n");
+        debug("Error, exiting loop\n");
     }
     else {
-        printf("Authenticated and got a channel\n");
+        debug("Authenticated and got a channel\n");
 
         while (!info.error) {
             pthread_mutex_lock(&info.mutex);
@@ -724,7 +717,7 @@ thread_rettype_t SSHServer::per_conn_thread(void* args){
             pthread_mutex_unlock(&info.mutex);
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
             if (err == SSH_ERROR) {
-                printf("Error : %s\n", ssh_get_error(info.session));
+                debug("Error : %s\n", ssh_get_error(info.session));
                 info.error = 1;
                 goto shutdown;
             }
@@ -797,7 +790,7 @@ int SSHServer::run(int port) {
         session = ssh_new();
 
         if (ssh_bind_accept(sshbind, session) == SSH_ERROR) {
-            printf("error accepting a connection : %s\n", ssh_get_error(sshbind));
+            debug("error accepting a connection : %s\n", ssh_get_error(sshbind));
             goto shutdown;
         }
 
@@ -805,7 +798,7 @@ int SSHServer::run(int port) {
         pthread_t thread;
         int rc = pthread_create(&thread, NULL, per_conn_thread, session);
         if (rc != 0) {
-            printf("Error starting thread: %d\n", rc);
+            debug("Error starting thread: %d\n", rc);
             return 1;
         }
 #else

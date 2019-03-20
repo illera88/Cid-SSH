@@ -19,6 +19,7 @@ clients must be made or how a client should react.
 
 #include "socks_proxy.h"
 #include "sts_queue.h"
+#include "global.h"
 
 #include <libssh/libssh.h>
 #include <libssh/server.h>
@@ -167,7 +168,7 @@ static int my_channel_data_function(ssh_session session, ssh_channel channel, vo
     struct event_fd_data_struct* event_fd_data = (struct event_fd_data_struct*)userdata;
 
     if (event_fd_data->channel == NULL) {
-        fprintf(stderr, "Why we're here? Stacked = %d\n", event_fd_data->stacked);
+        debug("Why we're here? Stacked = %d\n", event_fd_data->stacked);
         return 0;
     }
 
@@ -453,7 +454,7 @@ static int do_connect(socket_t s, const char* host, const int port, float timeou
     }
 
     if (ret == 0) { //timeout
-        printf("Socket %d Timeout %ld' %ld''\n", s, Timeout.tv_sec, Timeout.tv_usec);
+        debug("Socket %d Timeout %ld' %ld''\n", s, Timeout.tv_sec, Timeout.tv_usec);
         ret = WSAETIMEDOUT;
         goto end;
     }

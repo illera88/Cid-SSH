@@ -13,6 +13,7 @@ SET(SSHIUU_HEADER_FILES
     src/server.h
     src/sts_queue.h
     src/socks_proxy.h
+    src/global.h
     #src/client.h
 )
 

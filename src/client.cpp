@@ -15,12 +15,6 @@
 #include <arpa/inet.h>
 #endif // _WIN32
 
-#ifdef IS_DEBUG
-#define debug printf
-#else  // just doesn't print the printf
-#define debug(MESSAGE, ...)
-#endif
-
 int SSHClient::should_terminate = 0;
 
 SSHClient::SSHClient()
