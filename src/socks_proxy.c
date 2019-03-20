@@ -508,9 +508,11 @@ end:
 }
 
 static int do_connect_blocking(socket_t s, const char* dest_hostname, int dest_port, float timeout) {
-    struct sockaddr_in sin;
-    struct hostent* host;
     struct timeval tv;
+    char port_str[15];
+    struct addrinfo* result = NULL;
+    struct addrinfo hints;
+    int ret = -1;
     tv.tv_sec = (long)timeout;
     tv.tv_usec = (long)((timeout - tv.tv_sec) * 1000000);
 
@@ -524,21 +526,26 @@ static int do_connect_blocking(socket_t s, const char* dest_hostname, int dest_p
         return -1;
     }
 
-    host = gethostbyname(dest_hostname);
-    if (host == NULL) {
-        _ssh_log(SSH_LOG_WARNING, "=== do_connect_blocking", "ERROR, no such host: %s", dest_hostname);
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_protocol = IPPROTO_TCP;
+
+    snprintf(port_str, sizeof(port_str), "%d", dest_port);
+
+    ret = getaddrinfo(dest_hostname, port_str, &hints, &result);
+    if (ret != 0) {
+        _ssh_log(SSH_LOG_WARNING, "=== do_connect_blocking", "Couldn't get address info. Err %d", ret);
         return -1;
     }
 
-    memset((char*)& sin, '\0', sizeof(sin));
-    sin.sin_family = AF_INET;
-    memcpy((char*)& sin.sin_addr.s_addr, (char*)host->h_addr, host->h_length);
-    sin.sin_port = htons(dest_port);
-
-    if (connect(s, (struct sockaddr*)& sin, sizeof(sin)) < 0) {
+    if (connect(s, result->ai_addr, result->ai_addrlen) != -1) {
         _ssh_log(SSH_LOG_WARNING, "=== do_connect_blocking", "ERROR connecting: %s", strerror(errno));
+        freeaddrinfo(result);
         return -1;
     }
+
+    freeaddrinfo(result);
 
     return 0;
 }
