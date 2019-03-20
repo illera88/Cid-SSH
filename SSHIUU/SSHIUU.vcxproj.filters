@@ -47,5 +47,8 @@
     <ClInclude Include="..\src\socks_proxy.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\global.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

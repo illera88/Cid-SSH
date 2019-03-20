@@ -7,6 +7,7 @@
 #include <thread>
 
 #include "client.h"
+#include "global.h"
 
 #ifdef _WIN32
 #include <Ws2tcpip.h>
