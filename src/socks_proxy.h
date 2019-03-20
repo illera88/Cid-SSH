@@ -1,8 +1,8 @@
 #pragma once
 
-#include <config.h>
 
 #include <libssh/libssh.h>
+#include <config.h>
 
 #include "sts_queue.h"
 
@@ -73,7 +73,7 @@ static int set_callbacks(struct event_fd_data_struct* event_fd_data, struct thre
 
 void _close_socket(struct event_fd_data_struct event_fd_data);
 
-thread_rettype_t connect_thread_worker(void* userdata);
+static thread_rettype_t connect_thread_worker(void* userdata);
 
 int handle_socks_connection(ssh_message message, struct thread_info_struct* thread_info);
 

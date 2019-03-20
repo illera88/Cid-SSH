@@ -81,7 +81,6 @@ static void push(StsHeader* header, void* elem) {
     pthread_mutex_unlock(&header->mutex);
 }
 
-static void* pop(StsHeader* header);
 static void* pop(StsHeader* header) {    
     pthread_mutex_lock(&header->mutex);
     StsElement* head = header->head;

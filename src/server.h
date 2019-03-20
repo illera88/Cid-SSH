@@ -42,6 +42,7 @@ struct my_SOCKS_callback_args {
 
 class SSHServer
 {
+	#ifdef _WIN32
 	typedef HRESULT(WINAPI *my_CreatePseudoConsole)(_In_ COORD,
 		_In_ HANDLE,
 		_In_ HANDLE,
@@ -51,6 +52,7 @@ class SSHServer
 	typedef void(WINAPI *my_ResizePseudoConsole)(_In_ HPCON hPC, _In_ COORD size);
 
 	typedef void(WINAPI *my_ClosePseudoConsole)(_Out_ HPCON);
+	#endif
 
 public:
 #ifdef _WIN32
@@ -61,7 +63,6 @@ public:
     static int copy_chan_to_fd(ssh_session session, ssh_channel channel, void * data, uint32_t len, int is_stderr, void * userdata);
     static void chan_close(ssh_session session, ssh_channel channel, void * userdata);
     SSHServer();
-
 	
 	static int run(int port);
 

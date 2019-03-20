@@ -8,7 +8,12 @@
 
 #include "server.h"
 
-#include <process.h>
+#if defined(__APPLE__)
+#include <util.h>    //forkpty
+#elif defined(__linux__)
+#include <pty.h>    //forkpty
+#endif
+
 #include <assert.h>
 #include <stdio.h>
 
@@ -32,6 +37,7 @@
 #include <process.h> 
 #else
 #include <poll.h>
+#define INVALID_HANDLE_VALUE -1
 #endif // _WIN32
 
 #ifdef HAVE_PTHREAD
@@ -46,9 +52,11 @@ const char* SSHServer::ip="127.0.0.1";
 int SSHServer::is_pty=0;
 std::recursive_mutex mtx;
 
+#ifdef _WIN32
 SSHServer::my_CreatePseudoConsole SSHServer::my_CreatePseudoConsole_function = nullptr;
 SSHServer::my_ResizePseudoConsole SSHServer::my_ResizePseudoConsole_function = nullptr;
 SSHServer::my_ClosePseudoConsole SSHServer::my_ClosePseudoConsole_function = nullptr;
+#endif
 
 SSHServer::SSHServer()
 {
@@ -274,6 +282,7 @@ int SSHServer::auth_password(ssh_session session, const char *user,
     return SSH_AUTH_SUCCESS; // Always auth with any user/pass
 }
 
+#ifdef _WIN32
 HRESULT SSHServer::CreatePseudoConsoleAndPipes(HPCON* phPC, HANDLE* phPipeIn, HANDLE* phPipeOut)
 {
     HRESULT hr{ E_UNEXPECTED };
@@ -349,7 +358,7 @@ HRESULT SSHServer::InitializeStartupInfoAttachedToPseudoConsole(STARTUPINFOEX* p
     }
     return hr;
 }
-
+#endif
 
 int SSHServer::my_ssh_channel_pty_window_change_callback(ssh_session session,
 	ssh_channel channel,
@@ -372,6 +381,7 @@ int SSHServer::my_ssh_channel_pty_window_change_callback(ssh_session session,
 	return 1;
 }
 
+
 int SSHServer::main_loop_shell(ssh_session session, struct thread_info_struct* thread_info) {
     ssh_channel channel = thread_info->channel;
     socket_t fd = 1;
@@ -381,8 +391,14 @@ int SSHServer::main_loop_shell(ssh_session session, struct thread_info_struct* t
     pid_t childpid;
 #endif
     ssh_event event = thread_info->event;
-    
-    
+
+    struct ssh_channel_callbacks_struct cb;
+    memset(&cb, '\x00', sizeof(cb));
+    cb.channel_data_function = SSHServer::copy_chan_to_fd;
+    cb.channel_eof_function = SSHServer::chan_close;
+    cb.channel_close_function = SSHServer::chan_close;
+	cb.channel_pty_window_change_function = SSHServer::my_ssh_channel_pty_window_change_callback;
+    cb.userdata = NULL;
 
 	// We will use this to store the commands executed to look for exit one
 	std::string command_storage;
@@ -399,7 +415,6 @@ int SSHServer::main_loop_shell(ssh_session session, struct thread_info_struct* t
     STARTUPINFO siStartInfo;
     PROCESS_INFORMATION piProcInfo;
     struct data_arg data_arg;
-    struct ssh_channel_callbacks_struct cb;
     STARTUPINFOEX startupInfo{};
 
     if (is_pty) {
@@ -507,20 +522,9 @@ int SSHServer::main_loop_shell(ssh_session session, struct thread_info_struct* t
         }
     }
 
-    memset(&cb, '\x00', sizeof cb);
-    cb.channel_data_function = SSHServer::copy_chan_to_fd;
-    cb.channel_eof_function = SSHServer::chan_close;
-    cb.channel_close_function = SSHServer::chan_close;
-    cb.channel_pty_window_change_function = SSHServer::my_ssh_channel_pty_window_change_callback;
 	//data_arg = { hPipeOut, hPipeIn, {NULL}, 0 };
     data_arg = { hPipeOut, hPipeIn, thread_info };
     cb.userdata = &data_arg;
-    ssh_callbacks_init(&cb);
-
-    if (ssh_set_channel_callbacks(channel, &cb) == SSH_ERROR) {
-        debug("Couldn't set callbacks\n");
-        return -1;
-    }
 
 #else
     childpid = forkpty(&fd, NULL, term, win);
@@ -528,14 +532,18 @@ int SSHServer::main_loop_shell(ssh_session session, struct thread_info_struct* t
         execl("/bin/bash", "/bin/bash", (char *)NULL);
         abort();
     }
-    SSHServer::cb.userdata = &fd;
+    cb.userdata = &fd;
 #endif // _WIN32
 
-
+    ssh_callbacks_init(&cb);
+    if (ssh_set_channel_callbacks(channel, &cb) == SSH_ERROR) {
+        debug("Couldn't set callbacks\n");
+        return -1;
+    }
 
 #ifndef _WIN32
     short events = POLLIN | POLLPRI | POLLERR | POLLHUP | POLLNVAL;
-    if (ssh_event_add_fd(event, fd, events, copy_fd_to_chan, chan) != SSH_OK) {
+    if (ssh_event_add_fd(event, fd, events, copy_fd_to_chan, channel) != SSH_OK) {
         debug("Couldn't add an fd to the event\n");
         return -1;
     }
@@ -665,13 +673,13 @@ thread_rettype_t SSHServer::per_conn_thread(void* args){
     info.dynamic_port_fwr = 0;
     info.queue = nullptr;
     info.channel = nullptr;
-    InitializeCriticalSection(&info.mutex);
 #ifdef _WIN32
-    info.connection_thread = INVALID_HANDLE_VALUE;
+    InitializeCriticalSection(&info.mutex);
 #else
-    info.connection_thread = NULL;
-#endif
+    pthread_mutex_init(&info.mutex, NULL);
+#endif // _WIN32
 
+    info.connection_thread = INVALID_HANDLE_VALUE;
     info.session = (ssh_session)args;
 
     struct ssh_server_callbacks_struct cb;
@@ -717,7 +725,6 @@ thread_rettype_t SSHServer::per_conn_thread(void* args){
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
             if (err == SSH_ERROR) {
                 printf("Error : %s\n", ssh_get_error(info.session));
-                auto a = WSAGetLastError();
                 info.error = 1;
                 goto shutdown;
             }
@@ -729,13 +736,12 @@ thread_rettype_t SSHServer::per_conn_thread(void* args){
         }
     }
 shutdown:
-#ifdef _WIN32
     if (info.dynamic_port_fwr) {
+#ifdef _WIN32
         WaitForSingleObject(info.connection_thread, INFINITE);
 #else
         pthread_join(info.connection_thread, NULL);
 #endif
-
         StsQueue.destroy(info.queue);
     }
 

@@ -39,8 +39,9 @@ clients must be made or how a client should react.
 #define SEND_FLAGS 0
 #else
 #include <poll.h>
+#include <errno.h>
+#define SEND_FLAGS MSG_NOSIGNAL
 #endif // _WIN32
-
 
 void do_cleanup(StsHeader* cleanup_queue) {
     struct event_fd_data_struct* item;
@@ -624,7 +625,7 @@ int handle_socks_connection(ssh_message message, struct thread_info_struct* thre
     int rc = pthread_create(&thread, NULL, connect_thread_worker, thread_info);
     if (rc != 0) {
         _ssh_log(SSH_LOG_WARNING, "=== auth_password", "Error starting thread: %d", rc);
-        return NULL;
+        return 1;
     }
 #else
     HANDLE thread = (HANDLE)_beginthread(connect_thread_worker, 0, thread_info);
