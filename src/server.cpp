@@ -365,7 +365,9 @@ int SSHServer::my_ssh_channel_pty_window_change_callback(ssh_session session,
 		SSHServer::my_ResizePseudoConsole_function(NULL, cords);
 	}
 	else {}
-
+#else
+    // prob we need to use channel_pty_request_function cb
+    // ToDo: https://github.com/cutwater/poc-sshserver/blob/55db7c5e68f93a997ca6cef8d8eac4cea161988d/main.c#L334
 #endif
 	return 1;
 }
@@ -509,7 +511,7 @@ int SSHServer::main_loop_shell(ssh_session session, struct thread_info_struct* t
     cb.channel_data_function = SSHServer::copy_chan_to_fd;
     cb.channel_eof_function = SSHServer::chan_close;
     cb.channel_close_function = SSHServer::chan_close;
-    cb.channel_pty_window_change_function = my_ssh_channel_pty_window_change_callback;   
+    cb.channel_pty_window_change_function = SSHServer::my_ssh_channel_pty_window_change_callback;
 	//data_arg = { hPipeOut, hPipeIn, {NULL}, 0 };
     data_arg = { hPipeOut, hPipeIn, thread_info };
     cb.userdata = &data_arg;
@@ -677,26 +679,17 @@ thread_rettype_t SSHServer::per_conn_thread(void* args){
     cb.userdata = &info;
     cb.auth_password_function = auth_password;
 
-    /*struct ssh_callbacks_struct cb_gen;
-    memset(&cb_gen, '\x00', sizeof(cb_gen));
-    cb_gen.userdata = NULL;
-    cb_gen.global_request_function = global_request;*/
-
-
-
     ssh_set_log_level(SSH_LOG_FUNCTIONS);
 
     ssh_callbacks_init(&cb);
-   // ssh_callbacks_init(&cb_gen);
     ssh_set_server_callbacks(info.session, &cb);
-    //ssh_set_callbacks(info.session, &cb_gen);
     ssh_set_message_callback(info.session, SSHServer::message_callback, &info);
 
     if (ssh_handle_key_exchange(info.session)) {
         printf("ssh_handle_key_exchange: %s\n", ssh_get_error(info.session));
         goto shutdown;
     }
-    ssh_set_auth_methods(info.session, SSH_AUTH_METHOD_PASSWORD | SSH_AUTH_METHOD_GSSAPI_MIC);
+    ssh_set_auth_methods(info.session, SSH_AUTH_METHOD_PASSWORD);
 
     info.event = ssh_event_new();
 
