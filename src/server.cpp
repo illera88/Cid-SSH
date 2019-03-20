@@ -7,7 +7,6 @@
 #include <chrono>
 
 #include "server.h"
-#include "shell-host.h"
 
 #include <process.h>
 #include <assert.h>
@@ -636,7 +635,6 @@ int SSHServer::message_callback(ssh_session session, ssh_message message, void *
                 debug("Weird that we are getting SSH_CHANNEL_REQUEST_SHELL and we did not get SSH_CHANNEL_SESSION before\n");
                 return 1;
             }
-            thread_info->borrame = 1;
 			std::thread(main_loop_shell, session, thread_info).detach();
 			return 0;
 		}
@@ -661,10 +659,9 @@ thread_rettype_t SSHServer::per_conn_thread(void* args){
     info.error = 0;
     info.session = 0;
     info.sockets_cnt = 0;
-    info.cleanup_stack = NULL;
+    info.cleanup_queue = StsQueue.create();
     info.dynamic_port_fwr = 0;
     info.queue = nullptr;
-    info.borrame = 0;
     info.channel = nullptr;
     InitializeCriticalSection(&info.mutex);
 #ifdef _WIN32
@@ -721,9 +718,8 @@ thread_rettype_t SSHServer::per_conn_thread(void* args){
         printf("Authenticated and got a channel\n");
 
         while (!info.error) {
-            /* */
             pthread_mutex_lock(&info.mutex);
-            int err = ssh_event_dopoll(info.event, 200);
+            int err = ssh_event_dopoll(info.event, 50);
             pthread_mutex_unlock(&info.mutex);
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
             if (err == SSH_ERROR) {
@@ -734,7 +730,7 @@ thread_rettype_t SSHServer::per_conn_thread(void* args){
             }
 
             if (info.dynamic_port_fwr) {
-                do_cleanup(&info.cleanup_stack);
+                do_cleanup(info.cleanup_queue);
                 do_set_callbacks(&info);
             }
         }
@@ -823,7 +819,5 @@ shutdown:
 	ssh_finalize();
 	return 0;
 }
-
-
 
 

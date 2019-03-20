@@ -73,8 +73,6 @@ void parse_args(int argc, char** argv,
 
 }
 
-
-
 int main(int argc, char** argv){
     char* C2_port = NULL;    
     char* C2_host = NULL;

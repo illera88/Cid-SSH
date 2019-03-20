@@ -24,9 +24,6 @@
     <ClCompile Include="..\src\SSHIUU.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\shell-host.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\sts_queue.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -39,9 +36,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\src\client.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\shell-host.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\src\SSHIUU.h">

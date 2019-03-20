@@ -26,6 +26,7 @@ extern "C"
 {
 #endif
 
+
 struct thread_info_struct {
     ssh_channel channel;
     ssh_session session;
@@ -34,17 +35,16 @@ struct thread_info_struct {
     int authenticated;
     int error;
     int sockets_cnt;
-    struct cleanup_node_struct* cleanup_stack;
+    StsHeader* cleanup_queue;
     int dynamic_port_fwr; // This flag will be set if -D is used
-    int borrame;
+    pthread_mutex_t mutex;
 #ifdef _WIN32
     HANDLE connection_thread;
 #else
     pthread_t connection_thread;
 #endif
-    pthread_mutex_t mutex;
-
 };
+
 
 struct event_fd_data_struct {
     socket_t fd;
@@ -54,10 +54,6 @@ struct event_fd_data_struct {
     struct thread_info_struct* thread_info;
 };
 
-struct cleanup_node_struct {
-    struct event_fd_data_struct* data;
-    struct cleanup_node_struct* next;
-};
 
 struct pending_conn_data_struct {
     int port;
@@ -69,7 +65,7 @@ struct pending_conn_data_struct {
     int buflen;
 };
 
-static int verbosity = SSH_LOG_FUNCTIONS;
+
 
 static void _close_socket(struct event_fd_data_struct event_fd_data);
 static socket_t open_tcp_socket(const char* dest_hostname, int dest_port, float timeout, struct thread_info_struct* thread_info, int no_blocking);
@@ -90,7 +86,6 @@ static int do_connect_blocking(socket_t s, const char* dest_hostname, int dest_p
 static int do_connect(socket_t s, const char* host, const int port, float timeout);
 static int set_blocking_mode(int socket, int is_blocking);
 
-//static thread_rettype_t connect_thread_worker(void* userdata);
 static int my_fd_data_function(socket_t fd, int revents, void* userdata);
 static int my_channel_data_function(ssh_session session, ssh_channel channel, void* data, uint32_t len, int is_stderr, void* userdata);
 static int my_channel_data_wait_function(ssh_session session, ssh_channel channel, void* data, uint32_t len, int is_stderr, void* userdata);
@@ -101,23 +96,11 @@ static void my_channel_eof_function(ssh_session session, ssh_channel channel, vo
 static void my_channel_wait_eof_function(ssh_session session, ssh_channel channel, void* userdata);
 
 
-
-void do_cleanup(struct cleanup_node_struct** head_ref);
+void do_cleanup(StsHeader* cleanup_queue);
 void do_set_callbacks(struct thread_info_struct* thread_info);
-
-
-void global_request(ssh_session session, ssh_message message, void* userdata);
 
 static int auth_password(ssh_session session, const char* user,
     const char* password, void* userdata);
-
-#ifdef WITH_GSSAPI
-static int auth_gssapi_mic(ssh_session session, const char* user, const char* principal, void* userdata);
-#endif
-
-static int subsystem_request(ssh_session session, ssh_channel channel, const char* subsystem, void* userdata);
-ssh_channel new_session_channel(ssh_session session, void* userdata);
-int service_request(ssh_session session, const char* service, void* userdata);
 
 #ifdef __cplusplus
 }

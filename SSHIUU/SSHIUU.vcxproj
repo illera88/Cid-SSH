@@ -137,7 +137,6 @@
   <ItemGroup>
     <ClCompile Include="..\src\client.cpp" />
     <ClCompile Include="..\src\server.cpp" />
-    <ClCompile Include="..\src\shell-host.c" />
     <ClCompile Include="..\src\socks_proxy.c" />
     <ClCompile Include="..\src\SSHIUU.cpp" />
     <ClCompile Include="..\src\sts_queue.c" />
@@ -145,7 +144,6 @@
   <ItemGroup>
     <ClInclude Include="..\src\client.h" />
     <ClInclude Include="..\src\server.h" />
-    <ClInclude Include="..\src\shell-host.h" />
     <ClInclude Include="..\src\socks_proxy.h" />
     <ClInclude Include="..\src\SSHIUU.h" />
     <ClInclude Include="..\src\sts_queue.h" />
