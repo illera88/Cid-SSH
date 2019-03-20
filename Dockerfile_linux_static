@@ -1,0 +1,7 @@
+FROM alpine:latest
+RUN apk add --no-cache build-base cmake autoconf libtool pkgconf git mercurial file linux-headers
+COPY . /Cid-SSH/
+WORKDIR /Cid-SSH/
+RUN rm -rf build && mkdir build
+RUN cd build && git clone https://github.com/illera88/PrecompiledLibraries
+RUN cd build && cmake -DLIBSSH_STATIC_PATH=/Cid-SSH/build/PrecompiledLibraries/linux/libssh_mod/ -DOPENSSL_STATIC_PATH=/Cid-SSH/build/PrecompiledLibraries/linux/openssl/ -DCMAKE_BUILD_TYPE=Release .. && make 
