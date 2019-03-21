@@ -850,6 +850,64 @@ shutdown:
 #endif
 }
 
+
+/* This is a copy to libssh bind_socket() but without setting SO_REUSEADDR
+    so we can detect when an port is in use*/
+socket_t SSHServer::bind_socket_non_reuse(ssh_bind sshbind, const char* hostname,
+    int port) {
+    char port_c[6];
+    struct addrinfo* ai;
+    struct addrinfo hints;
+    int opt = 1;
+    socket_t s;
+    int rc;
+
+    memset(&hints, 0, sizeof(hints));
+
+    hints.ai_flags = AI_PASSIVE;
+    hints.ai_socktype = SOCK_STREAM;
+
+    snprintf(port_c, 6, "%d", port);
+    rc = getaddrinfo(hostname, port_c, &hints, &ai);
+    if (rc != 0) {
+        return SSH_INVALID_SOCKET;
+    }
+
+    s = socket(ai->ai_family,
+        ai->ai_socktype,
+        ai->ai_protocol);
+    if (s == SSH_INVALID_SOCKET) {
+        freeaddrinfo(ai);
+        return SSH_INVALID_SOCKET;
+    }
+
+    // this is the part that I deleted
+    //if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR,
+    //    (char*)& opt, sizeof(opt)) < 0) {
+    //   /* ssh_set_error(sshbind,
+    //        SSH_FATAL,
+    //        "Setting socket options failed: %s",
+    //        strerror(errno));*/
+    //    freeaddrinfo(ai);
+    //    CLOSE_SOCKET(s);
+    //    return -1;
+    //}
+
+    if (bind(s, ai->ai_addr, ai->ai_addrlen) != 0) {
+        freeaddrinfo(ai);
+        CLOSE_SOCKET(s);
+        return SSH_INVALID_SOCKET;
+    }
+
+    freeaddrinfo(ai);
+    if (listen(s, 10) < 0) {
+        CLOSE_SOCKET(s);
+        return SSH_INVALID_SOCKET;
+    }
+
+    return s;
+}
+
 int SSHServer::run(int port) {
 #ifdef IS_DEBUG
     int verbosity = SSH_LOG_FUNCTIONS;
@@ -866,17 +924,26 @@ int SSHServer::run(int port) {
     /* Create and configure the ssh session. */
     ssh_bind sshbind = ssh_bind_new();
 
-    //ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_BINDADDR, ip);
+    ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_BINDADDR, ip);
     ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_BINDPORT, &port);
     ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_LOG_VERBOSITY, &verbosity);
     ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_HOSTKEY_MEMORY, priv_key.c_str());
     
+    socket_t s = bind_socket_non_reuse(sshbind, ip, port);
+
+    if (s == SSH_INVALID_SOCKET){
+        debug("Error listening to socket: %s\n", ssh_get_error(sshbind));
+        exit(1);
+    }
+
+    ssh_bind_set_fd(sshbind, s);
 
     /* Listen on 'port' for connections. */
     if (ssh_bind_listen(sshbind) < 0) {
         debug("Error listening to socket: %s\n", ssh_get_error(sshbind));
-        return -1;
+        exit(1);
     }
+
     debug("Listening on port %d.\n", port);
 
     /* Loop forever, waiting for and handling connection attempts. */
@@ -902,7 +969,6 @@ int SSHServer::run(int port) {
 
 shutdown:
 	ssh_bind_free(sshbind);
-	ssh_finalize();
 	return 0;
 }
 

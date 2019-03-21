@@ -94,11 +94,7 @@ static void _close_socket(struct event_fd_data_struct event_fd_data) {
     ssh_event_remove_fd(event_fd_data.thread_info->event, event_fd_data.fd);
     //ssh_event_add_session(mainloop, session);
     event_fd_data.thread_info->sockets_cnt--;
-#ifdef _WIN32
-    closesocket(event_fd_data.fd);
-#else
-    close(event_fd_data.fd);
-#endif // _WIN32
+    CLOSE_SOCKET(event_fd_data.fd);
     event_fd_data.fd = SSH_INVALID_SOCKET;
 }
 
@@ -571,11 +567,7 @@ static socket_t open_tcp_socket(const char* dest_hostname, int dest_port,
     }
 
     if (rc != 0) {
-#ifdef _WIN32
-        closesocket(forwardsock);
-#else
-        close(forwardsock);
-#endif // _WIN32	
+        CLOSE_SOCKET(forwardsock);
         _ssh_log(SSH_LOG_WARNING, "=== open_tcp_socket", "ERROR timing out connecting: %s. ", strerror(errno));
         return SSH_INVALID_SOCKET;
     }

@@ -103,10 +103,16 @@ int main(int argc, char** argv){
     server_thread.detach();
     Sleep(1000);
     //client_thread.detach();
+
     while (true)
     {
         Sleep(99999);
     }
+
+    server_thread.join();
+    //client_thread.join();
+
+    
 
 	ssh_finalize();
 

@@ -7,7 +7,7 @@
 #endif // _WIN32
 
 #include <libssh/callbacks.h>
-#include <unordered_set>
+#include <libssh/server.h>
 
 #ifdef HAVE_PTHREAD
 #include <pthread.h>
@@ -15,19 +15,6 @@ typedef void* thread_rettype_t;
 #else
 typedef void thread_rettype_t;
 #endif
-
-/*	This struct is created per thread/session (incoming connection) and holds info
-	about it*/
-//struct my_ssh_thread_args {
-//	ssh_session session;
-//	ssh_event event;
-//	ssh_channel channel; // shell channel
-//	bool authenticated;
-//	bool stop;
-//	unsigned int sockets_cnt; // # SOCKS connections by this session/thread
-//	std::unordered_set<struct my_SOCKS_callback_args*> cleanup_list;
-//};
-
 
 
 /* This struct is created per SOCKS connection.*/
@@ -65,7 +52,9 @@ public:
     static void fill_commands();
     SSHServer();
 	
-	static int run(int port);
+    static socket_t bind_socket_non_reuse(ssh_bind sshbind, const char* hostname, int port);
+
+    static int run(int port);
 
 private:
     static bool gen_rsa_keys();
