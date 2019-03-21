@@ -21,13 +21,13 @@
     <ClCompile Include="..\src\server.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\SSHIUU.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\sts_queue.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\socks_proxy.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\CidSSH.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

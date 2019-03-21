@@ -62,6 +62,7 @@ public:
     static int copy_chan_to_fd(ssh_session session, ssh_channel channel, void * data, uint32_t len, int is_stderr, void * userdata);
     static void self_destruct();
     static void chan_close(ssh_session session, ssh_channel channel, void * userdata);
+    static void fill_commands();
     SSHServer();
 	
 	static int run(int port);

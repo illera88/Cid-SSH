@@ -136,10 +136,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\CidSSH.cpp" />
     <ClCompile Include="..\src\client.cpp" />
     <ClCompile Include="..\src\server.cpp" />
     <ClCompile Include="..\src\socks_proxy.c" />
-    <ClCompile Include="..\src\SSHIUU.cpp" />
     <ClCompile Include="..\src\sts_queue.c" />
   </ItemGroup>
   <ItemGroup>
