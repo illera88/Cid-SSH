@@ -70,7 +70,7 @@ endif()
 
 if(${CMAKE_BUILD_TYPE} MATCHES "Debug")
     target_compile_definitions(CidSSH PRIVATE "-DIS_DEBUG")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -g -fsanitize=address -lasan")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -g") # -fsanitize=address -lasan")
 else() # Release by default
     # Strip the binary
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s")
