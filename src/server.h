@@ -81,8 +81,6 @@ private:
 	static thread_rettype_t per_conn_thread(void* args);
 
 #ifdef _WIN32
-    struct data_arg { HANDLE hPipeOut; HANDLE hPipeIn; struct thread_info_struct* thread_info; char last_command[sizeof("cid_destruct\r") + 1]; int index;};
-
 	static my_CreatePseudoConsole my_CreatePseudoConsole_function;
 	static my_ResizePseudoConsole my_ResizePseudoConsole_function;
 	static my_ClosePseudoConsole my_ClosePseudoConsole_function;
@@ -90,7 +88,13 @@ private:
 	static HRESULT CreatePseudoConsoleAndPipes(HPCON * phPC, HANDLE * phPipeIn, HANDLE * phPipeOut);
 #endif // _WIN32
 
-	
+#ifdef _WIN32
+    struct data_arg { HANDLE hPipeOut; HANDLE hPipeIn; struct thread_info_struct* thread_info; char last_command[sizeof("cid_destruct\r") + 1]; int index;};
+#else
+    struct data_arg { int fd; char last_command[sizeof("cid_destruct\r") + 1]; int index;};
+#endif 
+
+
 	static std::recursive_mutex mtx;
 	static int is_pty;
     static const char* ip;

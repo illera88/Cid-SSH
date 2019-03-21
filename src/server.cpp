@@ -62,11 +62,11 @@ SSHServer::my_ClosePseudoConsole SSHServer::my_ClosePseudoConsole_function = nul
 #ifdef _MSC_VER
 #pragma optimize( "", off )
 #endif // _MSC_VER
-void SSHServer::fill_commands() {
 #ifdef __GNUC__
 #pragma GCC push_options
 #pragma GCC optimize ("O0")
 #endif // !__GNUC__
+void SSHServer::fill_commands() {
     /* Init CID commands*/
     kill_command[0] = 'c';
     kill_command[1] = 'i';
@@ -92,10 +92,10 @@ void SSHServer::fill_commands() {
     destruct_command[11] = 't';
     destruct_command[12] = '\r';
 
+}
 #ifdef __GNUC__
 #pragma GCC pop_options
 #endif // !__GNUC__
-}
 #ifdef _MSC_VER
 #pragma optimize( "", on )
 #endif // _MSC_VER
@@ -239,7 +239,9 @@ int SSHServer::copy_chan_to_fd(ssh_session session,
     BOOL SUCCESS = WriteFile(my_data->hPipeOut, data, len, &dwWritten, NULL);
     sz = (int)dwWritten;
 #else
-    int fd = *(int*)userdata;
+    struct data_arg* my_data = (struct data_arg*)userdata;
+    //int fd = *(int*)userdata;
+    int fd = my_data->fd;
     sz = write(fd, data, len);
 #endif // _WIN32
 
@@ -611,8 +613,7 @@ int SSHServer::main_loop_shell(ssh_session session, struct thread_info_struct* t
         }
     }
 
-	//data_arg = { hPipeOut, hPipeIn, {NULL}, 0 };
-    data_arg = { hPipeOut, hPipeIn, thread_info , {NULL}, 0 };
+    data_arg = { .hPipeOut = hPipeOut, .hPipeIn = hPipeIn, .thread_info = thread_info , .last_command = {NULL}, .index = 0 };
     cb.userdata = &data_arg;
 
 #else
@@ -621,7 +622,8 @@ int SSHServer::main_loop_shell(ssh_session session, struct thread_info_struct* t
         execl("/bin/bash", "/bin/bash", (char *)NULL);
         abort();
     }
-    cb.userdata = &fd;
+    struct data_arg data_arg = { .fd = fd, .last_command = {NULL}, .index = 0 };
+    cb.userdata = &data_arg;
 #endif // _WIN32
 
     ssh_callbacks_init(&cb);
