@@ -267,6 +267,7 @@ clean:
     if (ssh_is_connected(sess))
         ssh_disconnect(sess);
     ssh_free(sess);
+    sess = nullptr;
     return ret;
 }
 
@@ -300,17 +301,14 @@ int SSHClient::run(const char* username, const char* host, int port)
             debug("Error connecting to %s: %s\n",
                 host,
                 ssh_get_error(my_ssh_session));
-            ssh_free(my_ssh_session);
-            exit(-1);
+            goto clean;
         }
 
         rc = ssh_userauth_none(my_ssh_session, username);
         if (rc != SSH_AUTH_SUCCESS){
             debug("Error authenticating with password: %s\n",
                 ssh_get_error(my_ssh_session));
-            ssh_disconnect(my_ssh_session);
-            ssh_free(my_ssh_session);
-            exit(-1);
+            goto clean;
         }
 
 
@@ -320,6 +318,9 @@ int SSHClient::run(const char* username, const char* host, int port)
 
 clean:
     pthread_mutex_destroy(&mutex);
+    ssh_disconnect(my_ssh_session);
+    ssh_free(my_ssh_session);
+    my_ssh_session = nullptr;
 
     return 0;
 }
