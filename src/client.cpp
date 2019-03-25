@@ -256,6 +256,7 @@ int SSHClient::do_remote_forwarding(ssh_session sess, int lport, pthread_mutex_t
         }
         debug("\n[OTCP] Connection received\n");
 		std::thread t(SSHClient::remote_forwading_thread, sess, chan, lport, mutex);
+        t.detach();
         SSHClient::thread_vector.push_back(std::move(t));
     }
 clean:
