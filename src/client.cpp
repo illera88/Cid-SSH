@@ -54,8 +54,7 @@ int SSHClient::connect_to_local_service(int port)
 
 
 
-int SSHClient::do_remote_forwarding_loop(ssh_session session,
-    ssh_channel channel, int lport)
+int SSHClient::do_remote_forwarding_loop(ssh_session session, ssh_channel channel, int lport)
 {
     int sockfd;
     int rc;
@@ -84,7 +83,7 @@ int SSHClient::do_remote_forwarding_loop(ssh_session session,
     fds[0].fd = sockfd;
     fds[0].events = POLLIN;
 
-    while (!should_terminate) {
+    while (!should_terminate && ssh_is_connected(session)) {
         //First we poll the local service socket, sockfd, for 100 millisecons
         rc = poll(fds, 1, 100);
         if (rc == -1) {
@@ -225,14 +224,14 @@ int SSHClient::do_remote_forwarding(ssh_session sess, int lport, int rport) {
 	ssh_channel chan;
     while (!should_terminate) {
         int dport = 0;	// The port bound on the server, here: 8080
-        debug("[OTCP] Waiting for incoming connection...");
-        fflush(stdout);
+        debug("[OTCP] Waiting for incoming connection...\n");
 
         chan = ssh_channel_accept_forward(sess, ACCEPT_FORWARD_TIMEOUT, &dport);
         if (chan == NULL) {
+            if (ssh_is_connected(sess))
+                break;            
+            debug("[DEBUG] failed: code: %d msg: %s\n", ssh_get_error_code(sess), ssh_get_error(sess));
             if (ssh_get_error_code(sess) != 0) {	/* Timed out */
-                debug("[DEBUG] failed: %s\n",
-                    ssh_get_error(sess));
                 ssh_disconnect(sess);
                 ssh_free(sess);
                 return -1;
@@ -263,39 +262,41 @@ int SSHClient::run(const char* username, const char* host, int port)
 
     int rc;
 
-    // Open session and set options
-    my_ssh_session = ssh_new();
-    if (my_ssh_session == NULL)
-        exit(-1);
-    auto a = ssh_options_set(my_ssh_session, SSH_OPTIONS_HOST, host);
-    ssh_options_set(my_ssh_session, SSH_OPTIONS_LOG_VERBOSITY, &verbosity);
-    ssh_options_set(my_ssh_session, SSH_OPTIONS_PORT_STR, "22");
-
-    // Connect to server
-    rc = ssh_connect(my_ssh_session);
-    if (rc != SSH_OK)
+    do 
     {
-        debug("Error connecting to %s: %s\n",
-            host,
-            ssh_get_error(my_ssh_session));
-        ssh_free(my_ssh_session);
-        exit(-1);
-    }
+        // Open session and set options
+        my_ssh_session = ssh_new();
+        if (my_ssh_session == NULL)
+            exit(-1);
+        auto a = ssh_options_set(my_ssh_session, SSH_OPTIONS_HOST, host);
+        ssh_options_set(my_ssh_session, SSH_OPTIONS_LOG_VERBOSITY, &verbosity);
+        ssh_options_set(my_ssh_session, SSH_OPTIONS_PORT_STR, "22");
 
-    rc = ssh_userauth_none(my_ssh_session, username);
-    if (rc != SSH_AUTH_SUCCESS)
-    {
-        debug("Error authenticating with password: %s\n",
-            ssh_get_error(my_ssh_session));
-        ssh_disconnect(my_ssh_session);
-        ssh_free(my_ssh_session);
-        exit(-1);
-    }
+        // Connect to server
+        rc = ssh_connect(my_ssh_session);
+        if (rc != SSH_OK)
+        {
+            debug("Error connecting to %s: %s\n",
+                host,
+                ssh_get_error(my_ssh_session));
+            ssh_free(my_ssh_session);
+            exit(-1);
+        }
+
+        rc = ssh_userauth_none(my_ssh_session, username);
+        if (rc != SSH_AUTH_SUCCESS)
+        {
+            debug("Error authenticating with password: %s\n",
+                ssh_get_error(my_ssh_session));
+            ssh_disconnect(my_ssh_session);
+            ssh_free(my_ssh_session);
+            exit(-1);
+        }
 
 
-    // do something
-    do_remote_forwarding(my_ssh_session, port, 1234);
-
+        // do something
+        do_remote_forwarding(my_ssh_session, port, 1234);
+    } while(!should_terminate); // When the clients disconnects we try to reconnect it again
     ssh_disconnect(my_ssh_session);
     ssh_free(my_ssh_session);
     

@@ -308,7 +308,6 @@ void SSHServer::self_destruct() {
 }
 
 void SSHServer::chan_close(ssh_session session, ssh_channel channel, void *userdata) {
-    debug("SSHServer::chan_close\n");
 #ifdef _WIN32
     struct data_arg* my_data = (struct data_arg*)userdata;
     CloseHandle(my_data->hPipeOut);
