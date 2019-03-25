@@ -210,7 +210,7 @@ int SSHClient::do_remote_forwarding(ssh_session sess, int lport, int rport) {
 #ifdef IS_DEBUG
 	int remote_liste_port = 1234;
 #else
-	int remote_liste_port = NULL;
+	int remote_liste_port = 0;
 #endif
     auto rc = ssh_channel_listen_forward(sess, "127.0.0.1", remote_liste_port, &bounded_port);
     if (rc != SSH_OK) {

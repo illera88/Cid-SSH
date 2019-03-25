@@ -37,11 +37,9 @@ clients must be made or how a client should react.
 #include <winsock2.h>
 #include <process.h>
 #include <Windows.h>
-#define SEND_FLAGS 0
 #else
 #include <poll.h>
 #include <errno.h>
-#define SEND_FLAGS MSG_NOSIGNAL
 #endif // _WIN32
 
 void do_cleanup(StsHeader* cleanup_queue) {
@@ -170,7 +168,7 @@ static int my_channel_data_function(ssh_session session, ssh_channel channel, vo
 
     _ssh_log(SSH_LOG_PROTOCOL, "=== my_channel_data_function", "%d bytes waiting on channel %d:%d for reading. Fd = %d", len, channel->local_channel, channel->remote_channel, event_fd_data->fd);
     if (len > 0) {
-        i = send(event_fd_data->fd, data, len, SEND_FLAGS);
+        i = send(event_fd_data->fd, data, len, 0);
     }
     if (i < 0) {
         _ssh_log(SSH_LOG_WARNING, "=== my_channel_data_function", "Writing to tcp socket %d: %s", event_fd_data->fd, strerror(errno));

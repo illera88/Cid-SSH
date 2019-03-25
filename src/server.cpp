@@ -633,7 +633,7 @@ int SSHServer::main_loop_shell(ssh_session session, struct thread_info_struct* t
     }
 
 #ifndef _WIN32
-    short events = POLLIN | POLLPRI | POLLERR | POLLRDHUP;
+    short events = POLLIN | POLLPRI | POLLERR; // | POLLRDHUP;
     if (ssh_event_add_fd(event, fd, events, copy_fd_to_chan, channel) != SSH_OK) {
         debug("Couldn't add an fd to the event\n");
         return -1;
@@ -759,11 +759,11 @@ thread_rettype_t SSHServer::per_conn_thread(void* args){
     info.channel = nullptr;
 #ifdef _WIN32
     InitializeCriticalSection(&info.mutex);
+    info.connection_thread = (HANDLE)INVALID_HANDLE_VALUE;
 #else
     pthread_mutex_init(&info.mutex, NULL);
+    info.connection_thread = (pthread_t)INVALID_HANDLE_VALUE;
 #endif // _WIN32
-
-    info.connection_thread = INVALID_HANDLE_VALUE;
     info.session = (ssh_session)args;
 
     struct ssh_server_callbacks_struct cb;
