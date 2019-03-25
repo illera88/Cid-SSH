@@ -2,6 +2,10 @@
 
 #ifdef _WIN32
 #define _XCLOSESOCKET closesocket
+#define pthread_mutex_t CRITICAL_SECTION
+#define pthread_mutex_lock EnterCriticalSection
+#define pthread_mutex_unlock LeaveCriticalSection
+#define pthread_mutex_destroy DeleteCriticalSection
 #else /* _WIN32 */
 #define _XCLOSESOCKET close
 #endif
@@ -15,4 +19,3 @@
 //Unsetting _ssh_log
 #define _ssh_log(MESSAGE, ...)
 #endif
-

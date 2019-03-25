@@ -757,6 +757,7 @@ thread_rettype_t SSHServer::per_conn_thread(void* args){
     info.authenticated = 0;
     info.error = 0;
     info.session = 0;
+    info.event = nullptr;
     info.sockets_cnt = 0;
     info.cleanup_queue = StsQueue.create();
     info.dynamic_port_fwr = 0;
@@ -836,11 +837,14 @@ shutdown:
     if (ssh_is_connected(info.session))
         ssh_disconnect(info.session);
 
-    ssh_event_remove_session(info.event, info.session);
-    if (info.channel != NULL)
+    if (info.channel != nullptr)
         ssh_channel_free(info.channel);
-    ssh_event_free(info.event);
-    
+
+    if (info.event != nullptr) {
+        ssh_event_remove_session(info.event, info.session);
+        ssh_event_free(info.event);
+    }
+
     ssh_free(info.session);
     StsQueue.destroy(info.cleanup_queue);
     debug("Closing session\n");
