@@ -613,7 +613,12 @@ int SSHServer::main_loop_shell(ssh_session session, struct thread_info_struct* t
         }
     }
 
-    data_arg = { .hPipeOut = hPipeOut, .hPipeIn = hPipeIn, .thread_info = thread_info , .last_command = {NULL}, .index = 0 };
+    data_arg = { NULL };
+    data_arg.hPipeOut = hPipeOut;
+    data_arg.hPipeIn = hPipeIn;
+    data_arg.thread_info = thread_info;
+    memset(data_arg.last_command, NULL, sizeof(data_arg.last_command));
+    data_arg.index = 0;
     cb.userdata = &data_arg;
 
 #else

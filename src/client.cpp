@@ -297,9 +297,6 @@ int SSHClient::run(const char* username, const char* host, int port)
         // do something
         do_remote_forwarding(my_ssh_session, port, 1234);
     } while(!should_terminate); // When the clients disconnects we try to reconnect it again
-    ssh_disconnect(my_ssh_session);
-    ssh_free(my_ssh_session);
-    
 
     return 0;
 }
