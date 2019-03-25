@@ -65,7 +65,7 @@ int SSHClient::do_remote_forwarding_loop(ssh_session session,
     /* Connect to the service */
     sockfd = connect_to_local_service(lport);
     if (sockfd == -1) {
-        debug("failed\n");
+        debug("[DEBUG] connect_to_local_service failed\n");
         return SERVICE_CONN_ERROR;
     }
 
@@ -109,7 +109,9 @@ int SSHClient::do_remote_forwarding_loop(ssh_session session,
 
             int tot_sent = 0;
             while (tot_sent < nbytes) {
+                //debug("Before ssh_channel_write. tot_sent=%d nbytes=%d\n", tot_sent, nbytes);
                 nwritten = ssh_channel_write(channel, buffer + tot_sent, nbytes - tot_sent);
+                //debug("After ssh_channel_write, nwritten=%d\n", nwritten);
                 if (nwritten == SSH_ERROR) {
                     debug("[DEBUG] ssh_channel_write: %s\n", ssh_get_error(session));
                     close(sockfd);
@@ -124,9 +126,11 @@ int SSHClient::do_remote_forwarding_loop(ssh_session session,
 
         //Next, we poll the channel
         rc = ssh_channel_poll(channel, 0);
+        //debug("ssh_channel_poll rc=%d\n", rc);
         //If there is anything to read then read it and write it to the socket
-        if (rc != 0 && rc != SSH_EOF) {
+        if (rc != 0 && rc != SSH_ERROR) {
             //nbytes = ssh_channel_read_nonblocking(channel, buffer, sizeof(buffer), 0);
+            //debug("ssh_channel_read, sizeof(buffer) %d\n", sizeof(buffer));
             nbytes = ssh_channel_read(channel, buffer, sizeof(buffer), 0);
             if (nbytes == 0) {
                 if (ssh_channel_is_eof(channel) || !ssh_channel_is_open(channel)) {
@@ -135,7 +139,7 @@ int SSHClient::do_remote_forwarding_loop(ssh_session session,
                 }
             }
             if (nbytes == SSH_ERROR) {
-                debug("[DEBUG] ssh_channel_read_nonblocking: %s\n", ssh_get_error(session));
+                debug("[DEBUG] ssh_channel_read: %s\n", ssh_get_error(session));
                 close(sockfd);
                 return SSH_ERROR;
             }

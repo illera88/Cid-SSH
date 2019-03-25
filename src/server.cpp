@@ -214,8 +214,8 @@ int SSHServer::copy_fd_to_chan(socket_t fd, int revents, void *userdata) {
         }
     }
     if (revents & POLLHUP) {
-        ssh_channel_close(chan);
-        sz = -1;
+        int rc = ssh_channel_close(chan);
+        sz = rc;
     }
     return sz;
 }
@@ -308,6 +308,7 @@ void SSHServer::self_destruct() {
 }
 
 void SSHServer::chan_close(ssh_session session, ssh_channel channel, void *userdata) {
+    debug("SSHServer::chan_close\n");
 #ifdef _WIN32
     struct data_arg* my_data = (struct data_arg*)userdata;
     CloseHandle(my_data->hPipeOut);
@@ -633,16 +634,17 @@ int SSHServer::main_loop_shell(ssh_session session, struct thread_info_struct* t
     }
 
 #ifndef _WIN32
-    short events = POLLIN | POLLPRI | POLLERR | POLLHUP | POLLNVAL;
+    short events = POLLIN | POLLPRI | POLLERR | POLLRDHUP;
     if (ssh_event_add_fd(event, fd, events, copy_fd_to_chan, channel) != SSH_OK) {
         debug("Couldn't add an fd to the event\n");
         return -1;
     }
+    // if (ssh_event_add_session(event, session) != SSH_OK) {
+    //     debug("Couldn't add the session to the event\n");
+    //     return -1;
+    // }
+
 #endif
-   /* if (ssh_event_add_session(event, session) != SSH_OK) {
-        debug("Couldn't add the session to the event\n");
-        return -1;
-    }*/
 
 
     do {        
@@ -652,17 +654,9 @@ int SSHServer::main_loop_shell(ssh_session session, struct thread_info_struct* t
             break;
 
         windows_poll_channel(channel, &data_arg);
-
-        
-        //ssh_event_dopoll(event, 100);
-
-#else
-        //ssh_event_dopoll(event, 1000);
 #endif // _WIN32
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
     } while (!ssh_channel_is_closed(channel));
-
     
     if(!ssh_channel_is_closed(channel))
         ssh_channel_close(channel);
