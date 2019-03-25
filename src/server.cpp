@@ -622,7 +622,7 @@ int SSHServer::main_loop_shell(ssh_session session, struct thread_info_struct* t
         execl("/bin/bash", "/bin/bash", (char *)NULL);
         abort();
     }
-    struct data_arg data_arg = { .fd = fd, .last_command = {NULL}, .index = 0 };
+    struct data_arg data_arg = { .fd = fd, .last_command = {0}, .index = 0 };
     cb.userdata = &data_arg;
 #endif // _WIN32
 

