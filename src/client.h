@@ -1,7 +1,7 @@
 #pragma once
 
 #include "global.h"
-
+#include <vector>
 #define CLIENT_SENT_EOF -6
 #define SERVICE_SENT_EOF -5
 #define SERVICE_CONN_ERROR -4
@@ -27,4 +27,5 @@ private:
 	static int do_remote_forwarding(ssh_session sess, int lport, pthread_mutex_t* mutex);
 
     static pthread_mutex_t mutex;
+    static std::vector<std::thread> thread_vector;
 };

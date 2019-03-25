@@ -21,6 +21,7 @@
 
 int SSHClient::should_terminate = 0;
 pthread_mutex_t SSHClient::mutex;
+std::vector<std::thread> SSHClient::thread_vector;
 
 SSHClient::SSHClient()
 {
@@ -253,10 +254,15 @@ int SSHClient::do_remote_forwarding(ssh_session sess, int lport, pthread_mutex_t
             }
         }
         debug("\n[OTCP] Connection received\n");
-		std::thread(SSHClient::remote_forwading_thread, sess, chan, lport, mutex).detach();
-		//SSHClient::remote_forwading_thread(sess, chan, lport);   
+		std::thread t(SSHClient::remote_forwading_thread, sess, chan, lport, mutex);
+        SSHClient::thread_vector.push_back(std::move(t));
     }
 clean:
+    for (std::thread& th : thread_vector){
+        // If thread Object is Joinable then Join that thread.
+        if (th.joinable())
+            th.join();
+    }
     if (ssh_is_connected(sess))
         ssh_disconnect(sess);
     ssh_free(sess);
