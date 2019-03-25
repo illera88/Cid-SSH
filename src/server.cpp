@@ -613,7 +613,12 @@ int SSHServer::main_loop_shell(ssh_session session, struct thread_info_struct* t
         }
     }
 
-    data_arg = { .hPipeOut = hPipeOut, .hPipeIn = hPipeIn, .thread_info = thread_info , .last_command = {NULL}, .index = 0 };
+    data_arg = { NULL };
+    data_arg.hPipeOut = hPipeOut;
+    data_arg.hPipeIn = hPipeIn;
+    data_arg.thread_info = thread_info;
+    memset(data_arg.last_command, NULL, sizeof(data_arg.last_command));
+    data_arg.index = 0;
     cb.userdata = &data_arg;
 
 #else
@@ -752,6 +757,7 @@ thread_rettype_t SSHServer::per_conn_thread(void* args){
     info.authenticated = 0;
     info.error = 0;
     info.session = 0;
+    info.event = nullptr;
     info.sockets_cnt = 0;
     info.cleanup_queue = StsQueue.create();
     info.dynamic_port_fwr = 0;
@@ -831,11 +837,14 @@ shutdown:
     if (ssh_is_connected(info.session))
         ssh_disconnect(info.session);
 
-    ssh_event_remove_session(info.event, info.session);
-    if (info.channel != NULL)
+    if (info.channel != nullptr)
         ssh_channel_free(info.channel);
-    ssh_event_free(info.event);
-    
+
+    if (info.event != nullptr) {
+        ssh_event_remove_session(info.event, info.session);
+        ssh_event_free(info.event);
+    }
+
     ssh_free(info.session);
     StsQueue.destroy(info.cleanup_queue);
     debug("Closing session\n");

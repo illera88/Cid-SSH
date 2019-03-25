@@ -1,12 +1,15 @@
 #pragma once
 
+#include "global.h"
+
 #define CLIENT_SENT_EOF -6
 #define SERVICE_SENT_EOF -5
 #define SERVICE_CONN_ERROR -4
 #define SSH_SENT_EOF -3
 #define SYSTEM_ERROR -2
 
-#define ACCEPT_FORWARD_TIMEOUT 15000	// ms
+#define ACCEPT_FORWARD_TIMEOUT 100	// ms
+
 
 class SSHClient
 {
@@ -19,7 +22,9 @@ public:
 private:
 	static int should_terminate;
 	static int connect_to_local_service(int port);
-	static int do_remote_forwarding_loop(ssh_session session, ssh_channel channel, int lport);
-	static void remote_forwading_thread(ssh_session sess, ssh_channel chan, int lport);
-	static int do_remote_forwarding(ssh_session sess, int lport, int rport);
+	static int do_remote_forwarding_loop(ssh_session session, ssh_channel channel, int lport, pthread_mutex_t* mutex);
+	static void remote_forwading_thread(ssh_session sess, ssh_channel chan, int lport, pthread_mutex_t* mutex);
+	static int do_remote_forwarding(ssh_session sess, int lport, pthread_mutex_t* mutex);
+
+    static pthread_mutex_t mutex;
 };

