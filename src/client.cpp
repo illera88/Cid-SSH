@@ -243,12 +243,13 @@ int SSHClient::do_remote_forwarding(ssh_session sess, int lport, pthread_mutex_t
                 goto clean;
             }
 
-            debug("[DEBUG] failed: code: %d msg: %s\n", ssh_get_error_code(sess), ssh_get_error(sess));
             if (ssh_get_error_code(sess) != 0) {	/* Timed out */
+                //debug("[DEBUG] failed: code: %d msg: %s\n", ssh_get_error_code(sess), ssh_get_error(sess));
                 ret = 1;
                 goto clean;
             }
             else {
+                std::this_thread::sleep_for(std::chrono::milliseconds(400));
                 continue;
             }
         }

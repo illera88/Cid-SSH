@@ -45,6 +45,7 @@ elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     if(${CMAKE_BUILD_TYPE} MATCHES "Debug") # Non static version, to compile in ubuntu without problems
         target_link_libraries(CidSSH "-lpthread")
         target_link_libraries(CidSSH "-ldl")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -g -fsanitize=address -lasan")
     else() #Static version
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static -static-libgcc -static-libstdc++")
     endif()
@@ -63,7 +64,7 @@ elseif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     if(NOT (LIBSSH_STATIC_PATH))
         message(FATAL_ERROR "Path required for LIBSSH_STATIC_PATH")
     endif()
-    
+
     target_include_directories(CidSSH PRIVATE "${LIBSSH_STATIC_PATH}/")
     target_include_directories(CidSSH PRIVATE "${LIBSSH_STATIC_PATH}/include/")
     #/usr/local/opt/gcc/bin/g++-8 -std=gnu++11 -static-libgcc -static-libstdc++ CidSSH.cpp server.cpp -I/usr/local/opt/openssl/include/ /usr/local/lib/libssh.a /usr/local/opt/openssl/lib/libcrypto.a -lutil -lpthread
@@ -81,7 +82,6 @@ endif()
 
 if(${CMAKE_BUILD_TYPE} MATCHES "Debug")
     target_compile_definitions(CidSSH PRIVATE "-DIS_DEBUG")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -g") # -fsanitize=address -lasan")
 else() # Release by default
     # Strip the binary
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s")
