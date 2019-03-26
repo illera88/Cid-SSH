@@ -27,7 +27,8 @@ tar xf libssh-0.8.7.tar.xz
 #Manually patch libssh: https://github.com/illera88/libssh_mod
 cd libssh-0.8.7
 mkdir build && cd build
-cmake -DCMAKE_BUILD_TYPE=Release -DLIBSSH_STATIC_PATH=/Users/test/shared/PrecompiledLibraries/macos/libssh_mod/ ..
+cmake -DOPENSSL_ROOT_DIR=/usr/local/opt/openssl/ -DWITH_GSSAPI=OFF -DWITH_ZLIB=OFF -DWITH_SFTP=OFF -DWITH_STATIC_LIB=ON -DWITH_PCAP=OFF -DWITH_NACL=OFF -DCMAKE_BUILD_TYPE=Release ..
+make
 sudo make install
 ```
 
@@ -35,5 +36,6 @@ Compile SSHIUU:
 ```
 cd ~/shared/SSHIUU/src/
 mkdir build && cd build
-cmake .. && make
+cmake -DCMAKE_BUILD_TYPE=Release -DLIBSSH_STATIC_PATH=/Users/test/shared/PrecompiledLibraries/macos/libssh_mod/ .. &&
+make
 ```
