@@ -42,10 +42,12 @@ struct thread_info_struct {
 #ifdef _WIN32
     HANDLE connection_thread;
     HANDLE shell_thread;
+    HPCON pty_handle;
 #else
     pthread_t connection_thread;
     pthread_t shell_thread;
 #endif
+    COORD win_size;
 };
 
 

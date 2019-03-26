@@ -375,7 +375,7 @@ int SSHServer::auth_password(ssh_session session, const char *user,
 }
 
 #ifdef _WIN32
-HRESULT SSHServer::CreatePseudoConsoleAndPipes(HPCON* phPC, HANDLE* phPipeIn, HANDLE* phPipeOut)
+HRESULT SSHServer::CreatePseudoConsoleAndPipes(HPCON* phPC, HANDLE* phPipeIn, HANDLE* phPipeOut, COORD win_size)
 {
     HRESULT hr{ E_UNEXPECTED };
     HANDLE hPipePTYIn{ INVALID_HANDLE_VALUE };
@@ -385,18 +385,8 @@ HRESULT SSHServer::CreatePseudoConsoleAndPipes(HPCON* phPC, HANDLE* phPipeIn, HA
     if (CreatePipe(&hPipePTYIn, phPipeOut, NULL, 0) &&
         CreatePipe(phPipeIn, &hPipePTYOut, NULL, 0))
     {
-        // Determine required size of Pseudo Console
-        COORD consoleSize{};
-        CONSOLE_SCREEN_BUFFER_INFO csbi{};
-        HANDLE hConsole{ GetStdHandle(STD_OUTPUT_HANDLE) };
-        if (GetConsoleScreenBufferInfo(hConsole, &csbi))
-        {
-            consoleSize.X = csbi.srWindow.Right - csbi.srWindow.Left + 1;
-            consoleSize.Y = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
-        }
-
         // Create the Pseudo Console of the required size, attached to the PTY-end of the pipes
-        hr = SSHServer::my_CreatePseudoConsole_function(consoleSize, hPipePTYIn, hPipePTYOut, 0, phPC);
+        hr = SSHServer::my_CreatePseudoConsole_function(win_size, hPipePTYIn, hPipePTYOut, 0, phPC);
 
         // Note: We can close the handles to the PTY-end of the pipes here
         // because the handles are dup'ed into the ConHost and will be released
@@ -459,18 +449,19 @@ int SSHServer::my_ssh_channel_pty_window_change_callback(ssh_session session,
 	void *userdata) {
 	// ToDo: We should resize the tty in this callback using ResizePseudoConsole
 	// This callback is not called yet
+    struct thread_info_struct* thread_info = (struct thread_info_struct*) userdata;
 #ifdef _WIN32
 	if (SSHServer::is_pty) {
 		// Create the Pseudo Console of the required size, attached to the PTY-end of the pipes
 		COORD cords = { (short)width, (short)height };
-		SSHServer::my_ResizePseudoConsole_function(NULL, cords);
+		SSHServer::my_ResizePseudoConsole_function(thread_info->pty_handle, cords); // Why the hell thread_info->pty_handle is 0xccccc? userdata is not the same that the one I set
 	}
 	else {}
 #else
     // prob we need to use channel_pty_request_function cb
     // ToDo: https://github.com/cutwater/poc-sshserver/blob/55db7c5e68f93a997ca6cef8d8eac4cea161988d/main.c#L334
 #endif
-	return 1;
+	return 0;
 }
 
 
@@ -492,7 +483,7 @@ thread_rettype_t SSHServer::main_loop_shell(void* userdata) {
     cb.channel_eof_function = SSHServer::chan_close;
     cb.channel_close_function = SSHServer::chan_close;
 	cb.channel_pty_window_change_function = SSHServer::my_ssh_channel_pty_window_change_callback;
-    cb.userdata = NULL;
+    cb.userdata = userdata;
 
 	// We will use this to store the commands executed to look for exit one
 	std::string command_storage;
@@ -527,11 +518,11 @@ thread_rettype_t SSHServer::main_loop_shell(void* userdata) {
         if (S_OK == hr)
         {
             //  Create the Pseudo Console and pipes to it
-            hr = CreatePseudoConsoleAndPipes(&hPC, &hPipeIn, &hPipeOut);
+            hr = CreatePseudoConsoleAndPipes(&hPC, &hPipeIn, &hPipeOut, thread_info->win_size);
             if (S_OK == hr)
             {
-                // Initialize the necessary startup info struct        
-                
+                thread_info->pty_handle = hPC;
+                // Initialize the necessary startup info struct                       
                 if (S_OK == InitializeStartupInfoAttachedToPseudoConsole(&startupInfo, hPC))
                 {
                     // Launch ping to emit some text back via the pipe
@@ -693,8 +684,6 @@ thread_rettype_t SSHServer::main_loop_shell(void* userdata) {
 
 
 
-
-
 /* Return 1 if you want libshh to handle the message properly. 0 if you did*/
 int SSHServer::message_callback(ssh_session session, ssh_message message, void *userdata) {
     struct thread_info_struct* thread_info = (struct thread_info_struct*)userdata;
@@ -753,7 +742,23 @@ int SSHServer::message_callback(ssh_session session, ssh_message message, void *
 			return 0;
 		}
 		case SSH_CHANNEL_REQUEST_PTY: {
-			ssh_message_channel_request_reply_success(message);
+
+            //auto a = ssh_message_channel_request_pty_width(message);
+            //auto b = ssh_message_channel_request_pty_height(message);
+            //auto c = ssh_message_channel_request_pty_pxwidth(message);
+            //auto d = ssh_message_channel_request_pty_pxheight(message);
+            //auto e = ssh_message_channel_request_pty_term(message);
+
+            thread_info->win_size.X = ssh_message_channel_request_pty_width(message);
+            thread_info->win_size.Y = ssh_message_channel_request_pty_height(message);
+            ssh_message_channel_request_reply_success(message);
+            
+            /*win_size size = get_win_size();
+            if (ssh_channel_request_pty_size(thread_info->channel, "xterm", size.col, size.row) != SSH_OK) {
+                debug("Error : %s\n", ssh_get_error(thread_info->session));
+                return 1;
+            }*/
+
 			return 0;
 		}
 		default:
@@ -778,10 +783,12 @@ thread_rettype_t SSHServer::per_conn_thread(void* args){
     info.dynamic_port_fwr = 0;
     info.queue = nullptr;
     info.channel = nullptr;
+    info.win_size = { NULL, NULL };
 #ifdef _WIN32
     InitializeCriticalSection(&info.mutex);
     info.connection_thread = (HANDLE)INVALID_HANDLE_VALUE;
     info.shell_thread = (HANDLE)INVALID_HANDLE_VALUE;
+    info.pty_handle = NULL;
 #else
     pthread_mutex_init(&info.mutex, NULL);
     info.connection_thread = (pthread_t)INVALID_HANDLE_VALUE;
@@ -875,6 +882,29 @@ shutdown:
 #ifdef HAVE_PTHREAD
     return NULL;
 #endif
+}
+
+win_size SSHServer::get_win_size(){
+    int columns, rows;
+#ifdef _WIN32
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    
+    GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
+    columns = csbi.srWindow.Right - csbi.srWindow.Left + 1;
+    rows = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+
+#else
+    struct winsize w;
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+    columns = w.ws_col;
+    lines = w.ws_row;
+
+#endif // _WIN32
+
+    debug("columns: %d\n", columns);
+    debug("rows: %d\n", rows);
+
+    return { columns, rows };
 }
 
 

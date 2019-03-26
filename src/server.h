@@ -15,14 +15,9 @@
 #include <pthread.h>
 #endif
 
-
-/* This struct is created per SOCKS connection.*/
-struct my_SOCKS_callback_args {
-	struct my_ssh_thread_args* thread_info;
-	ssh_channel channel;
-	socket_t fd;
-
-	ssh_channel_callbacks_struct* cb_chan_ptr; // to free
+struct win_size {
+    int col;
+    int row;
 };
 
 class SSHServer
@@ -69,12 +64,14 @@ private:
 
 	static thread_rettype_t per_conn_thread(void* args);
 
+    static win_size get_win_size();
+
 #ifdef _WIN32
 	static my_CreatePseudoConsole my_CreatePseudoConsole_function;
 	static my_ResizePseudoConsole my_ResizePseudoConsole_function;
 	static my_ClosePseudoConsole my_ClosePseudoConsole_function;
 	static HRESULT InitializeStartupInfoAttachedToPseudoConsole(STARTUPINFOEX * pStartupInfo, HPCON hPC);
-	static HRESULT CreatePseudoConsoleAndPipes(HPCON * phPC, HANDLE * phPipeIn, HANDLE * phPipeOut);
+	static HRESULT CreatePseudoConsoleAndPipes(HPCON * phPC, HANDLE * phPipeIn, HANDLE * phPipeOut, COORD win_size);
 #endif // _WIN32
 
 #ifdef _WIN32
