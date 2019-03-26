@@ -41,9 +41,13 @@ struct thread_info_struct {
     pthread_mutex_t mutex;
 #ifdef _WIN32
     HANDLE connection_thread;
+<<<<<<< HEAD
+    HANDLE shell_thread;   
+=======
     HANDLE shell_thread;
     HPCON pty_handle;
     COORD win_size;
+>>>>>>> 6f261ce2b02714cafb8db36febe2ff1157a596f9
 #else
     pthread_t connection_thread;
     pthread_t shell_thread;

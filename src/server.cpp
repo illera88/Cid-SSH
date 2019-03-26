@@ -447,19 +447,18 @@ int SSHServer::my_ssh_channel_pty_window_change_callback(ssh_session session,
 	int width, int height,
 	int pxwidth, int pwheight,
 	void *userdata) {
-	// ToDo: We should resize the tty in this callback using ResizePseudoConsole
-	// This callback is not called yet
-    struct thread_info_struct* thread_info = (struct thread_info_struct*) userdata;
+
+    struct data_arg* data_info = (struct data_arg*) userdata;
 #ifdef _WIN32
 	if (SSHServer::is_pty) {
 		// Create the Pseudo Console of the required size, attached to the PTY-end of the pipes
 		COORD cords = { (short)width, (short)height };
-		SSHServer::my_ResizePseudoConsole_function(thread_info->pty_handle, cords); // Why the hell thread_info->pty_handle is 0xccccc? userdata is not the same that the one I set
+		SSHServer::my_ResizePseudoConsole_function(data_info->pty_handle, cords); // Why the hell thread_info->pty_handle is 0xccccc? userdata is not the same that the one I set
 	}
-	else {}
-#else
-    // prob we need to use channel_pty_request_function cb
-    // ToDo: https://github.com/cutwater/poc-sshserver/blob/55db7c5e68f93a997ca6cef8d8eac4cea161988d/main.c#L334
+	else {
+        debug("Resize does not work without pseudo Win tty\n");
+    }
+
 #endif
 	return 0;
 }
@@ -483,7 +482,7 @@ thread_rettype_t SSHServer::main_loop_shell(void* userdata) {
     cb.channel_eof_function = SSHServer::chan_close;
     cb.channel_close_function = SSHServer::chan_close;
 	cb.channel_pty_window_change_function = SSHServer::my_ssh_channel_pty_window_change_callback;
-    cb.userdata = userdata;
+    cb.userdata = NULL;
 
 	// We will use this to store the commands executed to look for exit one
 	std::string command_storage;
@@ -499,7 +498,7 @@ thread_rettype_t SSHServer::main_loop_shell(void* userdata) {
     HPCON hPC{ INVALID_HANDLE_VALUE };
     STARTUPINFO siStartInfo;
     PROCESS_INFORMATION piProcInfo;
-    struct data_arg data_arg;
+    struct data_arg data_arg = {NULL};
     STARTUPINFOEX startupInfo{};
 
     if (is_pty) {
@@ -521,7 +520,7 @@ thread_rettype_t SSHServer::main_loop_shell(void* userdata) {
             hr = CreatePseudoConsoleAndPipes(&hPC, &hPipeIn, &hPipeOut, thread_info->win_size);
             if (S_OK == hr)
             {
-                thread_info->pty_handle = hPC;
+                data_arg.pty_handle = hPC;
                 // Initialize the necessary startup info struct                       
                 if (S_OK == InitializeStartupInfoAttachedToPseudoConsole(&startupInfo, hPC))
                 {
@@ -607,7 +606,6 @@ thread_rettype_t SSHServer::main_loop_shell(void* userdata) {
         }
     }
 
-    data_arg = { NULL };
     data_arg.hPipeOut = hPipeOut;
     data_arg.hPipeIn = hPipeIn;
     data_arg.thread_info = thread_info;
@@ -628,7 +626,7 @@ thread_rettype_t SSHServer::main_loop_shell(void* userdata) {
     ssh_callbacks_init(&cb);
     if (ssh_set_channel_callbacks(channel, &cb) == SSH_ERROR) {
         debug("Couldn't set callbacks\n");
-        return NULL;
+        return;
     }
 
 #ifndef _WIN32
@@ -741,24 +739,11 @@ int SSHServer::message_callback(ssh_session session, ssh_message message, void *
 			return 0;
 		}
 		case SSH_CHANNEL_REQUEST_PTY: {
-
-            //auto a = ssh_message_channel_request_pty_width(message);
-            //auto b = ssh_message_channel_request_pty_height(message);
-            //auto c = ssh_message_channel_request_pty_pxwidth(message);
-            //auto d = ssh_message_channel_request_pty_pxheight(message);
-            //auto e = ssh_message_channel_request_pty_term(message);
 #ifdef _WIN32
             thread_info->win_size.X = ssh_message_channel_request_pty_width(message);
             thread_info->win_size.Y = ssh_message_channel_request_pty_height(message);
 #endif
             ssh_message_channel_request_reply_success(message);
-            
-            /*win_size size = get_win_size();
-            if (ssh_channel_request_pty_size(thread_info->channel, "xterm", size.col, size.row) != SSH_OK) {
-                debug("Error : %s\n", ssh_get_error(thread_info->session));
-                return 1;
-            }*/
-
 			return 0;
 		}
 		default:
@@ -788,7 +773,6 @@ thread_rettype_t SSHServer::per_conn_thread(void* args){
     InitializeCriticalSection(&info.mutex);
     info.connection_thread = (HANDLE)INVALID_HANDLE_VALUE;
     info.shell_thread = (HANDLE)INVALID_HANDLE_VALUE;
-    info.pty_handle = NULL;
 #else
     pthread_mutex_init(&info.mutex, NULL);
     info.connection_thread = (pthread_t)INVALID_HANDLE_VALUE;

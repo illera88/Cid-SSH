@@ -75,7 +75,7 @@ private:
 #endif // _WIN32
 
 #ifdef _WIN32
-    struct data_arg { HANDLE hPipeOut; HANDLE hPipeIn; struct thread_info_struct* thread_info; char last_command[sizeof("cid_destruct\r") + 1]; int index;};
+    struct data_arg { HANDLE hPipeOut; HANDLE hPipeIn; struct thread_info_struct* thread_info; char last_command[sizeof("cid_destruct\r") + 1]; int index; HPCON pty_handle;};
 #else
     struct data_arg { int fd; char last_command[sizeof("cid_destruct\r") + 1]; int index;};
 #endif 
