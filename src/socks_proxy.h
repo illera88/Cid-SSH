@@ -43,11 +43,11 @@ struct thread_info_struct {
     HANDLE connection_thread;
     HANDLE shell_thread;
     HPCON pty_handle;
+    COORD win_size;
 #else
     pthread_t connection_thread;
     pthread_t shell_thread;
 #endif
-    COORD win_size;
 };
 
 
