@@ -300,18 +300,9 @@ static thread_rettype_t connect_thread_worker(void* userdata) {
 
             }
             StsQueue.push(thread_info->queue, item);
-#ifdef _WIN32
             Sleep(50);
-#else
-            usleep(50000);
-#endif // _WIN32
         }
-#ifdef _WIN32
         Sleep(100);
-#else
-        usleep(100000);
-#endif // _WIN32
-
         }
 #ifdef HAVE_PTHREAD
     return NULL;
@@ -355,11 +346,7 @@ void do_set_callbacks(struct thread_info_struct* thread_info) {
             StsQueue.push(thread_info->queue, item);
             if (--max_in_turn == 0)
                 break;
-#ifdef _WIN32
             Sleep(5);
-#else
-            usleep(5000);
-#endif // _WIN32        
         }
     }
     // ssh_set_blocking(thread_info->session, 1);

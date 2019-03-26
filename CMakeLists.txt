@@ -7,6 +7,7 @@ set(CidSSH_SOURCE_FILES
     src/sts_queue.c
     src/socks_proxy.c
     src/client.cpp
+    src/global.c
 )
 
 SET(CidSSH_HEADER_FILES

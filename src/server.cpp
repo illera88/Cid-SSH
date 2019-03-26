@@ -633,7 +633,7 @@ thread_rettype_t SSHServer::main_loop_shell(void* userdata) {
     short events = POLLIN | POLLPRI | POLLERR; // | POLLRDHUP;
     if (ssh_event_add_fd(event, fd, events, copy_fd_to_chan, channel) != SSH_OK) {
         debug("Couldn't add an fd to the event\n");
-        return -1;
+        return NULL;
     }
     // if (ssh_event_add_session(event, session) != SSH_OK) {
     //     debug("Couldn't add the session to the event\n");
@@ -675,9 +675,8 @@ thread_rettype_t SSHServer::main_loop_shell(void* userdata) {
     }
 #else // _WIN32
     ssh_event_remove_fd(event, fd);
+    return NULL;
 #endif
-
-    return;
 }
 
 
@@ -740,23 +739,11 @@ int SSHServer::message_callback(ssh_session session, ssh_message message, void *
 			return 0;
 		}
 		case SSH_CHANNEL_REQUEST_PTY: {
-
-            //auto a = ssh_message_channel_request_pty_width(message);
-            //auto b = ssh_message_channel_request_pty_height(message);
-            //auto c = ssh_message_channel_request_pty_pxwidth(message);
-            //auto d = ssh_message_channel_request_pty_pxheight(message);
-            //auto e = ssh_message_channel_request_pty_term(message);
-
+#ifdef _WIN32
             thread_info->win_size.X = ssh_message_channel_request_pty_width(message);
             thread_info->win_size.Y = ssh_message_channel_request_pty_height(message);
+#endif
             ssh_message_channel_request_reply_success(message);
-            
-            /*win_size size = get_win_size();
-            if (ssh_channel_request_pty_size(thread_info->channel, "xterm", size.col, size.row) != SSH_OK) {
-                debug("Error : %s\n", ssh_get_error(thread_info->session));
-                return 1;
-            }*/
-
 			return 0;
 		}
 		default:
@@ -781,8 +768,8 @@ thread_rettype_t SSHServer::per_conn_thread(void* args){
     info.dynamic_port_fwr = 0;
     info.queue = nullptr;
     info.channel = nullptr;
-    info.win_size = { NULL, NULL };
 #ifdef _WIN32
+    info.win_size = { NULL, NULL };
     InitializeCriticalSection(&info.mutex);
     info.connection_thread = (HANDLE)INVALID_HANDLE_VALUE;
     info.shell_thread = (HANDLE)INVALID_HANDLE_VALUE;
@@ -891,10 +878,10 @@ win_size SSHServer::get_win_size(){
     rows = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
 
 #else
-    struct winsize w;
-    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-    columns = w.ws_col;
-    lines = w.ws_row;
+    // struct winsize w;
+    // ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+    // columns = w.ws_col;
+    // lines = w.ws_row;
 
 #endif // _WIN32
 
