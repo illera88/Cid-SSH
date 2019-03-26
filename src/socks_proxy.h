@@ -41,8 +41,7 @@ struct thread_info_struct {
     pthread_mutex_t mutex;
 #ifdef _WIN32
     HANDLE connection_thread;
-    HANDLE shell_thread;
-    HPCON pty_handle;
+    HANDLE shell_thread;   
 #else
     pthread_t connection_thread;
     pthread_t shell_thread;
