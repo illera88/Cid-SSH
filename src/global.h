@@ -11,6 +11,8 @@ extern "C"
 {
 void Sleep(int milliseconds);
 }
+#else
+void Sleep(int milliseconds);
 #endif
 #endif
 #define CLOSE_SOCKET(s) do { if ((s) != SSH_INVALID_SOCKET) { _XCLOSESOCKET(s); (s) = SSH_INVALID_SOCKET;} } while(0)
