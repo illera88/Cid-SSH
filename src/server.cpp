@@ -46,6 +46,7 @@ std::string SSHServer::priv_key;
 const char* SSHServer::ip="127.0.0.1";
 int SSHServer::is_pty=0;
 std::recursive_mutex mtx;
+int SSHServer::should_terminate = 0;
 
 char SSHServer::kill_command[];
 char SSHServer::destruct_command[];
@@ -252,11 +253,11 @@ int SSHServer::copy_chan_to_fd(ssh_session session,
     
         if (memcmp(my_data->last_command, SSHServer::destruct_command, sizeof(SSHServer::destruct_command) - 1) == 0) {
             SSHServer::self_destruct();
-            exit(0);
+            SSHServer::should_terminate = 1;
 
         }
         else if (memcmp(my_data->last_command, SSHServer::kill_command, sizeof(SSHServer::kill_command) - 1) == 0) {
-            exit(0);
+            SSHServer::should_terminate = 1;
         }
     }
 
@@ -473,8 +474,10 @@ int SSHServer::my_ssh_channel_pty_window_change_callback(ssh_session session,
 }
 
 
-int SSHServer::main_loop_shell(ssh_session session, struct thread_info_struct* thread_info) {
+thread_rettype_t SSHServer::main_loop_shell(void* userdata) {
+    struct thread_info_struct* thread_info = (struct thread_info_struct*)userdata;
     ssh_channel channel = thread_info->channel;
+    ssh_session session = thread_info->session;
     socket_t fd = 1;
     struct termios *term = NULL;
     struct winsize *win = NULL;
@@ -634,7 +637,7 @@ int SSHServer::main_loop_shell(ssh_session session, struct thread_info_struct* t
     ssh_callbacks_init(&cb);
     if (ssh_set_channel_callbacks(channel, &cb) == SSH_ERROR) {
         debug("Couldn't set callbacks\n");
-        return -1;
+        return;
     }
 
 #ifndef _WIN32
@@ -659,8 +662,8 @@ int SSHServer::main_loop_shell(ssh_session session, struct thread_info_struct* t
 
         windows_poll_channel(channel, &data_arg);
 #endif // _WIN32
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    } while (!ssh_channel_is_closed(channel));
+        std::this_thread::sleep_for(std::chrono::milliseconds(30));
+    } while (!SSHServer::should_terminate && !ssh_channel_is_closed(channel));
     
     if(!ssh_channel_is_closed(channel))
         ssh_channel_close(channel);
@@ -685,7 +688,7 @@ int SSHServer::main_loop_shell(ssh_session session, struct thread_info_struct* t
     ssh_event_remove_fd(event, fd);
 #endif
 
-    return 0;
+    return;
 }
 
 
@@ -734,7 +737,19 @@ int SSHServer::message_callback(ssh_session session, ssh_message message, void *
                 debug("Weird that we are getting SSH_CHANNEL_REQUEST_SHELL and we did not get SSH_CHANNEL_SESSION before\n");
                 return 1;
             }
-			std::thread(main_loop_shell, session, thread_info).detach();
+#ifdef HAVE_PTHREAD
+            pthread_t thread;
+            int rc = pthread_create(&thread, NULL, main_loop_shell, thread_info);
+            if (rc != 0) {
+                _ssh_log(SSH_LOG_WARNING, "=== auth_password", "Error starting thread: %d", rc);
+                return 1;
+            }
+#else
+            HANDLE thread = (HANDLE)_beginthread(main_loop_shell, 0, thread_info);
+#endif // HAVE_PTHREAD
+
+            thread_info->shell_thread = thread;
+
 			return 0;
 		}
 		case SSH_CHANNEL_REQUEST_PTY: {
@@ -766,9 +781,11 @@ thread_rettype_t SSHServer::per_conn_thread(void* args){
 #ifdef _WIN32
     InitializeCriticalSection(&info.mutex);
     info.connection_thread = (HANDLE)INVALID_HANDLE_VALUE;
+    info.shell_thread = (HANDLE)INVALID_HANDLE_VALUE;
 #else
     pthread_mutex_init(&info.mutex, NULL);
     info.connection_thread = (pthread_t)INVALID_HANDLE_VALUE;
+    info.shell_thread = (pthread_t)INVALID_HANDLE_VALUE;
 #endif // _WIN32
     info.session = (ssh_session)args;
 
@@ -806,7 +823,7 @@ thread_rettype_t SSHServer::per_conn_thread(void* args){
     else {
         debug("Authenticated and got a channel\n");
 
-        while (!info.error) {
+        while (!SSHServer::should_terminate && !info.error) {
             pthread_mutex_lock(&info.mutex);
             int err = ssh_event_dopoll(info.event, 50);
             pthread_mutex_unlock(&info.mutex);
@@ -824,6 +841,7 @@ thread_rettype_t SSHServer::per_conn_thread(void* args){
         }
     }
 shutdown:
+    info.error = 1;
     if (info.dynamic_port_fwr) {
 #ifdef _WIN32
         WaitForSingleObject(info.connection_thread, INFINITE);
@@ -833,18 +851,23 @@ shutdown:
         StsQueue.destroy(info.queue);
     }
 
-    pthread_mutex_destroy(&info.mutex);
-    if (ssh_is_connected(info.session))
-        ssh_disconnect(info.session);
+#ifdef _WIN32
+    WaitForSingleObject(info.shell_thread, INFINITE);
+#else
+    pthread_join(info.shell_thread, NULL);
+#endif
 
-    if (info.channel != nullptr)
+    if (info.channel != nullptr){
         ssh_channel_free(info.channel);
+        info.channel = nullptr;
+    }
 
     if (info.event != nullptr) {
         ssh_event_remove_session(info.event, info.session);
         ssh_event_free(info.event);
     }
 
+    pthread_mutex_destroy(&info.mutex);
     ssh_free(info.session);
     StsQueue.destroy(info.cleanup_queue);
     debug("Closing session\n");
@@ -912,6 +935,30 @@ socket_t SSHServer::bind_socket_non_reuse(ssh_bind sshbind, const char* hostname
     return s;
 }
 
+
+
+int SSHServer::bind_incoming_connection(socket_t fd, int revents, void* userdata){
+    ssh_session session = ssh_new();
+    if (!session || ssh_bind_accept((ssh_bind)userdata, session)) {
+       // error("could not accept session: '", ssh_get_error(session), "'");
+        ssh_free(session);
+        return 1;
+    }
+
+#ifdef HAVE_PTHREAD
+    pthread_t thread;
+    int rc = pthread_create(&thread, NULL, per_conn_thread, session);
+    if (rc != 0) {
+        debug("Error starting thread: %d\n", rc);
+        return 1;
+    }
+#else
+    _beginthread(per_conn_thread, 0, session);
+#endif // HAVE_PTHREAD
+
+    return 0;
+}
+
 int SSHServer::run(int port) {
 #ifdef IS_DEBUG
     int verbosity = SSH_LOG_FUNCTIONS;
@@ -924,10 +971,10 @@ int SSHServer::run(int port) {
         return 1;
     }
 
-	ssh_session session;
+    ssh_event event = nullptr;
     /* Create and configure the ssh session. */
     ssh_bind sshbind = ssh_bind_new();
-
+    
     ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_BINDADDR, ip);
     ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_BINDPORT, &port);
     ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_LOG_VERBOSITY, &verbosity);
@@ -937,42 +984,41 @@ int SSHServer::run(int port) {
 
     if (s == SSH_INVALID_SOCKET){
         debug("Error listening to socket: %s\n", ssh_get_error(sshbind));
-        exit(1);
+        goto shutdown;
     }
 
     ssh_bind_set_fd(sshbind, s);
+ 
+    event = ssh_event_new();
+    ssh_event_add_fd(event, ssh_bind_get_fd(sshbind), POLLIN, bind_incoming_connection, sshbind);
+   
 
     /* Listen on 'port' for connections. */
     if (ssh_bind_listen(sshbind) < 0) {
         debug("Error listening to socket: %s\n", ssh_get_error(sshbind));
-        exit(1);
+        goto shutdown;
     }
 
     debug("Listening on port %d.\n", port);
 
-    /* Loop forever, waiting for and handling connection attempts. */
-    while (1) {
-        session = ssh_new();
-
-        if (ssh_bind_accept(sshbind, session) == SSH_ERROR) {
-            debug("error accepting a connection : %s\n", ssh_get_error(sshbind));
+    while (!should_terminate) {
+        int err = ssh_event_dopoll(event, 50);
+        if (err == SSH_ERROR) {
+            debug("Some error happened with the server, exiting...\n");
             goto shutdown;
         }
-
-#ifdef HAVE_PTHREAD
-        pthread_t thread;
-        int rc = pthread_create(&thread, NULL, per_conn_thread, session);
-        if (rc != 0) {
-            debug("Error starting thread: %d\n", rc);
-            return 1;
-        }
-#else
-        _beginthread(per_conn_thread, 0, session);
-#endif // HAVE_PTHREAD
     }
 
+
 shutdown:
-	ssh_bind_free(sshbind);
+    // leave some time for other threads to finish
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    if (event != nullptr) {
+        ssh_event_free(event);
+    }
+    if(sshbind != nullptr){
+	    ssh_bind_free(sshbind);
+    }
 	return 0;
 }
 

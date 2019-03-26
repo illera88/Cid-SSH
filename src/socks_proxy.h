@@ -5,6 +5,7 @@
 #include <config.h>
 
 #include "sts_queue.h"
+#include "global.h"
 
 #ifdef HAVE_PTHREAD
 #include <pthread.h>
@@ -40,8 +41,10 @@ struct thread_info_struct {
     pthread_mutex_t mutex;
 #ifdef _WIN32
     HANDLE connection_thread;
+    HANDLE shell_thread;
 #else
     pthread_t connection_thread;
+    pthread_t shell_thread;
 #endif
 };
 

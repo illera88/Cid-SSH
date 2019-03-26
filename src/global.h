@@ -2,12 +2,12 @@
 
 #ifdef _WIN32
 #define _XCLOSESOCKET closesocket
-#define pthread_mutex_t CRITICAL_SECTION
-#define pthread_mutex_lock EnterCriticalSection
-#define pthread_mutex_unlock LeaveCriticalSection
-#define pthread_mutex_destroy DeleteCriticalSection
 #else /* _WIN32 */
 #define _XCLOSESOCKET close
+#include <unistd.h>
+void Sleep(int milliseconds) {
+    sleep(milliseconds / 1000);
+}
 #endif
 #define CLOSE_SOCKET(s) do { if ((s) != SSH_INVALID_SOCKET) { _XCLOSESOCKET(s); (s) = SSH_INVALID_SOCKET;} } while(0)
 
@@ -18,4 +18,17 @@
 #define debug(MESSAGE, ...)
 //Unsetting _ssh_log
 #define _ssh_log(MESSAGE, ...)
+#endif
+
+#ifdef _WIN32
+#define pthread_mutex_t CRITICAL_SECTION
+#define pthread_mutex_lock EnterCriticalSection
+#define pthread_mutex_unlock LeaveCriticalSection
+#define pthread_mutex_destroy DeleteCriticalSection
+#endif
+
+#ifdef HAVE_PTHREAD
+typedef void* thread_rettype_t;
+#else
+typedef void thread_rettype_t;
 #endif

@@ -256,7 +256,6 @@ int SSHClient::do_remote_forwarding(ssh_session sess, int lport, pthread_mutex_t
         }
         debug("\n[OTCP] Connection received\n");
 		std::thread t(SSHClient::remote_forwading_thread, sess, chan, lport, mutex);
-        t.detach();
         SSHClient::thread_vector.push_back(std::move(t));
     }
 clean:
@@ -265,10 +264,14 @@ clean:
         if (th.joinable())
             th.join();
     }
+
     if (ssh_is_connected(sess))
         ssh_disconnect(sess);
-    ssh_free(sess);
-    sess = nullptr;
+
+    if (sess!= nullptr){
+        ssh_free(sess);
+        sess = nullptr;
+    }
     return ret;
 }
 
@@ -319,9 +322,7 @@ int SSHClient::run(const char* username, const char* host, int port)
 
 clean:
     pthread_mutex_destroy(&mutex);
-    ssh_disconnect(my_ssh_session);
-    ssh_free(my_ssh_session);
-    my_ssh_session = nullptr;
+
 
     return 0;
 }

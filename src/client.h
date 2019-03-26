@@ -19,8 +19,8 @@ public:
 	
 
 	static int run(const char* username, const char* host, int port);
+    static int should_terminate;
 private:
-	static int should_terminate;
 	static int connect_to_local_service(int port);
 	static int do_remote_forwarding_loop(ssh_session session, ssh_channel channel, int lport, pthread_mutex_t* mutex);
 	static void remote_forwading_thread(ssh_session sess, ssh_channel chan, int lport, pthread_mutex_t* mutex);

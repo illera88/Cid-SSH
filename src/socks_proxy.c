@@ -608,7 +608,6 @@ static int set_callbacks(struct event_fd_data_struct * event_fd_data, struct thr
 
 
 int handle_socks_connection(ssh_message message, struct thread_info_struct* thread_info) {
-    //ssh_message_get(session);
     ssh_channel channel;
     struct ssh_channel_callbacks_struct* cb_chan;
     struct event_fd_data_struct* event_fd_data;

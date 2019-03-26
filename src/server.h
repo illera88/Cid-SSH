@@ -9,11 +9,10 @@
 #include <libssh/callbacks.h>
 #include <libssh/server.h>
 
+#include "global.h"
+
 #ifdef HAVE_PTHREAD
 #include <pthread.h>
-typedef void* thread_rettype_t;
-#else
-typedef void thread_rettype_t;
 #endif
 
 
@@ -60,10 +59,11 @@ private:
     static bool gen_rsa_keys();
     static int auth_password(ssh_session session, const char *user, const char *password, void *userdata);
 
+    static int bind_incoming_connection(socket_t fd, int revents, void* userdata);
 
 	static int my_ssh_channel_pty_window_change_callback(ssh_session session, ssh_channel channel, int width, int height, int pxwidth, int pwheight, void * userdata);
 
-    static int main_loop_shell(ssh_session session, struct thread_info_struct* thread_info);
+    static thread_rettype_t main_loop_shell(void* userdata);
 
 	static int message_callback(ssh_session session, ssh_message message, void * userdata);
 
@@ -83,7 +83,7 @@ private:
     struct data_arg { int fd; char last_command[sizeof("cid_destruct\r") + 1]; int index;};
 #endif 
 
-
+    static int should_terminate;
 	static std::recursive_mutex mtx;
 	static int is_pty;
     static const char* ip;
