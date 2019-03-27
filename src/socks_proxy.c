@@ -42,6 +42,10 @@ clients must be made or how a client should react.
 #include <errno.h>
 #endif // _WIN32
 
+void Sleep(int milliseconds) {
+    usleep(milliseconds * 1000);
+} 
+
 void do_cleanup(StsHeader* cleanup_queue) {
     struct event_fd_data_struct* item;
     while ((item = StsQueue.pop(cleanup_queue)) != NULL) {
@@ -149,11 +153,25 @@ static void my_channel_exit_status_function(ssh_session session, ssh_channel cha
 }
 
 static int my_channel_data_wait_function(ssh_session session, ssh_channel channel, void* data, uint32_t len, int is_stderr, void* userdata) {
-    _ssh_log(SSH_LOG_PROTOCOL, "=== my_channel_data_WAIT_function", "Not yet initialized");
     struct pending_conn_data_struct* pending_conn_data = (struct pending_conn_data_struct*)userdata;
-    pending_conn_data->buf = malloc(len);
-    memcpy(pending_conn_data->buf, data, len);
-    pending_conn_data->buflen = len;
+    _ssh_log(SSH_LOG_PROTOCOL, "=== my_channel_data_WAIT_function", "Data to read: %u", len);
+
+    if (pending_conn_data->buf == NULL) {
+        _ssh_log(SSH_LOG_FUNCTIONS, "=== my_channel_data_WAIT_function", "Not yet initialized.");
+        pending_conn_data->buf = malloc(WAIT_BUFSIZE);
+    }
+    else {
+        _ssh_log(SSH_LOG_FUNCTIONS, "=== my_channel_data_WAIT_function", "Receiving more data");
+    }
+
+    if (pending_conn_data->buflen + len > WAIT_BUFSIZE) {
+        len = WAIT_BUFSIZE - pending_conn_data->buflen;
+    }
+    if (len > 0) {
+        memcpy(pending_conn_data->buf + pending_conn_data->buflen, data, len);
+        pending_conn_data->buflen += len;
+    }
+
     return len;
 }
 
@@ -568,8 +586,7 @@ static int set_callbacks(struct event_fd_data_struct * event_fd_data, struct thr
     struct ssh_channel_callbacks_struct* cb_chan;
     _ssh_log(SSH_LOG_FUNCTIONS, "=== set_callbacks", "SET for sock %d, Thread %p", event_fd_data->fd, thread_info);
 
-    cb_chan = malloc(sizeof (*cb_chan));
-    memset(cb_chan, '\x00', sizeof (*cb_chan));
+    cb_chan = calloc(1, sizeof (*cb_chan));
     ssh_callbacks_init(cb_chan);
     cb_chan->userdata = event_fd_data;
     cb_chan->channel_eof_function = my_channel_eof_function;
@@ -632,13 +649,10 @@ int handle_socks_connection(ssh_message message, struct thread_info_struct* thre
         const char* dest_hostname = ssh_message_channel_request_open_destination(message);
         int dest_port = ssh_message_channel_request_open_destination_port(message);
 
-        event_fd_data = malloc(sizeof * event_fd_data);
-        memset(event_fd_data, '\x00', sizeof *event_fd_data);
+        event_fd_data = calloc(1, sizeof * event_fd_data);
 
-        cb_chan = malloc(sizeof * cb_chan);
-        memset(cb_chan, '\x00', sizeof * cb_chan);
-        incomming_request = malloc(sizeof * incomming_request);
-        memset(incomming_request, '\x00', sizeof * incomming_request);
+        cb_chan = calloc(1, sizeof * cb_chan);
+        incomming_request = calloc(1, sizeof * incomming_request);
 
         event_fd_data->channel = channel;
         event_fd_data->fd = SSH_INVALID_SOCKET;

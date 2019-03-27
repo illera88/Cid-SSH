@@ -20,6 +20,8 @@ typedef void thread_rettype_t;
 #define MAX_HOSTNAME_LEN 128
 #endif // !MAX_HOSTNAME_LEN
 
+#define WAIT_BUFSIZE 2048
+
 #define NON_BLOCKING 1
 
 #ifdef __cplusplus

@@ -42,15 +42,13 @@ void help(char* self) {
     exit(1);
 }
 
-#include <ws2tcpip.h>
 void integer_to_ip(int ip, char* result) {
-
     unsigned char bytes[4];
     bytes[0] = ip & 0xFF;
     bytes[1] = (ip >> 8) & 0xFF;
     bytes[2] = (ip >> 16) & 0xFF;
     bytes[3] = (ip >> 24) & 0xFF;
-    snprintf(result, 15, "%d.%d.%d.%d\n", bytes[3], bytes[2], bytes[1], bytes[0]);
+    snprintf(result, 15, "%d.%d.%d.%d", bytes[3], bytes[2], bytes[1], bytes[0]);
 }
 
 void parse_args(int argc, char** argv,
@@ -67,19 +65,19 @@ void parse_args(int argc, char** argv,
 
     /* integer IP*/
     if (argc == 3 && memcmp(argv[1], "-t", 2) == 0) {
-        unsigned long ip_integuer = strtoul(argv[2], NULL, 10);
-        if (ip_integuer == NULL) {
+        unsigned long ip_integer = strtoul(argv[2], NULL, 10);
+        if (ip_integer == NULL) {
             help(argv[0]);
         }
-        integer_to_ip(ip_integuer, C2_host);
+        integer_to_ip(ip_integer, C2_host);
         return;
     }
 
     ptr = strchr(argv[1], '@');
     if (ptr != NULL){
         ptr[0] = '\0';
-        memcpy_s(username, 100, argv[1], strlen(argv[1]));
-        memcpy_s(C2_host, 255, ptr + 1, strlen(ptr + 1));
+        strncpy(username, argv[1], 100);
+        strncpy(C2_host, ptr + 1,  255);
     }
     else {
         strncpy(C2_host, argv[1], 255);

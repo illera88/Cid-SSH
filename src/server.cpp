@@ -626,7 +626,11 @@ thread_rettype_t SSHServer::main_loop_shell(void* userdata) {
     ssh_callbacks_init(&cb);
     if (ssh_set_channel_callbacks(channel, &cb) == SSH_ERROR) {
         debug("Couldn't set callbacks\n");
+#ifdef _WIN32
         return;
+#else
+        return NULL;
+#endif
     }
 
 #ifndef _WIN32

