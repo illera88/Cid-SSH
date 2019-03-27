@@ -57,25 +57,28 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MT /MP -DIS_DEBUG")
 
 elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-    # Option to set the path to the statically compiled libssh
-    set(LIBSSH_STATIC_PATH "" CACHE FILEPATH "Path to the build folder for libssh with the config.h file and the include folder")
-    if(NOT (LIBSSH_STATIC_PATH))
-        message(FATAL_ERROR "Path required for LIBSSH_STATIC_PATH")
+    set(LIBSSH_LIBRARY "" CACHE FILEPATH "Path to the static libssh.a")
+    if(NOT (LIBSSH_LIBRARY))
+        message(FATAL_ERROR "Path required for LIBSSH_LIBRARY")
     endif()
 
-    # Option to set the path to the statically compiled openssl lib
-    set(OPENSSL_STATIC_PATH "" CACHE FILEPATH "Path to the static openssl static library")
-    if(NOT (OPENSSL_STATIC_PATH))
-        message(FATAL_ERROR "Path required for OPENSSL_STATIC_PATH")
+    set(LIBSSH_INCLUDE "" CACHE FILEPATH "Path to the build folder for libssh with the config.h file and the include folder")
+    if(NOT (LIBSSH_INCLUDE))
+        message(FATAL_ERROR "Path required for LIBSSH_INCLUDE")
+    endif()
+
+    set(LIBSSH_CONFIG_FOLDER "" CACHE FILEPATH "Path to the folder with the file config.h for libssh")
+    if(NOT (LIBSSH_CONFIG_FOLDER))
+        message(FATAL_ERROR "Path required for LIBSSH_CONFIG_FOLDER")
     endif()
 
     target_compile_definitions(CidSSH PRIVATE "-DHAVE_PTHREAD")    
-    target_link_libraries(CidSSH "${LIBSSH_STATIC_PATH}/libssh.a")
-    target_link_libraries(CidSSH "${OPENSSL_STATIC_PATH}/libcrypto.a")
+    target_link_libraries(CidSSH "${LIBSSH_LIBRARY}")
     target_link_libraries(CidSSH "-lutil")
+    target_link_libraries(CidSSH "-lcrypto")
 
-    target_include_directories(CidSSH PRIVATE "${LIBSSH_STATIC_PATH}/include/")
-    target_include_directories(CidSSH PRIVATE "${OPENSSL_STATIC_PATH}/include/")
+    target_include_directories(CidSSH PRIVATE "${LIBSSH_CONFIG_FOLDER}")
+    target_include_directories(CidSSH PRIVATE "${LIBSSH_INCLUDE}")
 
     if(${CMAKE_BUILD_TYPE} MATCHES "Debug") # Non static version, to compile in ubuntu without problems
         target_link_libraries(CidSSH "-lpthread")
@@ -85,16 +88,6 @@ elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     else() #Static version
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static -static-libgcc -static-libstdc++ -s")
     endif()
-
-    #g++ -static CidSSH.cpp server.cpp /usr/local/lib/libssh.a /usr/local/lib/libcrypto.a /usr/lib/x86_64-linux-gnu/libutil.a -ldl -pthread -Wl,--whole-archive -lpthread -Wl,--no-whole-archive
-    #target_link_libraries(CidSSH "-lssh")
-    #target_link_libraries(CidSSH "-lcrypto")
-    #target_link_libraries(CidSSH "-Wl,-Bstatic /usr/lib/x86_64-linux-gnu/libutil.a -Wl,-Bdynamic")
-    # Not sure why cmake tries to use -lutil if I don't specific the -Wl,-Bstatic
-    #target_link_libraries(CidSSH "-Wl,-Bstatic /usr/lib/x86_64-linux-gnu/libutil.a")
-    # This is the way to link pthread statically
-    #target_link_libraries(CidSSH "-Wl,-Bdynamic -lpthread -ldl -Wl,-Bstatic")
-    #target_link_libraries(CidSSH "-pthread -Wl,--whole-archive -lpthread -Wl,--no-whole-archive")
 elseif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     # Option to set the path to the statically compiled libssh
     set(LIBSSH_STATIC_PATH "" CACHE FILEPATH "Path to the build folder for libssh with the config.h file and the include folder")
@@ -109,7 +102,6 @@ elseif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     # We want to use the gcc installed with brew instead of the system one
     set(CMAKE_C_COMPILER "/usr/local/opt/gcc/bin/gcc-8")
     set(CMAKE_CXX_COMPILER "/usr/local/opt/gcc/bin/g++-8")
-    target_include_directories(CidSSH PRIVATE "/usr/local/opt/openssl/include/")
     target_link_libraries(CidSSH "${LIBSSH_STATIC_PATH}/libssh.a")
     target_link_libraries(CidSSH "/usr/local/opt/openssl/lib/libcrypto.a")
     target_link_libraries(CidSSH "-lutil")

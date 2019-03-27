@@ -28,6 +28,7 @@
 #include <process.h> 
 #else
 #include <poll.h>
+#include <limits.h>
 #define INVALID_HANDLE_VALUE -1
 #endif // _WIN32
 

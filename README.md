@@ -54,17 +54,12 @@ sudo docker run -v `pwd`:/data_out -i -t alpine_cid_ssh:latest /bin/sh -c "cp /C
 ```
 
 ### Compilation on MacOs
-Install/compile dependencies:
-```
-brew install openssl
-```
-
 Compile CidSSH:
 ```
 cd ~/shared/SSHIUU/src/
 mkdir build && cd build
-git clone git clone https://github.com/illera88/PrecompiledLibraries
-cmake -DCMAKE_BUILD_TYPE=Release -DLIBSSH_STATIC_PATH=PrecompiledLibraries/macos/libssh_mod/ .. &&
+git clone https://github.com/illera88/PrecompiledLibraries
+cmake -DCMAKE_BUILD_TYPE=Release -DLIBSSH_STATIC_PATH=PrecompiledLibraries/macos/libssh_mod/ ..
 make
 ```
 
