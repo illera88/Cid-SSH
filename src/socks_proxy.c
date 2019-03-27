@@ -42,9 +42,11 @@ clients must be made or how a client should react.
 #include <errno.h>
 #endif // _WIN32
 
-void Sleep(int milliseconds) {
-    usleep(milliseconds * 1000);
-} 
+#ifndef _WIN32
+#include <unistd.h>
+#define Sleep(x) usleep((x)*1000)
+#endif
+
 
 void do_cleanup(StsHeader* cleanup_queue) {
     struct event_fd_data_struct* item;
@@ -168,7 +170,7 @@ static int my_channel_data_wait_function(ssh_session session, ssh_channel channe
         len = WAIT_BUFSIZE - pending_conn_data->buflen;
     }
     if (len > 0) {
-        memcpy(pending_conn_data->buf + pending_conn_data->buflen, data, len);
+        memcpy((char*)pending_conn_data->buf + pending_conn_data->buflen, data, len);
         pending_conn_data->buflen += len;
     }
 

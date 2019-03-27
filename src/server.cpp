@@ -18,13 +18,9 @@
 #include <assert.h>
 #include <stdio.h>
 
-
 #include "sts_queue.h"
 #include "socks_proxy.h"
 
-
-// to generate RSA keys
-#include <openssl/pem.h>
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -42,11 +38,11 @@ typedef void* thread_rettype_t;
 typedef void thread_rettype_t;
 #endif
 
-std::string SSHServer::priv_key;
 const char* SSHServer::ip="127.0.0.1";
 int SSHServer::is_pty=0;
 std::recursive_mutex mtx;
 int SSHServer::should_terminate = 0;
+ssh_key SSHServer::pkey;
 
 char SSHServer::kill_command[];
 char SSHServer::destruct_command[];
@@ -103,15 +99,15 @@ void SSHServer::fill_commands() {
 
 
 
-SSHServer::SSHServer()
-{
+SSHServer::SSHServer(){
     fill_commands();
 
-    if (gen_rsa_keys()) {
+    if (gen_rsa_keys() == SSH_OK) {
         debug("[+] RSA keys generated correctly\n");
     }
     else {
         debug("[+] Error generating RSA keys\n");
+        exit(1);
     }
 
 	/*Here we load dynamically the Windows pseudoTTY APIs*/
@@ -320,50 +316,14 @@ void SSHServer::chan_close(ssh_session session, ssh_channel channel, void *userd
     (void)channel;  
 }
 
-bool SSHServer::gen_rsa_keys() {
-    int             ret = 0;
-    RSA             *r = NULL;
-    BIGNUM          *bne = NULL;
-    EVP_PKEY        *key = NULL;
-    BIO             *bio = NULL;
-    int             bits = 2048;
-    unsigned long   e = RSA_F4;
-    char            *pem_key = nullptr;
-    int keylen;
-
-    // 1. generate rsa key
-    bne = BN_new();
-    ret = BN_set_word(bne, e);
-    if (ret != 1) {
-        goto free_all;
+int SSHServer::gen_rsa_keys() {
+    
+    if (ssh_pki_generate(SSH_KEYTYPE_RSA, 2048, &pkey) == SSH_ERROR) {
+        debug("Could not generate key pair. Exiting...");
+        return SSH_ERROR;
+        
     }
-
-    r = RSA_new();
-    ret = RSA_generate_key_ex(r, bits, bne, NULL);
-    if (ret != 1) {
-        goto free_all;
-    }
-
-    key = EVP_PKEY_new();
-    if (!EVP_PKEY_set1_RSA(key, r)) {
-        goto free_all;
-    }
-    bio = BIO_new(BIO_s_mem());
-    ret = PEM_write_bio_RSAPrivateKey(bio, r, NULL, NULL, 0, NULL, NULL);
-    keylen = BIO_pending(bio);
-    pem_key = (char*)calloc(keylen + 1, 1); /* Null-terminate */
-    BIO_read(bio, pem_key, keylen);
-    priv_key = std::string(pem_key);
-
-free_all:
-    if (pem_key != nullptr)free(pem_key);
-    BIO_free(bio);
-    EVP_PKEY_free(key);
-
-    RSA_free(r);
-    BN_free(bne);
-
-    return ret == 1;
+    return SSH_OK;
 }
 
 
@@ -984,11 +944,6 @@ int SSHServer::run(int port) {
     int verbosity = SSH_LOG_NOLOG;
 #endif // DEBUG
 
-    if (priv_key.empty()) {
-        debug("[-] There is no RSA key to start the SSH server");
-        return 1;
-    }
-
     ssh_event event = nullptr;
     /* Create and configure the ssh session. */
     ssh_bind sshbind = ssh_bind_new();
@@ -996,8 +951,9 @@ int SSHServer::run(int port) {
     ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_BINDADDR, ip);
     ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_BINDPORT, &port);
     ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_LOG_VERBOSITY, &verbosity);
-    ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_HOSTKEY_MEMORY, priv_key.c_str());
+    ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_IMPORT_KEY, pkey);
     
+
     socket_t s = bind_socket_non_reuse(sshbind, ip, port);
 
     if (s == SSH_INVALID_SOCKET){

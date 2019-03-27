@@ -51,7 +51,7 @@ public:
     static int run(int port);
 
 private:
-    static bool gen_rsa_keys();
+    static int gen_rsa_keys();
     static int auth_password(ssh_session session, const char *user, const char *password, void *userdata);
 
     static int bind_incoming_connection(socket_t fd, int revents, void* userdata);
@@ -84,7 +84,8 @@ private:
 	static std::recursive_mutex mtx;
 	static int is_pty;
     static const char* ip;
-    static std::string priv_key;
+
+    static ssh_key pkey;
 
     static char destruct_command[sizeof "cid_destruct\r"];
     static char kill_command[sizeof "cid_kill\r"];
