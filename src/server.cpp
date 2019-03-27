@@ -320,8 +320,7 @@ int SSHServer::gen_rsa_keys() {
     
     if (ssh_pki_generate(SSH_KEYTYPE_RSA, 2048, &pkey) == SSH_ERROR) {
         debug("Could not generate key pair. Exiting...");
-        return SSH_ERROR;
-        
+        return SSH_ERROR;        
     }
     return SSH_OK;
 }
@@ -503,8 +502,6 @@ thread_rettype_t SSHServer::main_loop_shell(void* userdata) {
         }
     }
     else {
-        /* ToDo: implement     //start_with_pty();*/
-
         // Set the bInheritHandle flag so pipe handles are inherited. 
         saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
         saAttr.bInheritHandle = TRUE;
@@ -542,9 +539,6 @@ thread_rettype_t SSHServer::main_loop_shell(void* userdata) {
         //char szCmdline[] = "C:\\WINDOWS\\System32\\cmd.exe /c cmd.exe";
         //TCHAR szCmdline[] = TEXT("C:\\WINDOWS\\System32\\powershell.exe");
         TCHAR szCmdline[] = TEXT("powershell.exe"); // For some weird reason it works fine with powershell but it does not with cmd.exe WHAAAAATTT?!?!
-        //TCHAR szCmdline[] = TEXT("cmd.exe");
-        //TCHAR szCmdline[] = TEXT("C:\\Users\\alberto.garcia\\Downloads\\OpenSSH-Win64\\ssh-shellhost.exe ---pty cmd.exe");
-        //TCHAR szCmdline[] = TEXT("C:\\Users\\alberto.garcia\\Downloads\\OpenSSH-Win64\\ssh-shellhost.exe ---pty conhost.exe --headless");
 
         ZeroMemory(&piProcInfo, sizeof(PROCESS_INFORMATION));
 
@@ -651,8 +645,6 @@ int SSHServer::message_callback(ssh_session session, ssh_message message, void *
 
 	auto type = ssh_message_type(message);
 	auto subtype = ssh_message_subtype(message);
-	debug("Message type: %d\n", type);
-	debug("Message Subtype: %d\n", subtype);
 	switch (type)
 	{
 	case SSH_REQUEST_CHANNEL_OPEN: {
@@ -735,11 +727,9 @@ thread_rettype_t SSHServer::per_conn_thread(void* args){
 #ifdef _WIN32
     info.win_size = { NULL, NULL };
     InitializeCriticalSection(&info.mutex);
-    info.connection_thread = (HANDLE)INVALID_HANDLE_VALUE;
     info.shell_thread = (HANDLE)INVALID_HANDLE_VALUE;
 #else
     pthread_mutex_init(&info.mutex, NULL);
-    info.connection_thread = (pthread_t)INVALID_HANDLE_VALUE;
     info.shell_thread = (pthread_t)INVALID_HANDLE_VALUE;
 #endif // _WIN32
     info.session = (ssh_session)args;
@@ -781,9 +771,10 @@ thread_rettype_t SSHServer::per_conn_thread(void* args){
         while (!SSHServer::should_terminate && !info.error) {
             pthread_mutex_lock(&info.mutex);
             int err = ssh_event_dopoll(info.event, 50);
+            int connected = ssh_is_connected(info.session);
             pthread_mutex_unlock(&info.mutex);
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
-            if (err == SSH_ERROR) {
+            if (err == SSH_ERROR || !connected) {
                 debug("Error : %s\n", ssh_get_error(info.session));
                 info.error = 1;
                 goto shutdown;
@@ -798,19 +789,23 @@ thread_rettype_t SSHServer::per_conn_thread(void* args){
 shutdown:
     info.error = 1;
     if (info.dynamic_port_fwr) {
+        for (int i = 0; i < NUM_THREADS_CONNECT_WORKER; i++) {
 #ifdef _WIN32
-        WaitForSingleObject(info.connection_thread, INFINITE);
+            WaitForSingleObject(info.connection_thread[i], INFINITE);
 #else
-        pthread_join(info.connection_thread, NULL);
+            pthread_join(info.connection_thread[i], NULL);
 #endif
+        }
         StsQueue.destroy(info.queue);
     }
 
+    if (info.shell_thread != INVALID_HANDLE_VALUE) {
 #ifdef _WIN32
-    WaitForSingleObject(info.shell_thread, INFINITE);
+        WaitForSingleObject(info.shell_thread, INFINITE);
 #else
-    pthread_join(info.shell_thread, NULL);
+        pthread_join(info.shell_thread, NULL);
 #endif
+    }
 
     if (info.channel != nullptr){
         ssh_channel_free(info.channel);
@@ -830,29 +825,6 @@ shutdown:
 #ifdef HAVE_PTHREAD
     return NULL;
 #endif
-}
-
-win_size SSHServer::get_win_size(){
-    int columns, rows;
-#ifdef _WIN32
-    CONSOLE_SCREEN_BUFFER_INFO csbi;
-    
-    GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
-    columns = csbi.srWindow.Right - csbi.srWindow.Left + 1;
-    rows = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
-
-#else
-    // struct winsize w;
-    // ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-    // columns = w.ws_col;
-    // lines = w.ws_row;
-
-#endif // _WIN32
-
-    debug("columns: %d\n", columns);
-    debug("rows: %d\n", rows);
-
-    return { columns, rows };
 }
 
 

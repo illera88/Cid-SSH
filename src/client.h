@@ -8,7 +8,7 @@
 #define SSH_SENT_EOF -3
 #define SYSTEM_ERROR -2
 
-#define ACCEPT_FORWARD_TIMEOUT 100	// ms
+#define ACCEPT_FORWARD_TIMEOUT 50	// ms
 
 
 class SSHClient

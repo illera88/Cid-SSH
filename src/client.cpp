@@ -93,7 +93,7 @@ int SSHClient::do_remote_forwarding_loop(ssh_session session, ssh_channel channe
 
     while (!should_terminate && ssh_is_connected(session)) {
         //First we poll the local service socket, sockfd, for 100 millisecons
-        rc = poll(fds, 1, 100);
+        rc = poll(fds, 1, 20);
         if (rc == -1) {
             close(sockfd);
             return SYSTEM_ERROR;

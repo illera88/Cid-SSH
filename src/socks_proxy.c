@@ -314,7 +314,7 @@ static thread_rettype_t connect_thread_worker(void* userdata) {
         struct pending_conn_data_struct* item;
         while ((item = StsQueue.pop(thread_info->queue)) != NULL) {
             if (item->event_fd_data->fd == SSH_INVALID_SOCKET) {
-                item->tries++;
+                item->tries++;               
                 item->event_fd_data->fd = open_tcp_socket(item->hostname, item->port, item->tries * TIMEOUT, thread_info, NON_BLOCKING);
                 if ((item->event_fd_data->fd == SSH_INVALID_SOCKET && item->tries > MAX_TRIES) || item->closed == 1) {
                     if (item->buflen > 0 && item->buf != NULL) {
@@ -323,7 +323,6 @@ static thread_rettype_t connect_thread_worker(void* userdata) {
                     stack_socket_close(item->event_fd_data);
                     continue;
                 }
-
             }
             StsQueue.push(thread_info->queue, item);
             Sleep(50);
@@ -564,6 +563,8 @@ static socket_t open_tcp_socket(const char* dest_hostname, int dest_port,
 
     _ssh_log(SSH_LOG_PROTOCOL, "=== open_tcp_socket", "Connecting to %s on port %d", dest_hostname, dest_port);
 
+
+
     forwardsock = socket(AF_INET, SOCK_STREAM, 0);
     if (forwardsock < 0) {
         _ssh_log(SSH_LOG_WARNING, "=== open_tcp_socket", "ERROR opening socket: %s", strerror(errno));
@@ -626,22 +627,26 @@ int handle_socks_connection(ssh_message message, struct thread_info_struct* thre
     struct pending_conn_data_struct* incomming_request;
 
 
-    /* We first create the objects and threads needed for dynamic port forwarding*/
-    thread_info->queue = StsQueue.create();
+    /* Only the first time per connection we create connection threads and the queue*/
+    if(thread_info->dynamic_port_fwr == 0 ){
+        thread_info->dynamic_port_fwr = 1; // execute this code only once per session
 
+        thread_info->queue = StsQueue.create();
+
+        for (int i = 0; i < NUM_THREADS_CONNECT_WORKER; i++) {
 #ifdef HAVE_PTHREAD
-    pthread_t thread;
-    int rc = pthread_create(&thread, NULL, connect_thread_worker, thread_info);
-    if (rc != 0) {
-        _ssh_log(SSH_LOG_WARNING, "=== auth_password", "Error starting thread: %d", rc);
-        return 1;
-    }
+            pthread_t thread;
+            int rc = pthread_create(&thread, NULL, connect_thread_worker, thread_info);
+            if (rc != 0) {
+                _ssh_log(SSH_LOG_WARNING, "=== auth_password", "Error starting thread: %d", rc);
+                return 1;
+            }
 #else
-    HANDLE thread = (HANDLE)_beginthread(connect_thread_worker, 0, thread_info);
+            HANDLE thread = (HANDLE)_beginthread(connect_thread_worker, 0, thread_info);
 #endif // HAVE_PTHREAD
-
-    thread_info->connection_thread = thread;
-    thread_info->dynamic_port_fwr = 1;
+            thread_info->connection_thread[i] = thread;
+        }
+    }
 
 
     channel = ssh_message_channel_request_open_reply_accept(message);

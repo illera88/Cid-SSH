@@ -24,6 +24,8 @@ typedef void thread_rettype_t;
 
 #define NON_BLOCKING 1
 
+#define NUM_THREADS_CONNECT_WORKER 3
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -42,12 +44,12 @@ struct thread_info_struct {
     int dynamic_port_fwr; // This flag will be set if -D is used
     pthread_mutex_t mutex;
 #ifdef _WIN32
-    HANDLE connection_thread;
+    HANDLE connection_thread[NUM_THREADS_CONNECT_WORKER];
     HANDLE shell_thread;
     HPCON pty_handle;
     COORD win_size;
 #else
-    pthread_t connection_thread;
+    pthread_t connection_thread[NUM_THREADS_CONNECT_WORKER];
     pthread_t shell_thread;
 #endif
 };

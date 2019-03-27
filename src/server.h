@@ -64,8 +64,6 @@ private:
 
 	static thread_rettype_t per_conn_thread(void* args);
 
-    static win_size get_win_size();
-
 #ifdef _WIN32
 	static my_CreatePseudoConsole my_CreatePseudoConsole_function;
 	static my_ResizePseudoConsole my_ResizePseudoConsole_function;
