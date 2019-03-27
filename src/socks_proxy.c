@@ -226,8 +226,14 @@ static int my_fd_data_function(socket_t fd, int revents, void* userdata) {
         if (revents & POLLOUT) {
             _ssh_log(SSH_LOG_PROTOCOL, "=== my_fd_data_function", "poll revents & POLLOUT");
         }
-        if (revents & POLLHUP) {
-            _ssh_log(SSH_LOG_PROTOCOL, "=== my_fd_data_function", "poll revents & POLLHUP");
+        if (revents& POLLHUP) {
+            _ssh_log(SSH_LOG_PROTOCOL, "=== my_fd_data_function", "poll revents & POLLHUP fd = %d", event_fd_data->fd);
+#ifdef _WIN32
+            shutdown(event_fd_data->fd, SD_RECEIVE);
+#else
+            shutdown(event_fd_data->fd, SHUT_RD);
+#endif // _WIN32
+            stack_socket_close(event_fd_data);
         }
         if (revents & POLLNVAL) {
             _ssh_log(SSH_LOG_PROTOCOL, "=== my_fd_data_function", "poll revents & POLLNVAL");
