@@ -7,7 +7,6 @@ set(CidSSH_SOURCE_FILES
     src/sts_queue.c
     src/socks_proxy.c
     src/client.cpp
-    src/global.c
 )
 
 SET(CidSSH_HEADER_FILES
@@ -21,7 +20,42 @@ SET(CidSSH_HEADER_FILES
 add_executable(CidSSH ${CidSSH_SOURCE_FILES} ${CidSSH_HEADER_FILES})
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-    #ToDo
+    set(LIBSSL_INCLUDE_DIR "" CACHE PATH "Path to OpenSSL include dir")
+    set(LIBSSL_LIBRARY "" CACHE FILEPATH "Path to LIBSSL_LIBRARY library")
+    set(LIBCRYPTO_LIBRARY "" CACHE FILEPATH "Path to LIBCRYPTO_LIBRARY library")
+    
+    set(LIBSSH_LIBRARY "" CACHE FILEPATH "Path to libssh library")
+    set(LIBSSH_INCLUDE_DIR "" CACHE PATH "Path to libssh include dir. Will contain config.h")
+
+    if(NOT (LIBSSH_LIBRARY))
+        message(FATAL_ERROR "Path required for LIBSSH_STATIC_PATH")
+    endif()
+
+    if(NOT (LIBSSL_INCLUDE_DIR))
+        message(FATAL_ERROR "Path required for LIBSSL_INCLUDE_DIR")
+    endif()
+
+    if(NOT (LIBSSL_LIBRARY))
+        message(FATAL_ERROR "Path required for LIBSSL_LIBRARY")
+    endif()
+
+    if(NOT (LIBCRYPTO_LIBRARY))
+        message(FATAL_ERROR "Path required for LIBCRYPTO_LIBRARY")
+    endif()
+
+    target_link_libraries(CidSSH ${LIBSSL_LIBRARY})
+    target_link_libraries(CidSSH ${LIBCRYPTO_LIBRARY})
+    target_link_libraries(CidSSH ${LIBSSH_LIBRARY})
+
+    target_link_libraries(CidSSH Ws2_32.lib Crypt32.lib)
+
+    target_include_directories(CidSSH PRIVATE "${LIBSSH_INCLUDE_DIR}")
+    target_include_directories(CidSSH PRIVATE "${LIBSSL_INCLUDE_DIR}")
+
+    target_compile_definitions (CidSSH PUBLIC _CRT_SECURE_NO_WARNINGS LIBSSH_STATIC)
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT /MP")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MT /MP -DIS_DEBUG")
+
 elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     # Option to set the path to the statically compiled libssh
     set(LIBSSH_STATIC_PATH "" CACHE FILEPATH "Path to the build folder for libssh with the config.h file and the include folder")
@@ -47,9 +81,11 @@ elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
         target_link_libraries(CidSSH "-lpthread")
         target_link_libraries(CidSSH "-ldl")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -g -fsanitize=address -lasan")
+        target_compile_definitions(CidSSH PRIVATE "-DIS_DEBUG")
     else() #Static version
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static -static-libgcc -static-libstdc++")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static -static-libgcc -static-libstdc++ -s")
     endif()
+
     #g++ -static CidSSH.cpp server.cpp /usr/local/lib/libssh.a /usr/local/lib/libcrypto.a /usr/lib/x86_64-linux-gnu/libutil.a -ldl -pthread -Wl,--whole-archive -lpthread -Wl,--no-whole-archive
     #target_link_libraries(CidSSH "-lssh")
     #target_link_libraries(CidSSH "-lcrypto")
@@ -81,9 +117,3 @@ elseif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     target_compile_definitions(CidSSH PRIVATE "-DHAVE_PTHREAD")
 endif()
 
-if(${CMAKE_BUILD_TYPE} MATCHES "Debug")
-    target_compile_definitions(CidSSH PRIVATE "-DIS_DEBUG")
-else() # Release by default
-    # Strip the binary
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s")
-endif()

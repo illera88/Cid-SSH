@@ -120,7 +120,7 @@ int main(int argc, char** argv){
     auto server = SSHServer();
     std::thread server_thread(server.run, ssh_server_port_int);
 
-    Sleep(1000);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
 
     // Client
     auto client = SSHClient();
