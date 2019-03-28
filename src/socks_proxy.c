@@ -205,7 +205,7 @@ static int my_fd_data_function(socket_t fd, int revents, void* userdata) {
     ssh_channel channel = event_fd_data->channel;
     ssh_session session;
     int len, i, wr;
-    char buf[16384];
+    char buf[4096];
     int	blocking;
 
     if (channel == NULL) {
@@ -271,7 +271,15 @@ static int my_fd_data_function(socket_t fd, int revents, void* userdata) {
         if (ssh_channel_is_open(channel)) {
             wr = 0;
             do {
+                // We have a problem with recursion, ssh_channel_write calls ssh_poll_ctx_dopoll that calls my_fd_data_function
+                // The solution is to remove temporally the callback
+                if (ssh_event_remove_fd(thread_info->event, event_fd_data->fd) != SSH_OK) {
+                    _ssh_log(SSH_LOG_WARNING, "=== my_fd_data_function", "Error removing the callback with ssh_event_remove_fd");
+                }
                 i = ssh_channel_write(channel, buf, len);
+                if (ssh_event_add_fd(thread_info->event, event_fd_data->fd, POLLIN, my_fd_data_function, event_fd_data) != SSH_OK) {
+                    _ssh_log(SSH_LOG_WARNING, "=== my_fd_data_function", "Error setting the callback with ssh_event_add_fd");
+                }
                 if (i < 0) {
                     _ssh_log(SSH_LOG_WARNING, "=== my_fd_data_function", "Error writing on the direct-tcpip channel: %d", i);
                     len = wr;
