@@ -29,7 +29,7 @@
 #else
 #include <poll.h>
 #include <limits.h>
-#define INVALID_HANDLE_VALUE -1
+#define INVALID_HANDLE_VALUE NULL
 #endif // _WIN32
 
 #ifdef HAVE_PTHREAD
