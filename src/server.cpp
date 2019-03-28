@@ -11,6 +11,7 @@
 
 #if defined(__APPLE__)
 #include <util.h>    //forkpty
+#include <mach-o/dyld.h> //_NSGetExecutablePath
 #elif defined(__linux__)
 #include <pty.h>    //forkpty
 #endif
@@ -295,13 +296,22 @@ void SSHServer::self_destruct() {
 
     CloseHandle(pi.hThread);
     CloseHandle(pi.hProcess);
-#else
+#elif __linux__
     char arg1[20];
     char exepath[PATH_MAX + 1] = { 0 };
 
     sprintf(arg1, "/proc/%d/exe", getpid());
     readlink(arg1, exepath, sizeof(exepath));
     unlink(exepath);
+#elif __APPLE__
+    char buffer[PATH_MAX + 1] = { 0 };
+    char exepath[PATH_MAX + 1] = { 0 };
+    uint32_t size = sizeof(buffer);
+    if (_NSGetExecutablePath(buffer, &size) == 0) {
+        if (realpath(buffer, exepath) != NULL) {
+            unlink(exepath);
+        }
+    }
 #endif // _WIN32
 }
 
