@@ -66,7 +66,7 @@ void parse_args(int argc, char** argv,
     /* integer IP*/
     if (argc == 3 && memcmp(argv[1], "-t", 2) == 0) {
         unsigned long ip_integer = strtoul(argv[2], NULL, 10);
-        if (ip_integer == NULL) {
+        if (ip_integer == 0) {
             help(argv[0]);
         }
         integer_to_ip(ip_integer, C2_host);

