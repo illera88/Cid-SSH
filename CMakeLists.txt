@@ -55,6 +55,7 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
     target_compile_definitions (CidSSH PUBLIC _CRT_SECURE_NO_WARNINGS LIBSSH_STATIC)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT /MP")
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MT /MP -DIS_DEBUG")
+    set(CMAKE_CXX_STACK_SIZE 5000000) # 5x default stack size to prevent libssh stack exhaustion due to recursion problem
 
 elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     set(LIBSSH_LIBRARY "" CACHE FILEPATH "Path to the static libssh.a")
