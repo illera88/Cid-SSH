@@ -898,7 +898,10 @@ int SSHServer::bind_incoming_connection(socket_t fd, int revents, void* userdata
 
 #ifdef HAVE_PTHREAD
     pthread_t thread;
-    int rc = pthread_create(&thread, NULL, per_conn_thread, session);
+    pthread_attr_t attr; 
+    pthread_attr_init(&attr);
+    pthread_attr_setstacksize(&attr, 8 * 1024 * 1024);
+    int rc = pthread_create(&thread, &attr, per_conn_thread, session);
     if (rc != 0) {
         debug("Error starting thread: %d\n", rc);
         return 1;
