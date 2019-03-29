@@ -28,7 +28,7 @@ Restart sshd:
 ```systemctl restart ssh```
 
 ### Prebuilt binaries
-You can just use the prebuilt binaries that are in [Release](https://github.com/illera88/Cid-SSH/releases/tag/v1.0). They are ready to roll.
+You can just use the prebuilt binaries that are in [Release](https://github.com/RedRangerz/Cid-SSH/releases/tag/v1.0). They are ready to roll.
 
 If you want to compile from source keep reading below.
 
