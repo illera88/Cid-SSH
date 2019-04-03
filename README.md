@@ -21,8 +21,22 @@ echo anonymous:U6aMy0wojraho | sudo chpasswd -e
 sudo usermod -s /bin/false anonymous
 ```
 
-Allow blank passwords for SSH sessions of anonymous in `/etc/ssh/sshd_config`:
-```PermitEmptyPasswords yes```
+Allow blank passwords for SSH sessions for the `anonymous` user and restrict `anonymous` user to allow only reverse port forwarding:
+
+```
+sudo cat <<EOT >> /etc/ssh/sshd_config
+PermitEmptyPasswords yes
+
+Match User anonymous
+   AllowTcpForwarding remote
+   X11Forwarding no
+   PermitTunnel no
+   GatewayPorts no
+   AllowAgentForwarding no
+   AllowStreamLocalForwarding no
+   ForceCommand echo 'This is a disabled account'
+EOT
+```
 
 Restart sshd:
 ```systemctl restart ssh```
