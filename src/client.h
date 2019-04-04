@@ -28,4 +28,7 @@ private:
 
     static pthread_mutex_t mutex;
     static std::vector<std::thread> thread_vector;
+#ifdef PASSWORD_AUTH
+    static char password[20];
+#endif
 };

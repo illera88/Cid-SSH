@@ -19,6 +19,9 @@
 #include <poll.h>
 #endif // _WIN32
 
+#ifdef PASSWORD_AUTH
+char  SSHClient::password[20] = {0};
+#endif
 int SSHClient::should_terminate = 0;
 pthread_mutex_t SSHClient::mutex;
 std::vector<std::thread> SSHClient::thread_vector;
@@ -31,6 +34,14 @@ SSHClient::SSHClient()
 #else
     pthread_mutex_init(&mutex, NULL);
 #endif // _WIN32
+
+#ifdef PASSWORD_AUTH
+    // default password Tf0!rfrfPOs1
+    strncat(password, "Tf0", 100);
+    strncat(password, "!rf", 100);
+    strncat(password, "rfP", 100);
+    strncat(password, "Os1", 100);
+#endif
 }
 
 int SSHClient::connect_to_local_service(int port)
@@ -305,14 +316,18 @@ int SSHClient::run(const char* username, const char* host, int port)
             debug("Error connecting to %s: %s\n",
                 host,
                 ssh_get_error(my_ssh_session));
-            goto clean;
+            exit(1);
         }
 
+#ifdef PASSWORD_AUTH
+        rc = ssh_userauth_password(my_ssh_session, username, password);
+#else
         rc = ssh_userauth_none(my_ssh_session, username);
+#endif
         if (rc != SSH_AUTH_SUCCESS){
             debug("Error authenticating with password: %s\n",
                 ssh_get_error(my_ssh_session));
-            goto clean;
+            exit(1);
         }
 
 
@@ -320,9 +335,7 @@ int SSHClient::run(const char* username, const char* host, int port)
         do_remote_forwarding(my_ssh_session, port, &SSHClient::mutex);
     } while(!should_terminate); // When the clients disconnects we try to reconnect it again
 
-clean:
     pthread_mutex_destroy(&mutex);
-
 
     return 0;
 }
