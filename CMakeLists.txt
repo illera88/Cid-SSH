@@ -114,3 +114,7 @@ elseif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     endif()
 endif()
 
+if (DEFINED PASSWORD_AUTH)
+    target_compile_definitions(CidSSH PRIVATE "-DPASSWORD_AUTH") 
+endif()
+
