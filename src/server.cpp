@@ -30,7 +30,7 @@
 #else
 #include <poll.h>
 #include <limits.h>
-#define INVALID_HANDLE_VALUE NULL
+#define INVALID_HANDLE_VALUE -1
 #endif // _WIN32
 
 #ifdef HAVE_PTHREAD
@@ -810,7 +810,7 @@ shutdown:
         StsQueue.destroy(info.queue);
     }
 
-    if (info.shell_thread != INVALID_HANDLE_VALUE) {
+    if (info.shell_thread != (pthread_t)INVALID_HANDLE_VALUE) {
 #ifdef _WIN32
         WaitForSingleObject(info.shell_thread, INFINITE);
 #else

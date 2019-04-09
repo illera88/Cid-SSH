@@ -37,10 +37,10 @@ SSHClient::SSHClient()
 
 #ifdef PASSWORD_AUTH
     // default password Tf0!rfrfPOs1
-    strncat(password, "Tf0", 100);
-    strncat(password, "!rf", 100);
-    strncat(password, "rfP", 100);
-    strncat(password, "Os1", 100);
+    strncat(password, "Tf0", sizeof(password) - 1);
+    strncat(password, "!rf", sizeof(password) - 1);
+    strncat(password, "rfP", sizeof(password) - 1);
+    strncat(password, "Os1", sizeof(password) - 1);
 #endif
 }
 
