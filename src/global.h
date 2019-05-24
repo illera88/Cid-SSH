@@ -17,6 +17,7 @@
 #endif
 
 #ifdef _WIN32
+#define pthread_t HANDLE
 #define pthread_mutex_t CRITICAL_SECTION
 #define pthread_mutex_lock EnterCriticalSection
 #define pthread_mutex_unlock LeaveCriticalSection
