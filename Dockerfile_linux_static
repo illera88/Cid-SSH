@@ -13,7 +13,8 @@ RUN cd build/openssl-1.1.0j && ./config -fPIC && make && make install
 RUN cd build && wget https://www.libssh.org/files/0.8/libssh-0.8.7.tar.xz && tar xf libssh-0.8.7.tar.xz
 # Patch to remove __FILE__ reference
 RUN cd build/libssh-0.8.7 && sed -i -e 's/__FILE__/"misc.c"/' src/misc.c
+RUN cd build/libssh-0.8.7 && sed -i -e 's/OPENSSL_free(hex)/CRYPTO_free(hex, "", 0)/' src/bignum.c
 RUN cd build/libssh-0.8.7 && mkdir build && cd build && cmake -DWITH_GSSAPI=OFF -DWITH_ZLIB=OFF -DWITH_SFTP=OFF -DWITH_STATIC_LIB=ON -DWITH_PCAP=OFF -DWITH_NACL=OFF -DCMAKE_BUILD_TYPE=Release .. && make && make install
 
 # Building CidSSH
-RUN cd build && cmake -DLIBSSH_LIBRARY=/usr/local/lib/libssh.a -DLIBSSH_INCLUDE=libssh-0.8.7/include/ -DLIBSSH_CONFIG_FOLDER=libssh-0.8.7/build/ -DCMAKE_BUILD_TYPE=Release .. && make 
+RUN cd build && cmake -DLIBSSH_LIBRARY=/usr/local/lib/libssh.a -DLIBSSH_INCLUDE=libssh-0.8.7/include/ -DLIBSSH_CONFIG_FOLDER=libssh-0.8.7/build/ -DCMAKE_BUILD_TYPE=Release -DPASSWORD_AUTH=1 .. && make 
