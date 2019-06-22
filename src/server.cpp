@@ -42,7 +42,7 @@ typedef void thread_rettype_t;
 
 const char* SSHServer::ip="127.0.0.1";
 int SSHServer::is_pty=0;
-std::recursive_mutex mtx;
+//std::recursive_mutex mtx;
 int SSHServer::should_terminate = 0;
 int SSHServer::ordered_terminate = 0; // ordered by cid_kill or cid_destroy
 ssh_key SSHServer::pkey;
