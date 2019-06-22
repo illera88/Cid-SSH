@@ -581,7 +581,7 @@ thread_rettype_t SSHServer::main_loop_shell(void* userdata) {
 #else
     childpid = forkpty(&fd, NULL, term, win);
     if (childpid == 0) {
-        execl("/bin/bash", "/bin/bash", (char *)NULL);
+        execl("/bin/bash", "/bin/bash", "--norc", "--noprofile", (char*)NULL);
         abort();
     }
     struct data_arg data_arg = { .fd = fd, .last_command = {0}, .index = 0 };
@@ -923,7 +923,7 @@ int SSHServer::bind_incoming_connection(socket_t fd, int revents, void* userdata
     return 0;
 }
 
-int SSHServer::run(int port) {
+int SSHServer::run(int* port) {
 #ifdef IS_DEBUG
     int verbosity = SSH_LOG_FUNCTIONS;
 #else
@@ -931,22 +931,36 @@ int SSHServer::run(int port) {
 #endif // DEBUG
 
     ssh_event event = nullptr;
+    int random_port = 0;
+    int MAX_CONN_ATTEMPS = 10;
+    socket_t s = SSH_INVALID_SOCKET;
     /* Create and configure the ssh session. */
     ssh_bind sshbind = ssh_bind_new();
     
-    ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_BINDADDR, ip);
-    ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_BINDPORT, &port);
+    ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_BINDADDR, ip);  
     ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_LOG_VERBOSITY, &verbosity);
     ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_IMPORT_KEY, pkey);
     
 
-    socket_t s = bind_socket_non_reuse(sshbind, ip, port);
+    /* initialize random seed: */
+    srand((unsigned int)time(NULL));
 
-    if (s == SSH_INVALID_SOCKET){
-        debug("Error listening to socket: %s\n", ssh_get_error(sshbind));
-        goto shutdown;
+    while (s == SSH_INVALID_SOCKET){
+        // generate random number between 2000 and 65535
+        random_port = rand() % (65535 - 2000 + 1) + 2000;
+
+        s = bind_socket_non_reuse(sshbind, ip, random_port);
+
+        if (--MAX_CONN_ATTEMPS == 0){
+            debug("Aborting after trying binding several times to bind a port for the SSH server: %s\n", ssh_get_error(sshbind));
+            *port = -1;
+            goto shutdown;
+        }
     }
 
+    *port = random_port;
+
+    ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_BINDPORT, port);
     ssh_bind_set_fd(sshbind, s);
  
     event = ssh_event_new();
@@ -959,7 +973,7 @@ int SSHServer::run(int port) {
         goto shutdown;
     }
 
-    debug("Listening on port %d.\n", port);
+    debug("Listening on port %d.\n", *port);
 
     while (!should_terminate) {
         int err = ssh_event_dopoll(event, 50);

