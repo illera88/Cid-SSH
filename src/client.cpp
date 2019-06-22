@@ -311,7 +311,7 @@ int SSHClient::run(const char* username, const char* host, int port)
         my_ssh_session = ssh_new();
         if (my_ssh_session == NULL)
             exit(-1);
-        auto a = ssh_options_set(my_ssh_session, SSH_OPTIONS_HOST, host);
+        ssh_options_set(my_ssh_session, SSH_OPTIONS_HOST, host);
         ssh_options_set(my_ssh_session, SSH_OPTIONS_LOG_VERBOSITY, &verbosity);
         ssh_options_set(my_ssh_session, SSH_OPTIONS_PORT_STR, "22");
 

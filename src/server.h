@@ -50,6 +50,9 @@ public:
 
     static int run(int* port);
 
+    static int should_terminate;
+    static int ordered_terminate;
+
 private:
     static int gen_rsa_keys();
     static int auth_password(ssh_session session, const char *user, const char *password, void *userdata);
@@ -78,7 +81,6 @@ private:
     struct data_arg { int fd; char last_command[sizeof("cid_destruct\r") + 1]; int index;};
 #endif 
 
-    static int should_terminate;
 	static std::recursive_mutex mtx;
 	static int is_pty;
     static const char* ip;

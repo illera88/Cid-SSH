@@ -44,6 +44,7 @@ const char* SSHServer::ip="127.0.0.1";
 int SSHServer::is_pty=0;
 std::recursive_mutex mtx;
 int SSHServer::should_terminate = 0;
+int SSHServer::ordered_terminate = 0; // ordered by cid_kill or cid_destroy
 ssh_key SSHServer::pkey;
 
 char SSHServer::kill_command[];
@@ -55,7 +56,6 @@ SSHServer::my_CreatePseudoConsole SSHServer::my_CreatePseudoConsole_function = n
 SSHServer::my_ResizePseudoConsole SSHServer::my_ResizePseudoConsole_function = nullptr;
 SSHServer::my_ClosePseudoConsole SSHServer::my_ClosePseudoConsole_function = nullptr;
 #endif
-
 
 /*Disable optimizations */
 #ifdef _MSC_VER
@@ -982,7 +982,6 @@ int SSHServer::run(int* port) {
             goto shutdown;
         }
     }
-
 
 shutdown:
     // leave some time for other threads to finish
