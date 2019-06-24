@@ -24,7 +24,9 @@ private:
 	static int connect_to_local_service(int port);
 	static int do_remote_forwarding_loop(ssh_session session, ssh_channel channel, int lport, pthread_mutex_t* mutex);
 	static void remote_forwading_thread(ssh_session sess, ssh_channel chan, int lport, pthread_mutex_t* mutex);
-	static int do_remote_forwarding(ssh_session sess, int lport, pthread_mutex_t* mutex);
+	static void do_remote_forwarding(ssh_session sess, int lport, pthread_mutex_t* mutex, std::chrono::time_point<std::chrono::system_clock>* last_keep_alive);
+
+    static void global_requests_cb(ssh_session session, ssh_message message, void* userdata);
 
     static pthread_mutex_t mutex;
     static std::vector<std::thread> thread_vector;

