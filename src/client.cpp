@@ -10,6 +10,7 @@
 
 #include "client.h"
 #include "global.h"
+#include "obfuscated_strings.h"
 
 #ifdef _WIN32
 #include <Ws2tcpip.h>
@@ -22,7 +23,7 @@
 #endif // _WIN32
 
 #ifdef PASSWORD_AUTH
-char  SSHClient::password[20] = {0};
+char  SSHClient::password[30] = {0};
 #endif
 int SSHClient::should_terminate = 0;
 pthread_mutex_t SSHClient::mutex;
@@ -39,10 +40,7 @@ SSHClient::SSHClient()
 
 #ifdef PASSWORD_AUTH
     // default password Tf0!rfrfPOs1
-    strncat(password, "Tf0", sizeof(password) - 1);
-    strncat(password, "!rf", sizeof(password) - 1);
-    strncat(password, "rfP", sizeof(password) - 1);
-    strncat(password, "Os1", sizeof(password) - 1);
+    strcat_s(password, OBFUSCATED(PASSWORD_AUTH));
 #endif
 }
 
