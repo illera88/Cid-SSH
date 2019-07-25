@@ -238,11 +238,12 @@ void SSHClient::do_remote_forwarding(ssh_session sess, int lport, pthread_mutex_
         goto clean;
     }
     debug("Check port %d in remote server\n", bounded_port?bounded_port:remote_liste_port);
+    debug("[OTCP] Waiting for incoming connection...\n");
 
 	ssh_channel chan;
     while (!should_terminate) {
         int dport = 0;	// The port bound on the server, here: 8080
-        debug("[OTCP] Waiting for incoming connection...\n");
+        
 
         // Check if server sent us a keep alive message recently, if not, restart connection with server 
         std::chrono::duration<double> elapsed_seconds = std::chrono::system_clock::now() - *last_keep_alive;       
@@ -255,7 +256,14 @@ void SSHClient::do_remote_forwarding(ssh_session sess, int lport, pthread_mutex_
         pthread_mutex_unlock(mutex);
 
         if (chan == NULL) {
-            if (!ssh_is_connected(sess)) {
+            if(ssh_get_status(sess) == SSH_CLOSED ||
+                ssh_get_status(sess) == SSH_CLOSED_ERROR){
+            //if (!ssh_is_connected(sess)) {
+                auto d = ssh_get_status(sess);
+                auto a = ssh_get_error(sess);
+                auto b = ssh_get_disconnect_message(sess);
+                auto c = ssh_is_connected(sess);
+                debug("%s\n%s\n%d\n", a,b,c);
                 goto clean;
             }
 
@@ -291,6 +299,7 @@ clean:
 void SSHClient::global_requests_cb(ssh_session session, ssh_message message, void* userdata) {
     auto type = ssh_message_type(message);
     auto subtype = ssh_message_subtype(message);
+    
     std::chrono::time_point<std::chrono::system_clock>* last_keep_alive;
     switch (type)
     {
@@ -298,9 +307,11 @@ void SSHClient::global_requests_cb(ssh_session session, ssh_message message, voi
         switch (subtype)
         {
         case SSH_GLOBAL_REQUEST_KEEPALIVE:
+            debug("Got a keep alive message from server\n");
             last_keep_alive = (std::chrono::time_point<std::chrono::system_clock>*)userdata;
             *last_keep_alive = std::chrono::system_clock::now();
-            debug("Got a keep alive message from server\n");
+            
+            ssh_message_global_request_reply_success(message, 0); // reply to the keep alive or server will close the connection
             break;
         default:
             break;

