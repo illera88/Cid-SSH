@@ -5,6 +5,7 @@
 #include <libssh/callbacks.h>
 
 #include <stdio.h>
+#include <string.h> 
 #include <thread>
 #include <math.h> 
 
@@ -40,7 +41,7 @@ SSHClient::SSHClient()
 
 #ifdef PASSWORD_AUTH
     // default password Tf0!rfrfPOs1
-    strcat_s(password, OBFUSCATED(PASSWORD_AUTH));
+    strncat(password, OBFUSCATED(PASSWORD_AUTH), sizeof(password)-1);
 #endif
 }
 

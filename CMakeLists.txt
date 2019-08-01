@@ -81,12 +81,15 @@ elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     target_include_directories(CidSSH PRIVATE "${LIBSSH_CONFIG_FOLDER}")
     target_include_directories(CidSSH PRIVATE "${LIBSSH_INCLUDE}")
 
-    if(${CMAKE_BUILD_TYPE} MATCHES "Debug") # Non static version, to compile in ubuntu without problems
+    if(${CMAKE_BUILD_TYPE} STREQUAL "Debug") # Non static version, to compile in ubuntu without problems
         target_link_libraries(CidSSH "-lpthread")
         target_link_libraries(CidSSH "-ldl")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -g -ggdb -fsanitize=address -lasan -static-libasan")
         target_compile_definitions(CidSSH PRIVATE "-DIS_DEBUG")
-    else() #Static version
+    elseif(${CMAKE_BUILD_TYPE} STREQUAL "DebugStatic") # Static debug version to compile with the docker file
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -g -ggdb -static -static-libgcc -static-libstdc++")
+        target_compile_definitions(CidSSH PRIVATE "-DIS_DEBUG")
+    else() #Static release version
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static -static-libgcc -static-libstdc++ -s")
     endif()
 elseif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")

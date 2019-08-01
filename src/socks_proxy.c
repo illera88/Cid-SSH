@@ -61,7 +61,7 @@ void do_cleanup(StsHeader* cleanup_queue) {
         ssh_remove_channel_callbacks(item->channel, item->cb_chan);
         ssh_channel_free(item->channel);
 
-
+        
         if (item->fd != SSH_INVALID_SOCKET) {
             _close_socket(*item);
         }
