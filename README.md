@@ -9,6 +9,23 @@ This tool can be used as a fast initial compromise tool that can be used not onl
 
 Windows systems lack of a proper TTY but thanks to [this](https://blogs.msdn.microsoft.com/commandline/2018/08/02/windows-command-line-introducing-the-windows-pseudo-console-conpty/) we can in recent Windows versions get a fully functional TTY. In the case that the target system does not support `CreatePseudoConsole` it will downgrade to a simple, not interactive shell.
 
+## Cid Controller
+**CidSSH** C2 will receive standar reverse SSH connections. You can see them just running `netstat -pln`. The problem about this is that if you receive multiple connections from different targets you won't know which binded local port correspond with each of the victims. To overcome this problem `Cid-SSH` provides a `Controller`. The controller will be used for:
+- As `anonymous` (or your chosen user) shell that will receive information sent by the victims when they infect.
+- As a dashboard to list a history of victims and a way to easily jump into a shell in them.
+
+To use it you just need to set the C2 user shell used by the malware (by default it is `anonymous`) to `Cid-Controller`. You can do that with:
+
+```
+sudo usermod -s /path/to/Cid-Controller anonymous
+```
+
+To list and interact with active connections you just have to call the same binary:
+
+```
+/path/to/Cid-Controller
+```
+
 ## Setup instructions
 ### C2 server
 We need to properly configure the SSH server running at the C2 so we don't get hacked.
@@ -64,8 +81,10 @@ These are the steps to build and get the compiled binary from the container:
 ```
 # Build the image, install dependencies and compile CidSSH
 sudo docker build -t alpine_cid_ssh -f Dockerfile_linux_static .
-# Copy the binary from the docker container to the current folder
-sudo docker run -v `pwd`:/data_out -i -t alpine_cid_ssh:latest /bin/sh -c "cp /Cid-SSH/build/CidSSH /data_out/"
+# Copy Cid malware from docker container to the current folder
+sudo docker run -v `pwd`:/data_out -i -t alpine_cid_ssh:latest /bin/sh -c "cp /Cid-SSH/build/malware/CidSSH /data_out/"
+# Copy Cid controller from docker container to the current folder
+sudo docker run -v `pwd`:/data_out -i -t alpine_cid_ssh:latest /bin/sh -c "cp /Cid-SSH/build/controller/Cid-Controller /data_out/"
 ```
 
 ### Compilation on MacOs
