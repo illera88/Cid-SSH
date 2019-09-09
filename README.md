@@ -26,6 +26,12 @@ To list and interact with active connections you just have to call the same bina
 /path/to/Cid-Controller
 ```
 
+`Cid-Controller` relies on `lsof` to get the info about the existent connections. Since `lsof` needs to be run as root to provide the information we need, we have to set the setgid bit to `lsof`. To do so:
+
+```
+sudo chmod +s /usr/bin/lsof
+```
+
 ## Setup instructions
 ### C2 server
 We need to properly configure the SSH server running at the C2 so we don't get hacked.
@@ -35,7 +41,7 @@ Run all of these commands:
 ```
 sudo useradd anonymous
 echo anonymous:U6aMy0wojraho | sudo chpasswd -e
-sudo usermod -s /bin/false anonymous
+sudo usermod -s /bin/false anonymous # change /bin/false to /path/to/Cid-Controller to use Cid-Controller
 ```
 
 Allow blank passwords for SSH sessions for the `anonymous` user and restrict `anonymous` user to allow only reverse port forwarding:
