@@ -23,7 +23,6 @@
 #endif
 
 #include<signal.h>
-#include <bits/sigaction.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
@@ -45,11 +44,10 @@
 
 #include "sshpass.h"
 
-#if 1
 #define PACKAGE_NAME "aaa"
 #define PACKAGE_STRING "r"
 #define PASSWORD_PROMPT "prom"
-#endif
+#define	SIG_SETMASK   2		 /* Set the set of blocked signals.  */
 
 enum program_return_codes {
     RETURN_NOERROR,
