@@ -1,0 +1,3 @@
+[submodule "src/malware/websockets/externals/asio"]
+	path = src/malware/websockets/externals/asio
+	url = https://github.com/chriskohlhoff/asio
