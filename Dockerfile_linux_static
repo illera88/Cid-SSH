@@ -6,8 +6,9 @@ RUN apk add --no-cache build-base cmake autoconf libtool pkgconf git mercurial f
 WORKDIR /tmp/
 
 # Building openssl statically (Requirement for libssh)
-RUN wget https://www.openssl.org/source/openssl-1.1.0j.tar.gz && tar xf openssl-1.1.0j.tar.gz
-RUN cd openssl-1.1.0j && ./config -fPIC && make && make install_sw
+ARG OPENSSL_VERSION=1.1.1d
+RUN wget https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz && tar xf openssl-${OPENSSL_VERSION}.tar.gz
+RUN cd openssl-${OPENSSL_VERSION} && ./config -fPIC && make && make install_sw
 
 COPY . /Cid-SSH/
 WORKDIR /Cid-SSH/

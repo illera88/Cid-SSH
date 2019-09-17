@@ -17,8 +17,9 @@ jobs:
                 name: Download and install OpenSSL
                 command: |
                     cd /tmp
-                    wget https://www.openssl.org/source/openssl-1.1.0j.tar.gz && tar xf openssl-1.1.0j.tar.gz
-                    cd openssl-1.1.0j && ./config -fPIC && make && make install
+                    export OPENSSL_VERSION=1.1.1d
+                    wget https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz && tar xf openssl-${OPENSSL_VERSION}.tar.gz
+                    cd openssl-${OPENSSL_VERSION} && ./config -fPIC && make && make install
             - run:
                 name: Build our software
                 command: |
