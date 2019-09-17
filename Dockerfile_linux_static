@@ -1,10 +1,13 @@
+# Please note that ldd is broken on alpine, and will always return ld.so in its
+# output, look at elfread --program-headers and make sure there is no INTERP
+# section instead
 FROM alpine:latest
-RUN apk add --no-cache build-base cmake autoconf libtool pkgconf git mercurial file linux-headers wget
+RUN apk add --no-cache build-base cmake autoconf libtool pkgconf git mercurial file linux-headers wget libc-dev
 WORKDIR /tmp/
 
 # Building openssl statically (Requirement for libssh)
 RUN wget https://www.openssl.org/source/openssl-1.1.0j.tar.gz && tar xf openssl-1.1.0j.tar.gz
-RUN cd openssl-1.1.0j && ./config -fPIC && make && make install
+RUN cd openssl-1.1.0j && ./config -fPIC && make && make install_sw
 
 COPY . /Cid-SSH/
 WORKDIR /Cid-SSH/
