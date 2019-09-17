@@ -5,7 +5,8 @@ include(ExternalProject)
 #ExternalProject_Add(openssl, )
 
 ExternalProject_Add(libssh_builder
-    URL https://www.libssh.org/files/0.8/libssh-0.8.7.tar.xz
+    GIT_REPOSITORY https://github.com/RedRangerz/libssh.git
+    GIT_TAG origin/buildfixes
     CMAKE_CACHE_ARGS
         -DWITH_GSSAPI:BOOL=OFF
         -DWITH_ZLIB:BOOL=OFF
