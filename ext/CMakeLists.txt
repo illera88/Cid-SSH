@@ -2,6 +2,15 @@ cmake_minimum_required(VERSION 3.13)
 
 include(ExternalProject)
 
+get_property(LIB64 GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS)
+
+if ("${LIB64}" STREQUAL "TRUE")
+    set(LIBSUFFIX 64)
+else()
+    set(LIBSUFFIX "")
+endif()
+
+
 #ExternalProject_Add(openssl, )
 
 ExternalProject_Add(libssh_builder
@@ -23,4 +32,7 @@ set(LIBSSH_INCLUDE_DIR ${INSTALL_DIR}/include PARENT_SCOPE)
 set(LIBSSH_LIB_DIR ${INSTALL_DIR}/lib PARENT_SCOPE)
 
 add_library(libssh STATIC IMPORTED GLOBAL)
-set_target_properties(libssh PROPERTIES IMPORTED_LOCATION ${INSTALL_DIR}/lib/libssh.a)
+set_target_properties(libssh 
+    PROPERTIES IMPORTED_LOCATION
+    ${INSTALL_DIR}/lib${LIBSUFFIX}/libssh.a
+)
