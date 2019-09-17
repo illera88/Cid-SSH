@@ -21,6 +21,7 @@ endif()
 
 option(CID_WEBSOCKETS "Build CidSSH with Websockets encapsulation" ON)
 
+add_subdirectory(ext)
 add_subdirectory(src/malware)
 
 
