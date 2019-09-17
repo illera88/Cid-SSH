@@ -24,8 +24,7 @@ option(CID_WEBSOCKETS "Build CidSSH with Websockets encapsulation" ON)
 add_subdirectory(ext)
 add_subdirectory(src/malware)
 
-
-add_subdirectory(src/malware/websockets/ws_proxy_server) #ToDo remove this. just testing in windows
+#add_subdirectory(src/malware/websockets/ws_proxy_server) #ToDo remove this. just testing in windows
 
 if(NOT ${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 	if(${BUILD_CONTROLER})
