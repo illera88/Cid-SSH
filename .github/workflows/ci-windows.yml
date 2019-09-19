@@ -1,0 +1,18 @@
+name: Build for Windows
+on: [push]
+
+jobs:
+    build:
+        runs-on: windows-2019
+        steps:
+            - uses: actions/checkout@v1
+              with:
+                  submodules: true
+            - name: Create build directory
+              run: |
+                  cmake --version
+                  cmake -S . -B build -G "Visual Studio 16 2019" -A Win32
+            - name: Build CidSSH in Release mode
+              run: |
+                  cmake --build build --config Release
+
