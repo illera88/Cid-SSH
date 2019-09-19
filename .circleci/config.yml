@@ -14,16 +14,6 @@ jobs:
                 command:
                     git submodule update --init --recursive
             - run:
-                name: Download and install OpenSSL
+                name: Build CidSSH
                 command: |
-                    cd /tmp
-                    export OPENSSL_VERSION=1.1.1d
-                    wget https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz && tar xf openssl-${OPENSSL_VERSION}.tar.gz
-                    cd openssl-${OPENSSL_VERSION} && ./config -fPIC && make && make install_sw
-            - run:
-                name: Build our software
-                command: |
-                    mkdir build
-                    cd build
-                    cmake ..
-                    make
+                    sh ./build.sh
