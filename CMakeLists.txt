@@ -3,8 +3,7 @@ cmake_minimum_required(VERSION 3.15.0)
 # https://cmake.org/cmake/help/latest/policy/CMP0091.html
 cmake_policy(SET CMP0091 NEW) 
 
-
-project(CidSSH)
+project(CidSSH LANGUAGES C CXX)
 
 # Find out if we have threading available
 set(CMAKE_THREAD_PREFER_PTHREADS ON)
