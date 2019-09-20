@@ -1,7 +1,7 @@
 # Please note that ldd is broken on alpine, and will always return ld.so in its
 # output, look at elfread --program-headers and make sure there is no INTERP
 # section instead
-FROM alpine:latest
+FROM alpine:edge
 
 COPY . /Cid-SSH/
 WORKDIR /Cid-SSH/

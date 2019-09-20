@@ -9,6 +9,6 @@ jobs:
               with:
                   submodules: true
             - name: Build CidSSH
-              uses: docker://alpine:latest
+              uses: docker://alpine:edge
               with: 
                   args: sh ./build.sh
