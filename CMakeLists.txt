@@ -6,7 +6,7 @@ project(CidSSH)
 set(CMAKE_THREAD_PREFER_PTHREADS ON)
 find_package(Threads)
 
-if (Threads_FOUND)
+if (Threads_FOUND AND CMAKE_USE_PTHREADS_INIT)
  set(HAVE_PTHREAD 1)
 endif ()
 
