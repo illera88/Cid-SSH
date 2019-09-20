@@ -30,6 +30,7 @@ ExternalProject_Add(libssh_builder
         -DWITH_NACL:BOOL=OFF
         -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
         -DOPENSSL_USE_STATIC_LIBS:BOOL=ON
+        -DCMAKE_TOOLCHAIN_FILE:PATH=${CMAKE_TOOLCHAIN_FILE}
 )
 
 ExternalProject_Get_Property(libssh_builder INSTALL_DIR)
