@@ -15,10 +15,11 @@ else()
     set(LIBSUFFIX "")
 endif()
 
+set(OPENSSL_STATIC_LIBS TRUE)
 
 ExternalProject_Add(libssh_builder
     GIT_REPOSITORY https://github.com/RedRangerz/libssh.git
-    GIT_TAG origin/buildfixes
+    GIT_TAG origin/msvcstatic
     CMAKE_CACHE_ARGS
         -DWITH_GSSAPI:BOOL=OFF
         -DWITH_ZLIB:BOOL=OFF
@@ -29,6 +30,7 @@ ExternalProject_Add(libssh_builder
         -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
         -DOPENSSL_USE_STATIC_LIBS:BOOL=ON
         -DCMAKE_TOOLCHAIN_FILE:PATH=${CMAKE_TOOLCHAIN_FILE}
+        -DOPENSSL_ROOT_DIR:STRING=${OPENSSL_ROOT_DIR}
 )
 
 ExternalProject_Get_Property(libssh_builder INSTALL_DIR)
