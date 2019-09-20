@@ -16,8 +16,6 @@ else()
 endif()
 
 
-#ExternalProject_Add(openssl, )
-
 ExternalProject_Add(libssh_builder
     GIT_REPOSITORY https://github.com/RedRangerz/libssh.git
     GIT_TAG origin/buildfixes
@@ -39,7 +37,15 @@ set(LIBSSH_INCLUDE_DIR ${INSTALL_DIR}/include PARENT_SCOPE)
 set(LIBSSH_LIB_DIR ${INSTALL_DIR}/lib PARENT_SCOPE)
 
 add_library(libssh STATIC IMPORTED GLOBAL)
-set_target_properties(libssh 
-    PROPERTIES IMPORTED_LOCATION
-    ${INSTALL_DIR}/lib${LIBSUFFIX}/libssh.a
-)
+
+if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+    set_target_properties(libssh
+        PROPERTIES IMPORTED_LOCATION
+        ${INSTALL_DIR}/lib/static/ssh.lib
+    )
+else()
+    set_target_properties(libssh
+        PROPERTIES IMPORTED_LOCATION
+        ${INSTALL_DIR}/lib${LIBSUFFIX}/libssh.a
+    )
+endif()
