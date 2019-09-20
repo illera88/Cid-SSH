@@ -18,4 +18,8 @@ jobs:
             - name: Build CidSSH in Release mode
               run: |
                   cmake --build build --config Release
+            - uses: actions/upload-artifact@master
+              with:
+                  name: CidSSH.exe
+                  path: build/src/malware/Release/CidSSH.exe
 
