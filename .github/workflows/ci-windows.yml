@@ -10,11 +10,11 @@ jobs:
                   submodules: true
             - name: Install OpenSSL from vcpkg
               run: |
-                  vcpkg install openssl
+                  vcpkg install --triplet x86-windows-static openssl
             - name: Create build directory
               run: |
                   cmake --version
-                  cmake -S . -B build -G "Visual Studio 16 2019" -A Win32 -DCMAKE_TOOLCHAIN_FILE=%VCPKG_INSTALLATION_ROOT%\scripts\buildsystems\vcpkg.cmake
+                  cmake -S . -B build -G "Visual Studio 16 2019" -A Win32 -DVCPKG_TARGET_TRIPLET="x86-windows-static" -DCMAKE_TOOLCHAIN_FILE=%VCPKG_INSTALLATION_ROOT%\scripts\buildsystems\vcpkg.cmake
             - name: Build CidSSH in Release mode
               run: |
                   cmake --build build --config Release
