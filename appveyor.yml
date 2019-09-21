@@ -26,9 +26,8 @@ build: off
 
 test_script:
     - cmd: |-
+        vcpkg install --triplet x86-windows-static openssl
         git submodule update --init --recursive
-        mkdir build
-        cd build
         cmake --version
-        cmake .. -G %generator% -A %arch%
-        cmake --build c:\projects\cidssh --config %CONFIGURATION%
+        cmake -S . -B build -G %generator% -A %arch% -DVCPKG_TARGET_TRIPLET="x86-windows-static" -DCMAKE_TOOLCHAIN_FILE=c:/tools/vcpkg/scripts/buildsystems/vcpkg.cmake
+        cmake --build build --config %CONFIGURATION%
