@@ -3,7 +3,6 @@ clone_folder: c:\projects\cidssh
 image:
     - Visual Studio 2019
 configuration:
-    - Debug
     - Release
 platform:
     - x64
