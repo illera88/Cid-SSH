@@ -8,7 +8,7 @@ jobs:
             - run:
                 name: Install some necessary dependencies
                 command: |
-                    apk add --no-cache build-base cmake autoconf libtool pkgconf git mercurial file linux-headers wget libc-dev
+                    apk add --no-cache git
             - run:
                 name: Pull submodules
                 command:
