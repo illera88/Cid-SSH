@@ -25,6 +25,8 @@ build: off
 
 test_script:
     - cmd: |-
+        echo. >> c:\tools\vcpkg\triplets\x86-windows-static.cmake
+        echo set(VCPKG_BUILD_TYPE release) >> c:\tools\vcpkg\triplets\x86-windows-static.cmake
         vcpkg install --triplet x86-windows-static openssl
         git submodule update --init --recursive
         cmake --version

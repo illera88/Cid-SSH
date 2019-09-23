@@ -8,6 +8,10 @@ jobs:
             - uses: actions/checkout@v1
               with:
                   submodules: true
+            - name: Update vcpkg triplet to only build release
+              run: |
+                  echo.  >> %VCPKG_INSTALLATION_ROOT%\triplets\x86-windows-static.cmake
+                  echo set(VCPKG_BUILD_TYPE release) >> %VCPKG_INSTALLATION_ROOT%\triplets\x86-windows-static.cmake
             - name: Install OpenSSL from vcpkg
               run: |
                   vcpkg install --triplet x86-windows-static openssl
