@@ -1,0 +1,32 @@
+name: Build for macOS
+on: [push]
+
+jobs:
+    build:
+        runs-on: macos-latest
+        steps:
+            - uses: actions/checkout@v1
+              with:
+                  submodules: true
+            - name: Install OpenSSL from Homebrew
+              run: |
+                  brew install openssl pkg-config cmake
+                  brew info openssl
+            - name: Create build directory
+              run: |
+                  export LDFLAGS="-L/usr/local/opt/openssl/lib"
+                  export CPPFLAGS="-I/usr/local/opt/openssl/include"
+                  export PKG_CONFIG_PATH="/usr/local/opt/openssl/lib/pkgconfig"
+                  cmake --version
+                  cmake -S . -B build
+            - name: Build CidSSH in Release mode
+              run: |
+                  export LDFLAGS="-L/usr/local/opt/openssl/lib"
+                  export CPPFLAGS="-I/usr/local/opt/openssl/include"
+                  export PKG_CONFIG_PATH="/usr/local/opt/openssl/lib/pkgconfig"
+                  cmake --build build --config release
+            - uses: actions/upload-artifact@master
+              with:
+                  name: CidSSH-macos
+                  path: build/src/malware/CidSSH
+
