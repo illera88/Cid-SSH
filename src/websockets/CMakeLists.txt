@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.13)
-
 set(OPENSSL_USE_STATIC_LIBS TRUE)
 set(OPENSSL_MSVC_STATIC_RT TRUE)
 include(FindOpenSSL)
@@ -26,7 +24,6 @@ target_compile_definitions(WebsocketsWrapper
 if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
     set_target_properties(WebsocketsWrapper PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
     target_compile_definitions (WebsocketsWrapper PUBLIC _WINSOCK_DEPRECATED_NO_WARNINGS)
-
 else()
     set_target_properties(WebsocketsWrapper PROPERTIES LINK_SEARCH_START_STATIC 1)
     set_target_properties(WebsocketsWrapper PROPERTIES LINK_SEARCH_END_STATIC 1)
