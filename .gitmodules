@@ -1,7 +1,7 @@
-[submodule "src/malware/websockets/externals/asio"]
-	path = src/malware/websockets/externals/asio
+[submodule "asio"]
+	path = ext/asio
 	url = https://github.com/chriskohlhoff/asio
 	branch = asio-1-12-branch
-[submodule "src/malware/websockets/externals/websocketpp"]
-	path = src/malware/websockets/externals/websocketpp
+[submodule "websocketpp"]
+	path = ext/websocketpp
 	url = https://github.com/zaphoyd/websocketpp
