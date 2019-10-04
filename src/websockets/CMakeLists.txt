@@ -2,6 +2,34 @@ set(OPENSSL_USE_STATIC_LIBS TRUE)
 set(OPENSSL_MSVC_STATIC_RT TRUE)
 include(FindOpenSSL)
 
+include(CheckIncludeFileCXX)
+
+# CHECK_INCLUDE_FILE_CXX updates the global CMAKE_CXX_FLAGS
+SET(CMAKE_CXX_FLAGS_BAK ${CMAKE_CXX_FLAGS})
+
+CHECK_INCLUDE_FILE_CXX("asio.hpp"
+    HAS_ASIO
+    "-I${CMAKE_SOURCE_DIR}/ext/asio/asio/include/ -DASIO_STANDALONE"
+)
+CHECK_INCLUDE_FILE_CXX(
+    "websocketpp/client.hpp"
+    HAS_WEBSOCKETPP
+    "-I${CMAKE_SOURCE_DIR}/ext/websocketpp/ -DASIO_STANDALONE -D_WEBSOCKETPP_CPP11_STL_"
+)
+
+if (NOT HAS_ASIO)
+    message(FATAL_ERROR
+        "Unable to find Boost ASIO headers. Please check git submodule checkout"
+    )
+endif()
+
+if (NOT HAS_WEBSOCKETPP)
+    message(FATAL_ERROR
+        "Unable to find WebSocket++ headers. Please check git submodule checkout"
+    )
+endif()
+SET(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS_BAK})
+
 add_library(WebsocketsWrapper STATIC
     wrapper.cpp
 )
