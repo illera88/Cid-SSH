@@ -143,7 +143,7 @@ namespace internal {
 
             asio::io_service& io_service_;
             asio::ip::tcp::socket socket_;
-            asio::ip::address_v4 localhost_address;
+            asio::ip::address localhost_address;
             asio::ip::tcp::acceptor acceptor_;
             std::function<void(asio::ip::tcp::socket)> sockethandler_;
     };
