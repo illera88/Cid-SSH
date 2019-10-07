@@ -13,10 +13,10 @@ namespace wswrap {
 }
 
 namespace internal {
-    template<typename WSConn>
-    class bridge : public std::enable_shared_from_this<bridge<WSConn>> {
+    template<typename WSConnT>
+    class bridge : public std::enable_shared_from_this<bridge<WSConnT>> {
             // Private constructor, use create()
-            bridge(asio::ip::tcp::socket socket, WSConn wsconnection)
+            bridge(asio::ip::tcp::socket socket, WSConnT wsconnection)
                 : socket_(std::move(socket)), wsconn_(std::move(wsconnection)
             ) {
                 if (wsconn_ == nullptr) {
@@ -189,7 +189,7 @@ namespace internal {
             }
 
             asio::ip::tcp::socket socket_;
-            WSConn wsconn_;
+            WSConnT wsconn_;
 
             static const int max_data_length = 8192; //8KB
             std::array<unsigned char, max_data_length> socket_data_;
