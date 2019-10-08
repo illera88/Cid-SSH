@@ -1,24 +1,17 @@
-#pragma once
+#ifndef WS_PROXY_SERVER_H_6E710ED1791262
+#define WS_PROXY_SERVER_H_6E710ED1791262
 
-#define ASIO_STANDALONE
-#define _WEBSOCKETPP_CPP11_INTERNAL_
-
-#include <websocketpp/config/asio.hpp>
-
-#include <websocketpp/server.hpp>
 #include <iostream>
 #include <map>
 
-#include "tcp_proxy.h"
+#include <websocketpp/config/asio.hpp>
+#include <websocketpp/server.hpp>
 
-class ws_proxy : public std::enable_shared_from_this<ws_proxy>
-{
+class ws_proxy {
     // pull out the type of messages sent by our config
     typedef websocketpp::config::asio::message_type::ptr message_ptr;
     typedef websocketpp::lib::shared_ptr<websocketpp::lib::asio::ssl::context> context_ptr;
     
-    typedef std::shared_ptr<ws_proxy> ptr_type;
-
     // See https://wiki.mozilla.org/Security/Server_Side_TLS for more details about
     // the TLS modes. The code below demonstrates how to implement both the modern
     enum tls_mode {
@@ -26,37 +19,27 @@ class ws_proxy : public std::enable_shared_from_this<ws_proxy>
         MOZILLA_MODERN = 2
     };
 public:
-    ws_proxy();
-    bool is_SSH_server_up();
-    void run();
-    static std::shared_ptr<ws_proxy> create() { return std::make_shared<ws_proxy>(); }
-    void init();
+    ws_proxy(std::string& ssh_address, unsigned short ssh_port);
+    ~ws_proxy();
     typedef websocketpp::server<websocketpp::config::asio_tls> server;
+
+    void run_forever();
 
 private:
     server ws_server;
     std::string accepted_UA = "Acepted UA";
-    std::map<void*, std::shared_ptr<asio::ip::tcp::socket>> active_connections;
-    std::map<void*, std::shared_ptr<tcp_proxy::bridge::acceptor>> active_connections2;
-    //std::shared_ptr<tcp_proxy::bridge> _session;
-    void on_message(server* s, websocketpp::connection_hdl hdl, message_ptr msg);
-    void on_http(server* s, websocketpp::connection_hdl hdl);
-    ws_proxy::context_ptr on_tls_init(tls_mode mode, websocketpp::connection_hdl hdl);
-    asio::error_code connect_SSH_server(websocketpp::connection_hdl hdl);
-    void read_handle(const asio::error_code& error, const size_t& bytes_transferred);
-    
-    void read_SSH(websocketpp::connection_hdl hdl);
-    void handle_downstream_read(const asio::error_code& error, const size_t& bytes_transferred);
-    bool on_validate(server* s, websocketpp::connection_hdl hdl);
-    void on_open(server* s, websocketpp::connection_hdl hdl);
-    void on_close(server* s, websocketpp::connection_hdl hdl);
+    void on_http(websocketpp::connection_hdl hdl);
+    context_ptr on_tls_init(tls_mode mode, websocketpp::connection_hdl hdl);
+    bool on_validate(websocketpp::connection_hdl hdl);
+    void on_open(websocketpp::connection_hdl hdl);
 
+    asio::ip::address ssh_address_;
+    unsigned short ssh_port_;
 
-
-    enum { max_data_length = 8192 }; //8KB
-    unsigned char downstream_data_[max_data_length] = { 0 };
-    unsigned char upstream_data_[max_data_length] = { 0 };
-
-
-
+    asio::io_service io_context_;
+    std::shared_ptr<asio::io_service::work> aio_work_;
+    std::thread io_runner_;
 };
+
+#endif /* WS_PROXY_SERVER_H_6E710ED1791262 */
+
