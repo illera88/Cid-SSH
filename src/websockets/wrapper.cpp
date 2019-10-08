@@ -19,8 +19,8 @@ namespace wswrap {
 
     class websocket {
         public:
-            websocket(asio::io_service& io_service, std::string uri) :
-            io_service_(io_service), uri_(uri) {
+            websocket(asio::io_context& io_context, std::string uri) :
+            io_context_(io_context), uri_(uri) {
                 try {
                     // Set logging to be pretty verbose (everything except message payloads)
                     wsclient_.set_access_channels(websocketpp::log::alevel::all);
@@ -29,7 +29,7 @@ namespace wswrap {
                     wsclient_.set_user_agent("test11111111"); // ToDo: Set to something unique that the server will verify to prevent outsiders poking with our ssh server
 
                     // Initialize ASIO
-                    wsclient_.init_asio(&io_service_);
+                    wsclient_.init_asio(&io_context_);
                     wsclient_.set_tls_init_handler(std::bind(&websocket::on_tls_init, this, std::placeholders::_1));
                 }
                 catch (websocketpp::exception const& e) {
@@ -54,7 +54,7 @@ namespace wswrap {
             };
 
         private:
-            asio::io_service& io_service_;
+            asio::io_context& io_context_;
             std::string uri_;
             wswrap::client wsclient_;
 
@@ -82,16 +82,16 @@ namespace internal {
     class acceptor {
         public:
             acceptor(
-                asio::io_service& io_service,
+                asio::io_context& io_context,
                 const asio::ip::address_v4& local_host,
                 unsigned short local_port,
                 std::function<void(asio::ip::tcp::socket)> sockethandler
             ) :
-                io_service_(io_service),
-                socket_(io_service_),
+                io_context_(io_context),
+                socket_(io_context_),
                 localhost_address(local_host),
                 acceptor_(
-                    io_service_,
+                    io_context_,
                     asio::ip::tcp::endpoint(
                         localhost_address,
                         local_port
@@ -141,7 +141,7 @@ namespace internal {
                 }
             }
 
-            asio::io_service& io_service_;
+            asio::io_context& io_context_;
             asio::ip::tcp::socket socket_;
             asio::ip::address localhost_address;
             asio::ip::tcp::acceptor acceptor_;
@@ -161,17 +161,17 @@ class WebsocketsWrapper::impl {
     public:
         impl(std::string& c2_uri) :
             uri_(c2_uri),
-            aio_work_(std::make_shared<asio::io_service::work>(aio_context_)),
+            aio_work_(std::make_shared<asio::io_context::work>(io_context_)),
             io_runner_(
                     std::thread(
                         [&] {
                             // Start up the asio context in a thread, forever
-                            aio_context_.run();
+                            io_context_.run();
                         }
                     )
             ),
             acceptor_(
-                aio_context_,
+                io_context_,
                 asio::ip::address_v4::loopback(),
                 0,
                 [&] (asio::ip::tcp::socket socket) {
@@ -179,7 +179,7 @@ class WebsocketsWrapper::impl {
                     auto bridge = internal::bridge<wswrap::client::connection_ptr>::create(std::move(socket), std::move(websocket_connection));
                 }
             ),
-            websocket_(aio_context_, uri_)
+            websocket_(io_context_, uri_)
         {
             acceptor_.accept_connections();
 
@@ -199,8 +199,8 @@ class WebsocketsWrapper::impl {
 
     private:
         std::string uri_;
-        asio::io_context aio_context_;
-        std::shared_ptr<asio::io_service::work> aio_work_;
+        asio::io_context io_context_;
+        std::shared_ptr<asio::io_context::work> aio_work_;
         std::thread io_runner_;
         internal::acceptor acceptor_;
         wswrap::websocket websocket_;
