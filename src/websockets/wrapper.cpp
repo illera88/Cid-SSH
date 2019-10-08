@@ -60,12 +60,13 @@ namespace wswrap {
 
             context_ptr on_tls_init(websocketpp::connection_hdl) {
                 try {
-                    context_ptr ctx = websocketpp::lib::make_shared<asio::ssl::context>(asio::ssl::context::method::tlsv12_client);
+                    context_ptr ctx = websocketpp::lib::make_shared<asio::ssl::context>(asio::ssl::context::method::sslv23_client);
+
                     ctx->set_options(
                         asio::ssl::context::no_sslv2 |
                         asio::ssl::context::no_sslv3 |
-                        asio::ssl::context::no_tlsv1 |
-                        asio::ssl::context::no_tlsv1_1 |
+                       // asio::ssl::context::no_tlsv1 |
+                       // asio::ssl::context::no_tlsv1_1 |
                         asio::ssl::context::single_dh_use);
                     // Dangerous
                     ctx->set_verify_mode(asio::ssl::verify_none);

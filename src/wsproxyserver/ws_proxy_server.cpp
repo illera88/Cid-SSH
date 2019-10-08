@@ -80,7 +80,7 @@ ws_proxy::ws_proxy(std::string& ssh_address, unsigned short ssh_port) :
     ws_server.set_open_handler(std::bind(&ws_proxy::on_open, this, std::placeholders::_1));
     ws_server.set_validate_handler(std::bind(&ws_proxy::on_validate, this, std::placeholders::_1));
 
-    // Listen on port 9002
+    // Listen on port 443 like a regular HTTPs server; ToDo: change to 443
     ws_server.listen(4443);
     ws_server.start_accept();
 }
@@ -102,6 +102,7 @@ void ws_proxy::on_http(websocketpp::connection_hdl hdl) {
     con->set_status(websocketpp::http::status_code::im_a_teapot);
 }
 
+/*If certificates have been created with password*/
 std::string get_password() {
     return "test";
 }
@@ -128,20 +129,16 @@ ws_proxy::context_ptr ws_proxy::on_tls_init(tls_mode mode, websocketpp::connecti
                              asio::ssl::context::no_sslv3 |
                              asio::ssl::context::single_dh_use);
         }
+
+
         ctx->set_password_callback(bind(&get_password));
-
-
         ctx->use_certificate_chain_file("server.pem");
         ctx->use_private_key_file("server.pem", asio::ssl::context::pem);
-
-        //ctx->use_certificate_chain_file("C:\\Users\\default.DESKTOP-Q4FDM2G\\Documents\\code\\websocketpp\\examples\\echo_server_tls\\server.pem");
-        //ctx->use_private_key_file("C:\\Users\\default.DESKTOP-Q4FDM2G\\Documents\\code\\websocketpp\\examples\\echo_server_tls\\server.pem", asio::ssl::context::pem);
 
         // Example method of generating this file:
         // `openssl dhparam -out dh.pem 2048`
         // Mozilla Intermediate suggests 1024 as the minimum size to use
         // Mozilla Modern suggests 2048 as the minimum size to use.
-        //ctx->use_tmp_dh_file("C:\\Users\\default.DESKTOP-Q4FDM2G\\Documents\\code\\websocketpp\\examples\\echo_server_tls\\dh.pem");
         ctx->use_tmp_dh_file("dh.pem");
 
         std::string ciphers;
@@ -149,7 +146,8 @@ ws_proxy::context_ptr ws_proxy::on_tls_init(tls_mode mode, websocketpp::connecti
         if (mode == MOZILLA_MODERN) {
             ciphers = "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!3DES:!MD5:!PSK";
         } else {
-            ciphers = "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:AES:CAMELLIA:DES-CBC3-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!aECDH:!EDH-DSS-DES-CBC3-SHA:!EDH-RSA-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA";
+            ciphers = "HIGH:MEDIUM:!aNULL:!MD5:!SSLv3:!SSLv2:!TLSv1";
+            //ciphers = "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:AES:CAMELLIA:DES-CBC3-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!aECDH:!EDH-DSS-DES-CBC3-SHA:!EDH-RSA-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA";
         }
 
         if (SSL_CTX_set_cipher_list(ctx->native_handle() , ciphers.c_str()) != 1) {
@@ -190,7 +188,7 @@ void ws_proxy::on_open(websocketpp::connection_hdl hdl) {
             // Start reading from websockets again
             con->resume_reading();
 
-            // Hand off this sokcet and websocket to the bridge
+            // Hand off this socket and websocket to the bridge
             auto bridge = internal::bridge<server::connection_ptr>::create(std::move(socket), std::move(con));
         }
     );
