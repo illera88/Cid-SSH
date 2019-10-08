@@ -17,8 +17,8 @@ namespace internal {
     class bridge : public std::enable_shared_from_this<bridge<WSConnT>> {
             // Private constructor, use create()
             bridge(asio::ip::tcp::socket socket, WSConnT wsconnection)
-                : socket_(std::move(socket)), wsconn_(std::move(wsconnection)
-            ) {
+                : socket_(std::move(socket)), wsconn_(std::move(wsconnection)), write_clear(true)
+            {
                 if (wsconn_ == nullptr) {
                     throw std::invalid_argument("No websocket connection provided.");
                 }
