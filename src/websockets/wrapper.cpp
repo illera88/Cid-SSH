@@ -26,7 +26,7 @@ namespace wswrap {
                     wsclient_.set_access_channels(websocketpp::log::alevel::all);
                     wsclient_.clear_access_channels(websocketpp::log::alevel::frame_payload);
                     wsclient_.set_error_channels(websocketpp::log::elevel::all);
-                    wsclient_.set_user_agent("test11111111"); // ToDo: Set to something unique that the server will verify to prevent outsiders poking with our ssh server
+                    wsclient_.set_user_agent("Acepted UA"); // ToDo: Set to something unique that the server will verify to prevent outsiders poking with our ssh server
 
                     // Initialize ASIO
                     wsclient_.init_asio(&io_context_);
