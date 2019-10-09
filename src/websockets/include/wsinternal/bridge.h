@@ -79,6 +79,14 @@ namespace internal {
                         std::placeholders::_2
                     ))
                 );
+
+                wsconn_->set_interrupt_handler(
+                    strand_ptr_->wrap(std::bind(
+                        &bridge::handle_ws_interrupt,
+                        this->shared_from_this(),
+                        std::placeholders::_1
+                    ))
+                );
             }
 
             // This handler is called when the websocket handler is open, and
@@ -99,6 +107,8 @@ namespace internal {
             // This handle will be called when the websocket connection is
             // closed
             void handle_ws_close(websocketpp::connection_hdl hdl) {
+                wsconn_->pause_reading();
+
                 // Close out our other socket if the websocket goes away
                 close();
             }
@@ -142,7 +152,11 @@ namespace internal {
             ) {
                 if (!error) {
                     // We received some data, send it to the websocket
-                    wsconn_->send(&socket_data_, bytes_transferred, websocketpp::frame::opcode::binary);
+
+                    s_data_.push(std::string(reinterpret_cast<char*>(&socket_data_), bytes_transferred));
+
+                    // We received some data, send it to the websocket
+                    wsconn_->interrupt();
 
                     // Reset trigger so we get called again
                     socket_.async_read_some(
@@ -177,6 +191,18 @@ namespace internal {
                 }
             }
 
+            void handle_ws_interrupt(websocketpp::connection_hdl hdl) {
+                std::cerr << "[" << this << "] on_interrupt" << std::endl;
+
+                wsconn_->send(s_data_.front(), websocketpp::frame::opcode::binary);
+                s_data_.pop();
+
+                if (!s_data_.empty()) {
+                    std::cerr << "Not empty yet, interrupting again" << std::endl;
+                    wsconn_->interrupt();
+                }
+
+            }
             void close() {
                 std::cerr << "Closing the sockets down" << std::endl;
                 if (socket_.is_open())
@@ -200,6 +226,7 @@ namespace internal {
             static const int max_data_length = 8192; //8KB
             std::array<unsigned char, max_data_length> socket_data_;
             std::queue<std::string> ws_data_;
+            std::queue<std::string> s_data_;
             bool write_clear;
             std::mutex mutex_;
     };
