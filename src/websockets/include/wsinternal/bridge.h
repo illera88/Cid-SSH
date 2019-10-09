@@ -10,6 +10,7 @@
 
 namespace wswrap {
     typedef websocketpp::config::asio::message_type::ptr message_ptr;
+    typedef std::shared_ptr<asio::io_service::strand> strand_ptr;
 }
 
 namespace internal {
@@ -17,7 +18,7 @@ namespace internal {
     class bridge : public std::enable_shared_from_this<bridge<WSConnT>> {
             // Private constructor, use create()
             bridge(asio::ip::tcp::socket socket, WSConnT wsconnection)
-                : socket_(std::move(socket)), wsconn_(std::move(wsconnection)), write_clear(true)
+                : socket_(std::move(socket)), wsconn_(std::move(wsconnection)), strand_ptr_(wsconn_->get_strand()), write_clear(true)
             {
                 if (wsconn_ == nullptr) {
                     throw std::invalid_argument("No websocket connection provided.");
@@ -41,42 +42,42 @@ namespace internal {
                 if (wsconn_->get_state() != websocketpp::session::state::open) {
                     // Set an open handler for the websocket connection
                     wsconn_->set_open_handler(
-                        std::bind(
+                        strand_ptr_->wrap(std::bind(
                             &bridge::handle_ws_open,
                             this->shared_from_this(),
                             std::placeholders::_1
-                        )
+                        ))
                     );
                 } else {
                     // Setup reading from the socket
                     socket_.async_read_some(
                         asio::buffer(socket_data_, max_data_length),
-                        std::bind(
+                        strand_ptr_->wrap(std::bind(
                             &bridge::handle_socket_read,
                             this->shared_from_this(),
                             std::placeholders::_1,
                             std::placeholders::_2
-                        )
+                        ))
                     );
                 }
 
                 // Set a close handler for the websocket connection
                 wsconn_->set_close_handler(
-                    std::bind(
+                    strand_ptr_->wrap(std::bind(
                         &bridge::handle_ws_close,
                         this->shared_from_this(),
                         std::placeholders::_1
-                    )
+                    ))
                 );
 
                 // Set a message handler for the websocket connection
                 wsconn_->set_message_handler(
-                    std::bind(
+                    strand_ptr_->wrap(std::bind(
                         &bridge::handle_ws_read,
                         this->shared_from_this(),
                         std::placeholders::_1,
                         std::placeholders::_2
-                    )
+                    ))
                 );
             }
 
@@ -86,12 +87,12 @@ namespace internal {
                 // Start reading from the socket to forward it on
                 socket_.async_read_some(
                     asio::buffer(socket_data_, max_data_length),
-                    std::bind(
+                    strand_ptr_->wrap(std::bind(
                         &bridge::handle_socket_read,
                         this->shared_from_this(),
                         std::placeholders::_1,
                         std::placeholders::_2
-                    )
+                    ))
                 );
             }
 
@@ -118,14 +119,18 @@ namespace internal {
             // up having to manually deal with this mess by using a queue and a
             // flag to know when we are done writing.
             void maybe_write_to_socket() {
-                if (write_clear && !ws_data_.empty()) {
+
+                if (!ws_data_.empty() && write_clear) {
                     write_clear = false;
 
+                    auto data = ws_data_.front();
+
                     async_write(socket_,
-                        asio::buffer(ws_data_.front(), ws_data_.front().length()),
-                        std::bind(&bridge::handle_socket_write,
+                        asio::buffer(data),
+                        strand_ptr_->wrap(std::bind(&bridge::handle_socket_write,
                             this->shared_from_this(),
-                            std::placeholders::_1));
+                            std::placeholders::_1))
+                    );
                 }
             }
 
@@ -137,17 +142,17 @@ namespace internal {
             ) {
                 if (!error) {
                     // We received some data, send it to the websocket
-                    wsconn_->send(&socket_data_, bytes_transferred);
+                    wsconn_->send(&socket_data_, bytes_transferred, websocketpp::frame::opcode::binary);
 
                     // Reset trigger so we get called again
                     socket_.async_read_some(
                         asio::buffer(socket_data_, max_data_length),
-                        std::bind(
+                        strand_ptr_->wrap(std::bind(
                             &bridge::handle_socket_read,
                             this->shared_from_this(),
                             std::placeholders::_1,
                             std::placeholders::_2
-                        )
+                        ))
                     );
 
                 } else {
@@ -190,6 +195,7 @@ namespace internal {
 
             asio::ip::tcp::socket socket_;
             WSConnT wsconn_;
+            wswrap::strand_ptr strand_ptr_;
 
             static const int max_data_length = 8192; //8KB
             std::array<unsigned char, max_data_length> socket_data_;
