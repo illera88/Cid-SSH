@@ -12,7 +12,7 @@ echo "Downloading OpenSSL version ${OPENSSL_VERSION}"
 wget https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz && tar xf openssl-${OPENSSL_VERSION}.tar.gz
 
 echo "Building and installing OpenSSL version ${OPENSSL_VERSION}"
-cd openssl-${OPENSSL_VERSION} && ./config -fPIC && make && make install_sw
+cd openssl-${OPENSSL_VERSION} && ./config no-tests -fPIC && make && make install_sw
 )
 
 # Building CidSSH
