@@ -1,7 +1,0 @@
-[submodule "asio"]
-	path = ext/asio
-	url = https://github.com/chriskohlhoff/asio
-	branch = asio-1-12-branch
-[submodule "websocketpp"]
-	path = ext/websocketpp
-	url = https://github.com/zaphoyd/websocketpp
