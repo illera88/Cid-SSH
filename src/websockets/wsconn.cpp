@@ -27,6 +27,7 @@ namespace wsinternal {
         sockethandler_(sockethandler)
     {
         std::tie(host_, port_, path_) = parse_uri(uri_);
+        ws_.binary(true);
     }
 
     void wsconn::start() {
