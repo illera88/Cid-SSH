@@ -41,6 +41,7 @@ add_library(WebsocketsWrapper STATIC
     wrapper.cpp
     uri.cpp
     acceptor.cpp
+    wsconn.cpp
 )
 set_target_properties(WebsocketsWrapper PROPERTIES EXPORT_NAME WebsocketsWrapper)
 target_include_directories(WebsocketsWrapper
