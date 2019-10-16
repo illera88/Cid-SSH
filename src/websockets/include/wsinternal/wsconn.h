@@ -1,3 +1,6 @@
+#ifndef WSCONN_H_9EDF7CB75D0C61
+#define WSCONN_H_9EDF7CB75D0C61
+
 #include <memory>
 
 #include <boost/beast/core.hpp>
@@ -44,3 +47,5 @@ namespace wsinternal {
             std::function<void(wsstream)> sockethandler_;
     };
 }
+
+#endif /* WSCONN_H_9EDF7CB75D0C61 */

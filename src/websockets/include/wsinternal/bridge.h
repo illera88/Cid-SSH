@@ -1,3 +1,6 @@
+#ifndef BRIDGE_H_000F58BF269299
+#define BRIDGE_H_000F58BF269299
+
 #include <iostream>
 
 #include <boost/asio/io_context.hpp>
@@ -61,3 +64,5 @@ namespace wsinternal {
             std::array<unsigned char, max_data_length> wsocket_data_;
     };
 }
+
+#endif /* BRIDGE_H_000F58BF269299 */

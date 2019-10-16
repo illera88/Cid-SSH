@@ -1,4 +1,7 @@
 #include <boost/asio/connect.hpp>
+#ifndef ACCEPTOR_H_4ADCB5B556AEB7
+#define ACCEPTOR_H_4ADCB5B556AEB7
+
 #include <boost/asio/ip/tcp.hpp>
 
 namespace wsinternal {
@@ -24,3 +27,5 @@ namespace wsinternal {
             std::function<void(net::ip::tcp::socket)> sockethandler_;
     };
 }
+
+#endif /* ACCEPTOR_H_4ADCB5B556AEB7 */
