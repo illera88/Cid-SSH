@@ -67,8 +67,7 @@ target_link_libraries(WebsocketsWrapper
         OpenSSL::SSL  # Link against OpenSSL
         OpenSSL::Crypto  # Link against OpenSSL's crypto
         Boost::system  # Link against Boost.System
-    PRIVATE
-        Boost::boost  # Build with Boost header location, but privately
+        Boost::boost  # Build with Boost header location
 )
 
 include(GNUInstallDirs)
