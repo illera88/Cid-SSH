@@ -78,7 +78,7 @@ namespace wsinternal {
     ) {
         if (!error) {
             async_write(socket_,
-                net::buffer(socket_data_, bytes_transferred),
+                net::buffer(wsocket_data_, bytes_transferred),
                 std::bind(
                     &bridge::handle_socket_write,
                     shared_from_this(),
