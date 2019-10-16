@@ -1,6 +1,17 @@
 #include <wsinternal/bridge.h>
 
 namespace wsinternal {
+
+#ifndef NDEBUG
+    template <typename T>
+    void debug_print(T this_, const std::string& function) {
+        std::cerr << "[" << this_ << "] " << function << std::endl;
+    }
+#else
+    template <typename T>
+    void debug_print(T this_, const std::string& function) {}
+#endif
+
     namespace beast = boost::beast;
     namespace net = boost::asio;
 
@@ -11,6 +22,8 @@ namespace wsinternal {
     {}
 
     void bridge::start() {
+        debug_print(this, "start");
+
         // Setup reading from the TCP/IP socket
         socket_.async_read_some(
             net::buffer(socket_data_, max_data_length),
@@ -39,6 +52,8 @@ namespace wsinternal {
         const std::error_code& error,
         const size_t& bytes_transferred
     ) {
+        debug_print(this, "handle_socket_read");
+
         if (!error) {
             wsocket_.async_write(
                 net::buffer(socket_data_, bytes_transferred),
@@ -56,6 +71,8 @@ namespace wsinternal {
     // We wrote the data we got from the websocket to the socket, so
     // now we can read more data from the websocket
     void bridge::handle_socket_write(const std::error_code& error) {
+        debug_print(this, "handle_socket_write");
+
         if (!error) {
             wsocket_.async_read_some(
                 net::buffer(wsocket_data_, max_data_length),
@@ -76,6 +93,8 @@ namespace wsinternal {
         const std::error_code& error,
         const size_t& bytes_transferred
     ) {
+        debug_print(this, "handle_wsocket_read");
+
         if (!error) {
             async_write(socket_,
                 net::buffer(wsocket_data_, bytes_transferred),
@@ -93,6 +112,8 @@ namespace wsinternal {
     // We wrote the data we got from the socket to the websocket, so
     // now we can read more data from the socket
     void bridge::handle_wsocket_write(const std::error_code& error) {
+        debug_print(this, "handle_wsocket_write");
+
         if (!error) {
             socket_.async_read_some(
                 net::buffer(socket_data_, max_data_length),
@@ -109,6 +130,8 @@ namespace wsinternal {
     }
 
     void bridge::close() {
+        debug_print(this, "close");
+
         if (socket_.is_open()) {
             socket_.close();
         }
