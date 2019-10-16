@@ -5,7 +5,7 @@
 #include <wsinternal/uri.h>
 
 namespace wsinternal {
-    std::tuple<std::string, unsigned short, std::string> parse_uri(const std::string uri) {
+    std::tuple<std::string, std::string, std::string> parse_uri(const std::string uri) {
         const std::regex wss_uri(
                 // proto  host          port         path        ignored
                 "^wss://(\\w+[^/\?#:]*)(\?::(\\d+))\?(/\?[^\?#]*)\?.*$"
@@ -18,14 +18,11 @@ namespace wsinternal {
 
         // base_match[0] is the whole string that matched
         std::string host = base_match[1].str();
-        unsigned short port;
-        std::string port_str = base_match[2].str();
+        std::string port = base_match[2].str();
         std::string path = base_match[3].str();
 
-        if (port_str == "") {
-            port = 443;
-        } else {
-            port = static_cast<unsigned short>(std::stoul(port_str));
+        if (port == "") {
+            port = "443";
         }
 
         return {host, port, path};

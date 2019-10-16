@@ -1,5 +1,6 @@
 #include <string>
+#include <tuple>
 
 namespace wsinternal {
-    std::tuple<std::string, unsigned short, std::string> parse_uri(std::string);
+    std::tuple<std::string, std::string, std::string> parse_uri(std::string);
 }

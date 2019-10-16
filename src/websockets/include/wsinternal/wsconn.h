@@ -45,6 +45,10 @@ namespace wsinternal {
             wsstream ws_;
             std::string& uri_;
             std::function<void(wsstream)> sockethandler_;
+
+            std::string host_;
+            std::string port_;
+            std::string path_;
     };
 }
 

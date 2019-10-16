@@ -25,10 +25,11 @@ namespace wsinternal {
         ws_(net::make_strand(io_context_), ssl_context_),
         uri_(uri),
         sockethandler_(sockethandler)
-    {}
+    {
+        std::tie(host_, port_, path_) = parse_uri(uri_);
+    }
 
     void wsconn::start() {
-        auto [host, port, path] = parse_uri(uri_);
     }
 
     void wsconn::on_connect(const std::error_code& error, net::ip::tcp::resolver::results_type::endpoint_type) {
