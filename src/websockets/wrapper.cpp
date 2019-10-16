@@ -66,7 +66,7 @@ class WebsocketsWrapper::impl {
                         [storage] (wsstream wsocket) {
                             // Using our storage shared pointer we get the socket, and move it into the bridge
                             // alongside moving the websocket into the bridge
-                            auto bridge = wsinternal::bridge::create(std::move(storage->get_socket()), std::move(wsocket));
+                            wsinternal::bridge::create(std::move(storage->get_socket()), std::move(wsocket));
                         }
                     );
                 }

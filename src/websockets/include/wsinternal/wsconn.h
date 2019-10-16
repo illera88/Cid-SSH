@@ -16,10 +16,10 @@ namespace wsinternal {
 
     class wsconn : public std::enable_shared_from_this<wsconn> {
             wsconn(
-                net::io_context& io_context,
-                net::ssl::context& ssl_context,
-                std::string& uri,
-                std::function<void(wsstream)> sockethandler
+                net::io_context&,
+                net::ssl::context&,
+                std::string&,
+                std::function<void(wsstream)>
             );
 
         public:
@@ -35,9 +35,16 @@ namespace wsinternal {
 
         private:
             void start();
-            void on_connect(const std::error_code& error, net::ip::tcp::resolver::results_type::endpoint_type);
-            void on_ssl_handshake(const std::error_code& error);
-            void on_handshake(const std::error_code& error);
+            void on_resolve(
+                const std::error_code&,
+                net::ip::tcp::resolver::results_type
+            );
+            void on_connect(
+                const std::error_code&,
+                net::ip::tcp::resolver::results_type::endpoint_type
+            );
+            void on_ssl_handshake(const std::error_code&);
+            void on_handshake(const std::error_code&);
 
             net::io_context& io_context_;
             net::ssl::context& ssl_context_;
