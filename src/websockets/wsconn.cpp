@@ -30,6 +30,35 @@ namespace wsinternal {
     }
 
     void wsconn::start() {
+        resolver_.async_resolve(
+            host_,
+            port_,
+            beast::bind_front_handler(
+                &wsconn::on_resolve,
+                shared_from_this()
+            )
+        );
+    }
+
+    void wsconn::on_resolve(
+        const std::error_code& error,
+        net::ip::tcp::resolver::results_type results
+    ) {
+        if (!error) {
+            // Set a timeout on the operation
+            beast::get_lowest_layer(ws_).expires_after(std::chrono::seconds(30));
+
+            // Make the connection on the IP address we get from a lookup
+            beast::get_lowest_layer(ws_).async_connect(
+                results,
+                beast::bind_front_handler(
+                    &wsconn::on_connect,
+                    shared_from_this()
+                )
+            );
+        } else {
+            std::cerr << "Failed to resolve: " << error.message() << std::endl;
+        }
     }
 
     void wsconn::on_connect(const std::error_code& error, net::ip::tcp::resolver::results_type::endpoint_type) {
