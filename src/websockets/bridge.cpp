@@ -23,7 +23,8 @@ namespace wsinternal {
         );
 
         // Setup reading from the Websocket
-        wsocket_.async_read_some(net::buffer(wsocket_data_, max_data_length),
+        wsocket_.async_read_some(
+            net::buffer(wsocket_data_, max_data_length),
             std::bind(
                 &bridge::handle_wsocket_read,
                 shared_from_this(),
@@ -56,7 +57,8 @@ namespace wsinternal {
     // now we can read more data from the websocket
     void bridge::handle_socket_write(const std::error_code& error) {
         if (!error) {
-            wsocket_.async_read_some(net::buffer(wsocket_data_, max_data_length),
+            wsocket_.async_read_some(
+                net::buffer(wsocket_data_, max_data_length),
                 std::bind(
                     &bridge::handle_wsocket_read,
                     shared_from_this(),
