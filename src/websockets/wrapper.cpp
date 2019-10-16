@@ -5,79 +5,6 @@
 #include <websocketswrapper.h>
 #include <wsinternal/bridge.h>
 
-#ifndef ASIO_STANDALONE
-#define ASIO_STANDALONE
-#endif
-
-#include <asio.hpp>
-#include <websocketpp/config/asio_client.hpp>
-#include <websocketpp/client.hpp>
-
-namespace wswrap {
-    typedef websocketpp::lib::shared_ptr<websocketpp::lib::asio::ssl::context> context_ptr;
-    typedef websocketpp::client<websocketpp::config::asio_tls_client> client;
-
-    class websocket {
-        public:
-            websocket(asio::io_context& io_context, std::string uri) :
-            io_context_(io_context), uri_(uri) {
-                try {
-                    // Set logging to be pretty verbose (everything except message payloads)
-                    wsclient_.set_access_channels(websocketpp::log::alevel::all);
-                    wsclient_.clear_access_channels(websocketpp::log::alevel::frame_payload);
-                    wsclient_.set_error_channels(websocketpp::log::elevel::all);
-                    wsclient_.set_user_agent("Acepted UA"); // ToDo: Set to something unique that the server will verify to prevent outsiders poking with our ssh server
-
-                    // Initialize ASIO
-                    wsclient_.init_asio(&io_context_);
-                    wsclient_.set_tls_init_handler(std::bind(&websocket::on_tls_init, this, std::placeholders::_1));
-                }
-                catch (websocketpp::exception const& e) {
-                    std::cout << e.what() << std::endl;
-                }
-
-            }
-
-            // Caller is responsible for this connection
-            client::connection_ptr new_connection() {
-                websocketpp::lib::error_code ec;
-                auto conn = wsclient_.get_connection(uri_, ec);
-
-                if (ec) {
-                    std::cerr << "Unable to create new websocket connection: " << ec.message() << std::endl;
-                    throw std::runtime_error(std::string("Unable to create new websocket connection"));
-                }
-
-                wsclient_.connect(conn);
-
-                return conn;
-            };
-
-        private:
-            asio::io_context& io_context_;
-            std::string uri_;
-            wswrap::client wsclient_;
-
-            context_ptr on_tls_init(websocketpp::connection_hdl) {
-                try {
-                    context_ptr ctx = websocketpp::lib::make_shared<asio::ssl::context>(asio::ssl::context::method::sslv23_client);
-
-                    ctx->set_options(
-                        asio::ssl::context::no_sslv2 |
-                        asio::ssl::context::no_sslv3 |
-                       // asio::ssl::context::no_tlsv1 |
-                       // asio::ssl::context::no_tlsv1_1 |
-                        asio::ssl::context::single_dh_use);
-                    // Dangerous
-                    ctx->set_verify_mode(asio::ssl::verify_none);
-                    return ctx;
-                } catch (std::exception &e) {
-                    std::cerr << "Error setting up the SSL context: " << e.what() << std::endl;
-                    throw;
-                }
-            }
-    };
-}
 
 namespace internal {
     class acceptor {
@@ -176,11 +103,9 @@ class WebsocketsWrapper::impl {
                 asio::ip::address_v4::loopback(),
                 0,
                 [&] (asio::ip::tcp::socket socket) {
-                    auto websocket_connection = websocket_.new_connection();
                     auto bridge = internal::bridge<wswrap::client::connection_ptr>::create(std::move(socket), std::move(websocket_connection));
                 }
             ),
-            websocket_(io_context_, uri_)
         {
             acceptor_.accept_connections();
 
@@ -204,7 +129,6 @@ class WebsocketsWrapper::impl {
         std::shared_ptr<asio::io_context::work> aio_work_;
         std::thread io_runner_;
         internal::acceptor acceptor_;
-        wswrap::websocket websocket_;
 
     public:
         std::string local_ip_;
