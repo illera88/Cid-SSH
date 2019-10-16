@@ -1,7 +1,8 @@
-#include <boost/asio/connect.hpp>
 #ifndef ACCEPTOR_H_4ADCB5B556AEB7
 #define ACCEPTOR_H_4ADCB5B556AEB7
 
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/ip/address.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
 namespace wsinternal {
@@ -11,7 +12,7 @@ namespace wsinternal {
         public:
             acceptor(
                 net::io_context& io_context,
-                const net::ip::address_v4& local_host,
+                const net::ip::address& local_host,
                 unsigned short local_port,
                 std::function<void(net::ip::tcp::socket)> sockethandler
             );

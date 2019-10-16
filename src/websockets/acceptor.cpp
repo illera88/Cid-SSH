@@ -1,15 +1,12 @@
 #include <iostream>
 #include <stdexcept>
 
-#include <boost/asio/connect.hpp>
-#include <boost/asio/ip/tcp.hpp>
-
 #include <wsinternal/acceptor.h>
 
 namespace wsinternal {
     acceptor::acceptor(
         net::io_context& io_context,
-        const net::ip::address_v4& local_host,
+        const net::ip::address& local_host,
         unsigned short local_port,
         std::function<void(net::ip::tcp::socket)> sockethandler
     ) :

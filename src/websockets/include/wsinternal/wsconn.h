@@ -3,10 +3,10 @@
 
 #include <memory>
 
-#include <boost/beast/core.hpp>
-#include <boost/beast/websocket.hpp>
-#include <boost/beast/ssl/ssl_stream.hpp>
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/ip/address.hpp>
 #include <boost/asio/ip/tcp.hpp>
+#include <boost/beast/ssl/ssl_stream.hpp>
 
 namespace wsinternal {
     namespace beast = boost::beast;

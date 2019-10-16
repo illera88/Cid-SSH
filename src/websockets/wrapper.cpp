@@ -1,12 +1,10 @@
 #include <iostream>
-#include <stdexcept>
 #include <thread>
 
-#include <boost/asio/ip/tcp.hpp>
-
 #include <websocketswrapper.h>
-#include <wsinternal/bridge.h>
+
 #include <wsinternal/acceptor.h>
+#include <wsinternal/bridge.h>
 #include <wsinternal/wsconn.h>
 
 namespace net = boost::asio;
