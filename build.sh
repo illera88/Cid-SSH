@@ -1,19 +1,24 @@
 #!/usr/bin/env bash
 
 echo "Installing some dependencies we need to build"
-apk add --no-cache build-base cmake autoconf libtool pkgconf git mercurial file linux-headers wget libc-dev
-
-(
-cd /tmp
-
-# Building openssl statically (Requirement for libssh)
-export OPENSSL_VERSION=1.1.1d
-echo "Downloading OpenSSL version ${OPENSSL_VERSION}"
-wget https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz && tar xf openssl-${OPENSSL_VERSION}.tar.gz
-
-echo "Building and installing OpenSSL version ${OPENSSL_VERSION}"
-cd openssl-${OPENSSL_VERSION} && ./config no-tests -fPIC && make && make install_sw
-)
+apk add --no-cache \
+    build-base \
+    cmake \
+    autoconf \
+    libtool \
+    pkgconf \
+    git \
+    mercurial \
+    file \
+    linux-headers \
+    wget \
+    libc-dev \
+    boost-dev \
+    boost-static \
+    boost-system \
+    openssl \
+    openssl-libs-static \
+    openssl-dev
 
 # Building CidSSH
 rm -rf build
