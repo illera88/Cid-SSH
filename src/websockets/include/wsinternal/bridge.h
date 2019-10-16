@@ -6,12 +6,12 @@
 #include <boost/beast/ssl.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
-namespace beast = boost::beast;
-namespace net = boost::asio;
-
-typedef beast::websocket::stream<beast::ssl_stream<beast::tcp_stream>> wsstream;
-
 namespace wsinternal {
+    namespace beast = boost::beast;
+    namespace net = boost::asio;
+
+    typedef beast::websocket::stream<beast::ssl_stream<beast::tcp_stream>> wsstream;
+
     class bridge : public std::enable_shared_from_this<bridge> {
             // Private constructor, use create()
             bridge(net::ip::tcp::socket socket, wsstream wsocket)
