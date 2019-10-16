@@ -40,6 +40,7 @@ set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS_BAK})
 add_library(WebsocketsWrapper STATIC
     wrapper.cpp
     uri.cpp
+    acceptor.cpp
 )
 set_target_properties(WebsocketsWrapper PROPERTIES EXPORT_NAME WebsocketsWrapper)
 target_include_directories(WebsocketsWrapper
