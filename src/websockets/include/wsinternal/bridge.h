@@ -1,10 +1,10 @@
 #include <iostream>
 
-#include <boost/beast/core.hpp>
-#include <boost/beast/websocket.hpp>
-#include <boost/beast/websocket/ssl.hpp>
-#include <boost/beast/ssl.hpp>
+#include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
+#include <boost/beast/core/tcp_stream.hpp>
+#include <boost/beast/ssl/ssl_stream.hpp>
+#include <boost/beast/websocket/stream.hpp>
 
 namespace wsinternal {
     namespace beast = boost::beast;
@@ -14,9 +14,7 @@ namespace wsinternal {
 
     class bridge : public std::enable_shared_from_this<bridge> {
             // Private constructor, use create()
-            bridge(net::ip::tcp::socket socket, wsstream wsocket)
-                : socket_(std::move(socket)), wsocket_(std::move(wsocket))
-            {}
+            bridge(net::ip::tcp::socket socket, wsstream wsocket);
 
         public:
             // Ah, C++ templating can be such a joy
@@ -30,111 +28,30 @@ namespace wsinternal {
             }
 
         private:
-            void start() {
-                // Setup reading from the TCP/IP socket
-                socket_.async_read_some(
-                    net::buffer(socket_data_, max_data_length),
-                    std::bind(
-                        &bridge::handle_socket_read,
-                        shared_from_this(),
-                        std::placeholders::_1,
-                        std::placeholders::_2
-                    )
-                );
-
-                // Setup reading from the Websocket
-                wsocket_.async_read_some(net::buffer(wsocket_data_, max_data_length),
-                    std::bind(
-                        &bridge::handle_wsocket_read,
-                        shared_from_this(),
-                        std::placeholders::_1,
-                        std::placeholders::_2
-                    )
-                );
-            }
+            void start();
 
             // When we read data from the socket, we write it to the websocket
             void handle_socket_read(
                 const std::error_code& error,
                 const size_t& bytes_transferred
-            ) {
-                if (!error) {
-                    wsocket_.async_write(
-                        net::buffer(socket_data_, bytes_transferred),
-                        std::bind(
-                            &bridge::handle_wsocket_write,
-                            shared_from_this(),
-                            std::placeholders::_1
-                        )
-                    );
-                } else {
-                    close();
-                }
-            }
+            );
 
             // We wrote the data we got from the websocket to the socket, so
             // now we can read more data from the websocket
-            void handle_socket_write(const std::error_code& error) {
-                if (!error) {
-                    wsocket_.async_read_some(net::buffer(wsocket_data_, max_data_length),
-                        std::bind(
-                            &bridge::handle_wsocket_read,
-                            shared_from_this(),
-                            std::placeholders::_1,
-                            std::placeholders::_2
-                        )
-                    );
-                } else {
-                    close();
-                }
-            }
+            void handle_socket_write(const std::error_code& error);
 
             // When we read data from the websocket, we write it to the socket
             void handle_wsocket_read(
                 const std::error_code& error,
                 const size_t& bytes_transferred
-            ) {
-                if (!error) {
-                    async_write(socket_,
-                        net::buffer(socket_data_, bytes_transferred),
-                        std::bind(
-                            &bridge::handle_socket_write,
-                            shared_from_this(),
-                            std::placeholders::_1
-                        )
-                    );
-                } else {
-                    close();
-                }
-            }
+            );
 
             // We wrote the data we got from the socket to the websocket, so
             // now we can read more data from the socket
-            void handle_wsocket_write(const std::error_code& error) {
-                if (!error) {
-                    socket_.async_read_some(
-                        net::buffer(socket_data_, max_data_length),
-                        std::bind(
-                            &bridge::handle_socket_read,
-                            shared_from_this(),
-                            std::placeholders::_1,
-                            std::placeholders::_2
-                        )
-                    );
-                } else {
-                    close();
-                }
-            }
+            void handle_wsocket_write(const std::error_code& error);
 
-            void close() {
-                if (socket_.is_open()) {
-                    socket_.close();
-                }
-
-                if (wsocket_.is_open()) {
-                    wsocket_.close(beast::websocket::close_code::normal);
-                }
-            }
+            // Close the socket and the websocket
+            void close();
 
             net::ip::tcp::socket socket_;
             wsstream wsocket_;

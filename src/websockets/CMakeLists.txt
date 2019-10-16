@@ -38,9 +38,10 @@ endif()
 set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS_BAK})
 
 add_library(WebsocketsWrapper STATIC
-    wrapper.cpp
-    uri.cpp
     acceptor.cpp
+    bridge.cpp
+    uri.cpp
+    wrapper.cpp
     wsconn.cpp
 )
 set_target_properties(WebsocketsWrapper PROPERTIES EXPORT_NAME WebsocketsWrapper)
