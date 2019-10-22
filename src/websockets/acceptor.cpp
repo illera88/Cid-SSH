@@ -8,7 +8,7 @@ namespace wsinternal {
         net::io_context& io_context,
         const net::ip::address& local_host,
         unsigned short local_port,
-        std::function<void(net::ip::tcp::socket)> sockethandler
+        std::function<void(net::ip::tcp::socket&&)> sockethandler
     ) :
         io_context_(io_context),
         socket_(io_context_),

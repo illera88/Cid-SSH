@@ -53,7 +53,7 @@ class WebsocketsWrapper::impl {
                 net::ip::address_v4::loopback(),
                 0,
                 // Capture everything by reference, so we can re-use things like io_context_/ssl_context_/uri_
-                [&] (net::ip::tcp::socket socket) {
+                [&] (net::ip::tcp::socket&& socket) {
                     // Create a shared pointer that holds the socket by moving it into the shared storage
                     auto storage = std::make_shared<wsinternal::shared_storage>(std::move(socket));
 
@@ -63,7 +63,7 @@ class WebsocketsWrapper::impl {
                         ssl_context_,
                         uri_,
                         // Lambda copies storage (thereby increasing the shared_ptr) and captures it
-                        [storage] (wsstream wsocket) {
+                        [storage] (wsstream&& wsocket) {
                             // Using our storage shared pointer we get the socket, and move it into the bridge
                             // alongside moving the websocket into the bridge
                             wsinternal::bridge::create(std::move(storage->get_socket()), std::move(wsocket));

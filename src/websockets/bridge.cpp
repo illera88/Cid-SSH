@@ -17,7 +17,7 @@ namespace wsinternal {
 
     typedef beast::websocket::stream<beast::ssl_stream<beast::tcp_stream>> wsstream;
 
-    bridge::bridge(net::ip::tcp::socket socket, wsstream wsocket)
+    bridge::bridge(net::ip::tcp::socket&& socket, wsstream&& wsocket)
         : socket_(std::move(socket)), wsocket_(std::move(wsocket))
     {}
 

@@ -17,7 +17,7 @@ namespace wsinternal {
         net::io_context& io_context,
         net::ssl::context& ssl_context,
         std::string& uri,
-        std::function<void(wsstream)> sockethandler
+        std::function<void(wsstream&&)> sockethandler
     ) :
         io_context_(io_context),
         ssl_context_(ssl_context),

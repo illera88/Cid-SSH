@@ -19,7 +19,7 @@ namespace wsinternal {
                 net::io_context&,
                 net::ssl::context&,
                 std::string&,
-                std::function<void(wsstream)>
+                std::function<void(wsstream&&)>
             );
 
         public:
@@ -51,7 +51,7 @@ namespace wsinternal {
             net::ip::tcp::resolver resolver_;
             wsstream ws_;
             std::string& uri_;
-            std::function<void(wsstream)> sockethandler_;
+            std::function<void(wsstream&&)> sockethandler_;
 
             std::string host_;
             std::string port_;

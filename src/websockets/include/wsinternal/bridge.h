@@ -17,7 +17,7 @@ namespace wsinternal {
 
     class bridge : public std::enable_shared_from_this<bridge> {
             // Private constructor, use create()
-            bridge(net::ip::tcp::socket socket, wsstream wsocket);
+            bridge(net::ip::tcp::socket&& socket, wsstream&& wsocket);
 
         public:
             // Ah, C++ templating can be such a joy
