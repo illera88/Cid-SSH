@@ -19,10 +19,9 @@ namespace wsinternal {
             net::ip::tcp::endpoint local_endpoint();
             void accept_connections();
         private:
-            void handle_accept(const std::error_code& error);
+            void handle_accept(const std::error_code& error, net::ip::tcp::socket);
 
             net::io_context& io_context_;
-            net::ip::tcp::socket socket_;
             net::ip::address localhost_address;
             net::ip::tcp::acceptor acceptor_;
             std::function<void(net::ip::tcp::socket&&)> sockethandler_;

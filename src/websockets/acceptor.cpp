@@ -11,7 +11,6 @@ namespace wsinternal {
         std::function<void(net::ip::tcp::socket&&)> sockethandler
     ) :
         io_context_(io_context),
-        socket_(io_context_),
         localhost_address(local_host),
         acceptor_(
             io_context_,
@@ -29,18 +28,22 @@ namespace wsinternal {
 
     void acceptor::accept_connections() {
         try {
-            acceptor_.async_accept(socket_,
+            acceptor_.async_accept(
+                net::make_strand(io_context_),
                 std::bind(&acceptor::handle_accept,
                     this,
-                    std::placeholders::_1));
+                    std::placeholders::_1,
+                    std::placeholders::_2
+                )
+            );
         } catch (std::exception& e) {
             std::cerr << "Unable to start accepting connections: " << e.what() << std::endl;
         }
     }
 
-    void acceptor::handle_accept(const std::error_code& error) {
+    void acceptor::handle_accept(const std::error_code& error, net::ip::tcp::socket socket) {
         if (!error) {
-            sockethandler_(std::move(socket_));
+            sockethandler_(std::move(socket));
             
             // Setup the async call to accept again
             accept_connections();
