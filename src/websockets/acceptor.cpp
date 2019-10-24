@@ -22,6 +22,20 @@ namespace wsinternal {
         sockethandler_(sockethandler)
     {}
 
+    acceptor::acceptor(
+        net::io_context& io_context,
+        net::ip::tcp::endpoint endpoint,
+        std::function<void(net::ip::tcp::socket&&)> sockethandler
+    ) :
+        io_context_(io_context),
+        acceptor_(
+            net::make_strand(io_context_),
+            endpoint,
+            true // reuse address
+        ),
+        sockethandler_(sockethandler)
+    {}
+
     net::ip::tcp::endpoint acceptor::local_endpoint() {
         return acceptor_.local_endpoint();
     }

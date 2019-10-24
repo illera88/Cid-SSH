@@ -16,6 +16,13 @@ namespace wsinternal {
                 unsigned short local_port,
                 std::function<void(net::ip::tcp::socket&&)> sockethandler
             );
+
+            acceptor(
+                net::io_context& io_context,
+                net::ip::tcp::endpoint endpoint,
+                std::function<void(net::ip::tcp::socket&&)> sockethandler
+            );
+
             net::ip::tcp::endpoint local_endpoint();
             void accept_connections();
         private:
