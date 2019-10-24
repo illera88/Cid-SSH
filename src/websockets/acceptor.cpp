@@ -1,6 +1,8 @@
 #include <iostream>
 #include <stdexcept>
 
+#include <boost/asio/strand.hpp>
+
 #include <wsinternal/acceptor.h>
 
 namespace wsinternal {
@@ -12,7 +14,7 @@ namespace wsinternal {
     ) :
         io_context_(io_context),
         acceptor_(
-            io_context_,
+            net::make_strand(io_context_),
             net::ip::tcp::endpoint{local_host, local_port},
             true // reuse address
         ),
