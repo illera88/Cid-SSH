@@ -11,13 +11,10 @@ namespace wsinternal {
         std::function<void(net::ip::tcp::socket&&)> sockethandler
     ) :
         io_context_(io_context),
-        localhost_address(local_host),
         acceptor_(
             io_context_,
-            net::ip::tcp::endpoint(
-                localhost_address,
-                local_port
-            )
+            net::ip::tcp::endpoint{local_host, local_port},
+            true // reuse address
         ),
         sockethandler_(sockethandler)
     {}
