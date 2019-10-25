@@ -9,54 +9,52 @@
 #include <boost/beast/ssl/ssl_stream.hpp>
 
 namespace wsinternal {
-    namespace beast = boost::beast;
-    namespace net = boost::asio;
+namespace beast = boost::beast;
+namespace net = boost::asio;
 
-    typedef beast::websocket::stream<beast::ssl_stream<beast::tcp_stream>> wsstream;
+typedef beast::websocket::stream<beast::ssl_stream<beast::tcp_stream>> wsstream;
 
-    class wsconn : public std::enable_shared_from_this<wsconn> {
-            wsconn(
-                net::io_context&,
-                net::ssl::context&,
-                std::string&,
-                std::function<void(wsstream&&)>
-            );
+class wsconn : public std::enable_shared_from_this<wsconn> {
+    wsconn(
+        net::io_context&,
+        net::ssl::context&,
+        std::string&,
+        std::function<void(wsstream&&)>);
 
-        public:
-            // Ah, C++ templating can be such a joy
-            template<typename ... T>
-            static auto create(T&& ... all) {
-                // Can't use make_shared here because of visibility rules and
-                // all that fun jazz...
-                auto ptr = std::shared_ptr<wsconn>(new wsconn(std::forward<T>(all)...));
-                ptr->start();
-                return ptr;
-            }
+public:
+    // Ah, C++ templating can be such a joy
+    template <typename... T>
+    static auto create(T&&... all)
+    {
+        // Can't use make_shared here because of visibility rules and
+        // all that fun jazz...
+        auto ptr = std::shared_ptr<wsconn>(new wsconn(std::forward<T>(all)...));
+        ptr->start();
+        return ptr;
+    }
 
-        private:
-            void start();
-            void on_resolve(
-                const std::error_code&,
-                net::ip::tcp::resolver::results_type
-            );
-            void on_connect(
-                const std::error_code&,
-                net::ip::tcp::resolver::results_type::endpoint_type
-            );
-            void on_ssl_handshake(const std::error_code&);
-            void on_handshake(const std::error_code&);
+private:
+    void start();
+    void on_resolve(
+        const std::error_code&,
+        net::ip::tcp::resolver::results_type);
+    void on_connect(
+        const std::error_code&,
+        net::ip::tcp::resolver::results_type::endpoint_type);
+    void on_ssl_handshake(const std::error_code&);
+    void on_handshake(const std::error_code&);
 
-            net::io_context& io_context_;
-            net::ssl::context& ssl_context_;
-            net::ip::tcp::resolver resolver_;
-            wsstream ws_;
-            std::string& uri_;
-            std::function<void(wsstream&&)> sockethandler_;
+    net::io_context& io_context_;
+    net::ssl::context& ssl_context_;
+    net::ip::tcp::resolver resolver_;
+    wsstream ws_;
+    std::string& uri_;
+    std::function<void(wsstream&&)> sockethandler_;
 
-            std::string host_;
-            std::string port_;
-            std::string path_;
-    };
-}
+    std::string host_;
+    std::string port_;
+    std::string path_;
+};
+} // namespace wsinternal
 
 #endif /* WSCONN_H_9EDF7CB75D0C61 */
