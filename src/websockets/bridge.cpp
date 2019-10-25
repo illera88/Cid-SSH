@@ -30,6 +30,9 @@ void bridge::start()
 {
     debug_print(this, "start");
 
+    // Set the websocket into binary mode
+    wsocket_.binary(true);
+
     // Setup reading from the TCP/IP socket
     socket_.async_read_some(
         net::buffer(socket_data_, max_data_length),
