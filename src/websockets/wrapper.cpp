@@ -1,6 +1,8 @@
 #include <iostream>
 #include <thread>
 
+#include <boost/asio/executor_work_guard.hpp>
+
 #include <websocketswrapper.h>
 
 #include <wsinternal/acceptor.h>
@@ -43,7 +45,7 @@ public:
         : uri_(c2_uri)
         , io_context_(net::io_context{})
         , ssl_context_(net::ssl::context::tlsv12_client)
-        , aio_work_(std::make_shared<net::io_context::work>(io_context_))
+        , aio_work_(net::executor_work_guard<net::io_context::executor_type>(io_context_.get_executor()))
         , io_runner_(
               std::thread(
                   [&] {
@@ -96,7 +98,7 @@ private:
     std::string uri_;
     net::io_context io_context_;
     net::ssl::context ssl_context_;
-    std::shared_ptr<net::io_context::work> aio_work_;
+    net::executor_work_guard<net::io_context::executor_type> aio_work_;
     std::thread io_runner_;
     wsinternal::acceptor acceptor_;
 
