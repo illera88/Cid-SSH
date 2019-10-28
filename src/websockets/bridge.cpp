@@ -128,6 +128,17 @@ void bridge::handle_wsocket_write(const std::error_code& error)
     }
 }
 
+void bridge::handle_wsocket_close(const std::error_code& error)
+{
+    debug_print(this, "handle_wsocket_close");
+
+    if (!error) {
+        return;
+    }
+
+    std::cerr << "handle_wsocket_close failed: " << error.message() << std::endl;
+}
+
 void bridge::close()
 {
     debug_print(this, "close");
@@ -137,7 +148,11 @@ void bridge::close()
     }
 
     if (wsocket_.is_open()) {
-        wsocket_.close(beast::websocket::close_code::normal);
+        wsocket_.async_close(beast::websocket::close_code::normal,
+            std::bind(
+                &bridge::handle_wsocket_close,
+                shared_from_this(),
+                std::placeholders::_1));
     }
 }
 } // namespace wsinternal

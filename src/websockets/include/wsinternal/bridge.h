@@ -52,6 +52,9 @@ private:
     // now we can read more data from the socket
     void handle_wsocket_write(const std::error_code& error);
 
+    // We send a close to the websocket using async, wait until it is completed
+    void handle_wsocket_close(const std::error_code&);
+
     // Close the socket and the websocket
     void close();
 
