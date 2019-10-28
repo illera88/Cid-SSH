@@ -7,13 +7,13 @@
 
 namespace wsinternal {
 acceptor::acceptor(
-    net::io_context& io_context,
+    net::executor executor,
     const net::ip::address& local_host,
     unsigned short local_port,
     std::function<void(net::ip::tcp::socket&&)> sockethandler)
-    : io_context_(io_context)
+    : executor_(executor)
     , acceptor_(
-          net::make_strand(io_context_),
+          net::make_strand(executor_),
           net::ip::tcp::endpoint { local_host, local_port },
           true // reuse address
           )
@@ -22,12 +22,12 @@ acceptor::acceptor(
 }
 
 acceptor::acceptor(
-    net::io_context& io_context,
+    net::executor executor,
     net::ip::tcp::endpoint endpoint,
     std::function<void(net::ip::tcp::socket&&)> sockethandler)
-    : io_context_(io_context)
+    : executor_(executor)
     , acceptor_(
-          net::make_strand(io_context_),
+          net::make_strand(executor_),
           endpoint,
           true // reuse address
           )
@@ -44,7 +44,7 @@ void acceptor::accept_connections()
 {
     try {
         acceptor_.async_accept(
-            net::make_strand(io_context_),
+            net::make_strand(executor_),
             std::bind(&acceptor::handle_accept,
                 this,
                 std::placeholders::_1,

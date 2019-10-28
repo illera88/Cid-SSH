@@ -14,14 +14,14 @@ namespace beast = boost::beast;
 namespace net = boost::asio;
 
 wsconn::wsconn(
-    net::io_context& io_context,
+    net::executor executor,
     net::ssl::context& ssl_context,
     std::string& uri,
     std::function<void(wsstream&&)> sockethandler)
-    : io_context_(io_context)
+    : executor_(executor)
     , ssl_context_(ssl_context)
-    , resolver_(net::make_strand(io_context_))
-    , ws_(net::make_strand(io_context_), ssl_context_)
+    , resolver_(net::make_strand(executor_))
+    , ws_(net::make_strand(executor_), ssl_context_)
     , uri_(uri)
     , sockethandler_(sockethandler)
 {

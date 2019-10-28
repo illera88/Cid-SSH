@@ -48,11 +48,11 @@ private:
 
 class connector : public std::enable_shared_from_this<connector> {
     connector(
-        net::executor io_context,
+        net::executor executor,
         const net::ip::address& ssh_host,
         unsigned short ssh_port,
         std::function<void(net::ip::tcp::socket)> sockethandler)
-        : socket_(io_context)
+        : socket_(executor)
         , ssh_address_(ssh_host)
         , ssh_port_(ssh_port)
         , sockethandler_(sockethandler)
@@ -375,7 +375,7 @@ int main(int argc, char* argv[])
     ctx.use_private_key_file("server.pem", net::ssl::context::pem);
 
     auto acceptor = wsinternal::acceptor {
-        ioc, tcp::endpoint { address, port }, [&](net::ip::tcp::socket&& socket) {
+        ioc.get_executor(), tcp::endpoint { address, port }, [&](net::ip::tcp::socket&& socket) {
             http_session::create(
                 beast::tcp_stream(std::move(socket)),
                 ctx);

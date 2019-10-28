@@ -3,7 +3,7 @@
 
 #include <memory>
 
-#include <boost/asio/io_context.hpp>
+#include <boost/asio/executor.hpp>
 #include <boost/asio/ip/address.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/beast/ssl/ssl_stream.hpp>
@@ -16,7 +16,7 @@ typedef beast::websocket::stream<beast::ssl_stream<beast::tcp_stream>> wsstream;
 
 class wsconn : public std::enable_shared_from_this<wsconn> {
     wsconn(
-        net::io_context&,
+        net::executor,
         net::ssl::context&,
         std::string&,
         std::function<void(wsstream&&)>);
@@ -44,7 +44,7 @@ private:
     void on_ssl_handshake(const std::error_code&);
     void on_handshake(const std::error_code&);
 
-    net::io_context& io_context_;
+    net::executor executor_;
     net::ssl::context& ssl_context_;
     net::ip::tcp::resolver resolver_;
     wsstream ws_;

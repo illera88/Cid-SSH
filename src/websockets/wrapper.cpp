@@ -41,6 +41,7 @@ class WebsocketsWrapper::impl {
 public:
     impl(std::string& c2_uri)
         : uri_(c2_uri)
+        , io_context_(net::io_context{})
         , ssl_context_(net::ssl::context::tlsv12_client)
         , aio_work_(std::make_shared<net::io_context::work>(io_context_))
         , io_runner_(
@@ -50,17 +51,20 @@ public:
                       io_context_.run();
                   }))
         , acceptor_(
-              io_context_,
+              io_context_.get_executor(),
               net::ip::address_v4::loopback(),
               0,
               // Capture everything by reference, so we can re-use things like io_context_/ssl_context_/uri_
               [&](net::ip::tcp::socket&& socket) {
+                  // Get the executor for the socket
+                  auto executor = socket.get_executor();
+
                   // Create a shared pointer that holds the socket by moving it into the shared storage
                   auto storage = std::make_shared<wsinternal::shared_storage>(std::move(socket));
 
                   // Create a new shared wsconn which will go do the whole song and dance to get connected to a websocket
                   wsinternal::wsconn::create(
-                      io_context_,
+                      executor,
                       ssl_context_,
                       uri_,
                       // Lambda copies storage (thereby increasing the shared_ptr) and captures it
