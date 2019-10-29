@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.13)
-
 include(ExternalProject)
 
 get_property(LIB64 GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS)
