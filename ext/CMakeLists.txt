@@ -2,6 +2,10 @@ include(ExternalProject)
 
 get_property(LIB64 GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS)
 
+# Add Multi-processor compilation
+if(MSVC)
+  add_definitions(/MP)
+endif()
 
 if ("${LIB64}" STREQUAL "TRUE")
     set(LIBSUFFIX 64)

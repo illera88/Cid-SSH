@@ -1,6 +1,11 @@
 add_executable(wsproxy server.cpp)
 add_dependencies(wsproxy libssh_builder)
 
+# Add Multi-processor compilation
+if(MSVC)
+  add_definitions(/MP)
+endif()
+
 target_include_directories(wsproxy
     PRIVATE
         ${LIBSSH_INCLUDE_DIR}

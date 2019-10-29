@@ -7,6 +7,11 @@ set(Boost_USE_MULTITHREADED ON)
 set(Boost_NO_BOOST_CMAKE 1)  # Required on macOS
 find_package(Boost 1.70 REQUIRED COMPONENTS system)
 
+# Add Multi-processor compilation
+if(MSVC)
+  add_definitions(/MP)
+endif()
+
 include(CheckIncludeFileCXX)
 
 # CHECK_INCLUDE_FILE_CXX updates the global CMAKE_CXX_FLAGS
@@ -54,7 +59,7 @@ target_compile_features(WebsocketsWrapper PRIVATE cxx_std_17)
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
     set_target_properties(WebsocketsWrapper PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-    target_compile_definitions (WebsocketsWrapper PUBLIC _WINSOCK_DEPRECATED_NO_WARNINGS)
+    target_compile_definitions (WebsocketsWrapper PUBLIC _WINSOCK_DEPRECATED_NO_WARNINGS _WIN32_WINNT=0x0A00)
 else()
     set_target_properties(WebsocketsWrapper PROPERTIES LINK_SEARCH_START_STATIC 1)
     set_target_properties(WebsocketsWrapper PROPERTIES LINK_SEARCH_END_STATIC 1)
