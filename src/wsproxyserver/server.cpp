@@ -135,8 +135,10 @@ void fail(beast::error_code ec, char const* what)
 class websocket_session : public std::enable_shared_from_this<websocket_session> {
 private:
     // Create the ssl_websocket_session
-    websocket_session(beast::ssl_stream<beast::tcp_stream>&& stream)
+    websocket_session(beast::ssl_stream<beast::tcp_stream>&& stream, const std::string& ssh_server, const int& ssh_port)
         : ws_(std::move(stream))
+        , ssh_server_(ssh_server)
+        , ssh_port_(ssh_port)
     {
     }
 
@@ -177,12 +179,12 @@ private:
     {
         if (ec)
             return fail(ec, "accept");
-        
+
         auto executor = ws_.get_executor();
         auto storage = std::make_shared<wsinternal::shared_storage>(std::move(ws_));
         auto connector = wsinternal::connector::create(
             std::move(executor),
-            net::ip::address::from_string("127.0.0.1"), 22,
+            net::ip::address::from_string(ssh_server_), ssh_port_,
             [storage](net::ip::tcp::socket&& socket) {
                 auto bridge = wsinternal::bridge::create(std::move(socket), std::move(storage->get_wsocket()));
             });
@@ -190,17 +192,27 @@ private:
 
     websocket::stream<beast::ssl_stream<beast::tcp_stream>> ws_;
     beast::flat_buffer buffer_;
+    const std::string& ssh_server_;
+    const int& ssh_port_;
 };
 
 //------------------------------------------------------------------------------
 
 // Handles an SSL HTTP connection
 class http_session : public std::enable_shared_from_this<http_session> {
+    typedef std::function<void(
+        beast::ssl_stream<beast::tcp_stream>&&,
+        http::request_parser<http::string_body>&&)>
+        on_upgrade_func;
 
 private:
     // Create the http_session
-    http_session(beast::tcp_stream&& stream, ssl::context& ctx)
+    http_session(
+        beast::tcp_stream&& stream,
+        ssl::context& ctx,
+        on_upgrade_func on_upgrade)
         : stream_(std::move(stream), ctx)
+        , on_upgrade_(on_upgrade)
     {
     }
 
@@ -268,7 +280,7 @@ private:
 
             // Create a websocket session, transferring ownership
             // of both the socket and the HTTP request.
-            websocket_session::create(parser_->release(), std::move(stream_));
+            on_upgrade_(std::move(stream_), std::move(parser_.value()));
             return;
         }
 
@@ -309,8 +321,6 @@ private:
         do_read();
     }
 
-    beast::ssl_stream<beast::tcp_stream> stream_;
-
     // Called by the base class
     void do_eof()
     {
@@ -340,6 +350,8 @@ private:
 
     // The parser is stored in an optional container so we can
     // construct it from scratch it at the beginning of each new message.
+    beast::ssl_stream<beast::tcp_stream> stream_;
+    on_upgrade_func on_upgrade_;
     std::optional<http::request_parser<http::string_body>> parser_;
     http::response<http::string_body> res;
     beast::flat_buffer buffer_;
@@ -350,15 +362,18 @@ private:
 int main(int argc, char* argv[])
 {
     // Check command line arguments.
-    if (argc != 4) {
-        std::cerr << "Usage: advanced-server-flex <address> <port> <threads>\n"
+    if (argc != 5) {
+        std::cerr << "Usage: advanced-server-flex <address> <port> <sshd ip> <sshd port>\n"
                   << "Example:\n"
-                  << "    advanced-server-flex 0.0.0.0 8080 1\n";
+                  << "    advanced-server-flex 0.0.0.0 8080 127.0.0.1 22\n";
         return EXIT_FAILURE;
     }
     auto const address = net::ip::make_address(argv[1]);
     auto const port = static_cast<unsigned short>(std::atoi(argv[2]));
-    auto const threads = std::max<int>(1, std::atoi(argv[3]));
+    auto const ssh_server = std::string(argv[3]);
+    auto const ssh_port = std::atoi(argv[4]);
+
+    auto threads = 1;
 
     // The io_context is required for all I/O
     net::io_context ioc { threads };
@@ -378,7 +393,11 @@ int main(int argc, char* argv[])
         ioc.get_executor(), tcp::endpoint { address, port }, [&](net::ip::tcp::socket&& socket) {
             http_session::create(
                 beast::tcp_stream(std::move(socket)),
-                ctx);
+                ctx,
+                [&ssh_server, &ssh_port](beast::ssl_stream<beast::tcp_stream>&& stream,
+                    http::request_parser<http::string_body>&& parser) {
+                    websocket_session::create(parser.release(), std::move(stream), ssh_server, ssh_port);
+                });
         }
     };
 
