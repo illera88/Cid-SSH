@@ -58,3 +58,5 @@ else()
         ${INSTALL_DIR}/lib${LIBSUFFIX}/libssh.a
     )
 endif()
+
+add_subdirectory(beastsocks)

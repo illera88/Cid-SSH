@@ -73,6 +73,7 @@ target_link_libraries(WebsocketsWrapper
         OpenSSL::Crypto  # Link against OpenSSL's crypto
         Boost::system  # Link against Boost.System
         Boost::boost  # Build with Boost header location
+        BeastSocks  # Build with Beast Socks header location
 )
 
 include(GNUInstallDirs)
