@@ -44,25 +44,25 @@ tcpconn::tcpconn(
 
 void tcpconn::start()
 {
+    std::string host;
+    std::string port;
+
     if (use_proxy_) {
-        resolver_.async_resolve(
-            std::string(socks_uri_.host()),
-            std::string(socks_uri_.port()),
-            std::bind(
-                &tcpconn::on_resolve,
-                shared_from_this(),
-                std::placeholders::_1,
-                std::placeholders::_2));
+        host = std::string(socks_uri_.host());
+        port = std::string(socks_uri_.port());
     } else {
-        resolver_.async_resolve(
-            host_,
-            port_,
-            std::bind(
-                &tcpconn::on_resolve,
-                shared_from_this(),
-                std::placeholders::_1,
-                std::placeholders::_2));
+        host = host_;
+        port = port_;
     }
+
+    resolver_.async_resolve(
+        host,
+        port,
+        std::bind(
+            &tcpconn::on_resolve,
+            shared_from_this(),
+            std::placeholders::_1,
+            std::placeholders::_2));
 }
 
 void tcpconn::on_resolve(
