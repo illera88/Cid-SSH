@@ -17,8 +17,8 @@ typedef beast::websocket::stream<beast::ssl_stream<beast::tcp_stream>> wsstream;
 class wsconn : public std::enable_shared_from_this<wsconn> {
     wsconn(
         net::executor,
+        net::ip::tcp::socket&& socket,
         net::ssl::context&,
-        std::string&,
         std::function<void(wsstream&&)>);
 
 public:
@@ -48,12 +48,7 @@ private:
     net::ssl::context& ssl_context_;
     net::ip::tcp::resolver resolver_;
     wsstream ws_;
-    std::string& uri_;
     std::function<void(wsstream&&)> sockethandler_;
-
-    std::string host_;
-    std::string port_;
-    std::string path_;
 };
 } // namespace wsinternal
 
