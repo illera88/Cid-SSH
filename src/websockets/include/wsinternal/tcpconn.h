@@ -38,7 +38,7 @@ private:
     void on_connect(
         const std::error_code&,
         net::ip::tcp::resolver::results_type::endpoint_type);
-    void socks_handshake(const std::error_code&);
+    void handshake(const std::error_code&);
 
     net::executor executor_;
     net::ip::tcp::resolver resolver_;
@@ -53,7 +53,6 @@ private:
     socks::uri socks_uri_;
 
     bool use_proxy_ = false;
-    int socks_version_ = 0;
 };
 } // namespace wsinternal
 

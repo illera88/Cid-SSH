@@ -9,6 +9,7 @@
 #include <socks/handshake.hpp>
 #include <socks/uri.hpp>
 
+#include <httpconnect.hpp>
 #include <wsinternal/tcpconn.h>
 #include <wsinternal/uri.h>
 
@@ -29,16 +30,9 @@ tcpconn::tcpconn(
 {
     std::tie(host_, port_, path_) = parse_uri(remote_uri_);
 
-    if (socks_uri_.parse(proxy_uri_) && socks_uri_.scheme() != "direct") {
-        use_proxy_ = true;
-    }
-
-    if (socks_uri_.scheme() == "socks5") {
-        socks_version_ = 5;
-    } else if (socks_uri_.scheme() == "socks4") {
-        socks_version_ = 4;
-    } else {
-        use_proxy_ = false;
+    if (!socks_uri_.parse(proxy_uri_)) {
+        std::cerr << "Unable to parse the proxy uri" << std::endl;
+        socks_uri_.parse("direct://");
     }
 }
 
@@ -87,7 +81,18 @@ void tcpconn::on_resolve(
 void tcpconn::on_connect(const std::error_code& error, net::ip::tcp::resolver::results_type::endpoint_type)
 {
     if (!error) {
-        if (use_proxy_) {
+        auto socks_version_ = 0;
+        auto use_socks = false;
+
+        if (socks_uri_.scheme() == "socks5") {
+            socks_version_ = 5;
+            use_socks = true;
+        } else if (socks_uri_.scheme() == "socks4") {
+            socks_version_ = 4;
+            use_socks = true;
+        }
+
+        if (use_socks) {
             switch (socks_version_) {
             case 5:
                 socks::async_handshake_v5(
@@ -97,7 +102,7 @@ void tcpconn::on_connect(const std::error_code& error, net::ip::tcp::resolver::r
                     std::string(socks_uri_.username()),
                     std::string(socks_uri_.password()),
                     true,
-                    std::bind(&tcpconn::socks_handshake,
+                    std::bind(&tcpconn::handshake,
                         shared_from_this(),
                         std::placeholders::_1));
                 break;
@@ -107,7 +112,7 @@ void tcpconn::on_connect(const std::error_code& error, net::ip::tcp::resolver::r
                     host_,
                     static_cast<unsigned short>(std::atoi(port_.c_str())),
                     std::string(socks_uri_.username()),
-                    std::bind(&tcpconn::socks_handshake,
+                    std::bind(&tcpconn::handshake,
                         shared_from_this(),
                         std::placeholders::_1));
                 break;
@@ -115,6 +120,16 @@ void tcpconn::on_connect(const std::error_code& error, net::ip::tcp::resolver::r
                 sockethandler_(std::move(socket_));
                 break;
             }
+        } else if (socks_uri_.scheme() == "http" || socks_uri_.scheme() == "connect") {
+                httpconnect::async_handshake_httpconnect(
+                    socket_,
+                    host_,
+                    port_, 
+                    std::string(socks_uri_.username()),
+                    std::string(socks_uri_.password()),
+                    std::bind(&tcpconn::handshake,
+                        shared_from_this(),
+                        std::placeholders::_1));
         } else {
             sockethandler_(std::move(socket_));
         }
@@ -123,12 +138,12 @@ void tcpconn::on_connect(const std::error_code& error, net::ip::tcp::resolver::r
     }
 }
 
-void tcpconn::socks_handshake(const std::error_code& error)
+void tcpconn::handshake(const std::error_code& error)
 {
     if (!error) {
         sockethandler_(std::move(socket_));
     } else {
-        std::cerr << "Failed to handshake socks proxy: " << error.message() << std::endl;
+        std::cerr << "Failed to handshake the proxy: " << error.message() << std::endl;
     }
 }
 
