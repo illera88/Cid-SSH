@@ -75,7 +75,7 @@ public:
             req_.target(target);
             req_.set(beast::http::field::host, target);
 
-            if (username_ != "" and password_ != "") {
+            if (username_ != "" && password_ != "") {
                 auto user_pass = username_ + ":" + password_;
                 auto b64encoded = std::vector<char> {};
                 b64encoded.resize(beast::detail::base64::encoded_size(user_pass.length()));
