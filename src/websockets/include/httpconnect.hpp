@@ -100,7 +100,7 @@ public:
 
             if (response.size() >= 4) {
                 auto response_data = static_cast<const char*>(response.data().data());
-                end_of_http = std::string("\r\n\r\n").compare(response_data + (response.size() - 4));
+                end_of_http = std::string("\r\n\r\n").compare(std::string_view(response_data + (response.size() - 4), 4)) == 0;
 
                 if (end_of_http) {
                     step_ = 2;
