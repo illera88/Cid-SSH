@@ -120,13 +120,13 @@ public:
             // We now need to parse the HTTP response that should be sitting in
             // the response_
 
-            auto& response = *response_;
             beast::http::response_parser<beast::http::string_body> http_response{};
             boost::beast::error_code put_ec;
             http_response.put(response.data(), put_ec);
 
             if (put_ec) {
                 this->complete_now(put_ec);
+                break;
             }
 
             if (http_response.get().result() == beast::http::status::ok) {
