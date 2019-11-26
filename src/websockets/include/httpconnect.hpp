@@ -68,12 +68,12 @@ public:
         case 0: {
             step_ = 1;
 
-            auto target = hostname_ + ":" + port_;
+            auto target_ = hostname_ + ":" + port_;
 
-            req_.version(11);
-            req_.method(beast::http::verb::connect);
-            req_.target(target);
-            req_.set(beast::http::field::host, target);
+            req_->version(10);
+            req_->method(beast::http::verb::connect);
+            req_->target(target_);
+            req_->set(beast::http::field::host, target_);
 
             if (username_ != "" && password_ != "") {
                 auto user_pass = username_ + ":" + password_;
@@ -81,12 +81,12 @@ public:
                 b64encoded.resize(beast::detail::base64::encoded_size(user_pass.length()));
                 beast::detail::base64::encode(b64encoded.data(), user_pass.c_str(), user_pass.length());
                 auto basic_auth = std::string("Basic ") + std::string(b64encoded.data(), b64encoded.size());
-                req_.set(beast::http::field::proxy_authorization, basic_auth);
+                req_->set(beast::http::field::proxy_authorization, basic_auth);
             }
 
             return beast::http::async_write(
                 stream_,
-                req_,
+                *req_,
                 std::move(*this));
         }
         case 1: {
@@ -146,13 +146,12 @@ private:
     BufferPtr request_ { new Buffer() };
     BufferPtr response_ { new Buffer() };
 
-    beast::http::request<beast::http::empty_body> req_;
+    std::unique_ptr<beast::http::request<beast::http::empty_body>> req_ = std::make_unique<beast::http::request<beast::http::empty_body>>();
 
     std::string hostname_;
     std::string port_;
     std::string username_;
     std::string password_;
-    bool use_hostname_;
     int step_ = 0;
 };
 
