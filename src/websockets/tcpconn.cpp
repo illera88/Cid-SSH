@@ -41,7 +41,7 @@ void tcpconn::start()
     std::string host;
     std::string port;
 
-    if (use_proxy_) {
+    if (socks_uri_.scheme() != "direct") {
         host = std::string(socks_uri_.host());
         port = std::string(socks_uri_.port());
     } else {

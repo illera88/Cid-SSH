@@ -51,8 +51,6 @@ private:
     std::string path_;
     std::string& proxy_uri_;
     socks::uri socks_uri_;
-
-    bool use_proxy_ = false;
 };
 } // namespace wsinternal
 
