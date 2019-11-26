@@ -121,15 +121,15 @@ void tcpconn::on_connect(const std::error_code& error, net::ip::tcp::resolver::r
                 break;
             }
         } else if (socks_uri_.scheme() == "http" || socks_uri_.scheme() == "connect") {
-                httpconnect::async_handshake_httpconnect(
-                    socket_,
-                    host_,
-                    port_, 
-                    std::string(socks_uri_.username()),
-                    std::string(socks_uri_.password()),
-                    std::bind(&tcpconn::handshake,
-                        shared_from_this(),
-                        std::placeholders::_1));
+            httpconnect::async_handshake_httpconnect(
+                socket_,
+                host_,
+                port_,
+                std::string(socks_uri_.username()),
+                std::string(socks_uri_.password()),
+                std::bind(&tcpconn::handshake,
+                    shared_from_this(),
+                    std::placeholders::_1));
         } else {
             sockethandler_(std::move(socket_));
         }
