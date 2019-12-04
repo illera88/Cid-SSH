@@ -1,25 +1,22 @@
-#ifndef WSCONN_H_9EDF7CB75D0C61
-#define WSCONN_H_9EDF7CB75D0C61
+#ifndef TCPCONN_H_D6AD02BDB9EF17
+#define TCPCONN_H_D6AD02BDB9EF17
 
 #include <memory>
 
 #include <boost/asio/executor.hpp>
 #include <boost/asio/ip/address.hpp>
 #include <boost/asio/ip/tcp.hpp>
-#include <boost/beast/ssl/ssl_stream.hpp>
+#include <socks/uri.hpp>
 
 namespace wsinternal {
-namespace beast = boost::beast;
 namespace net = boost::asio;
 
-typedef beast::websocket::stream<beast::ssl_stream<beast::tcp_stream>> wsstream;
-
-class wsconn : public std::enable_shared_from_this<wsconn> {
-    wsconn(
+class tcpconn : public std::enable_shared_from_this<tcpconn> {
+    tcpconn(
         net::executor,
-        net::ip::tcp::socket&& socket,
-        net::ssl::context&,
-        std::function<void(wsstream&&)>);
+        std::string&,
+        std::string&,
+        std::function<void(net::ip::tcp::socket&&)>);
 
 public:
     // Ah, C++ templating can be such a joy
@@ -28,7 +25,7 @@ public:
     {
         // Can't use make_shared here because of visibility rules and
         // all that fun jazz...
-        auto ptr = std::shared_ptr<wsconn>(new wsconn(std::forward<T>(all)...));
+        auto ptr = std::shared_ptr<tcpconn>(new tcpconn(std::forward<T>(all)...));
         ptr->start();
         return ptr;
     }
@@ -41,15 +38,21 @@ private:
     void on_connect(
         const std::error_code&,
         net::ip::tcp::resolver::results_type::endpoint_type);
-    void on_ssl_handshake(const std::error_code&);
-    void on_handshake(const std::error_code&);
+    void handshake(const std::error_code&);
 
     net::executor executor_;
-    net::ssl::context& ssl_context_;
     net::ip::tcp::resolver resolver_;
-    wsstream ws_;
-    std::function<void(wsstream&&)> sockethandler_;
+    std::function<void(net::ip::tcp::socket&&)> sockethandler_;
+    net::ip::tcp::socket socket_;
+
+    std::string& remote_uri_;
+    std::string host_;
+    std::string port_;
+    std::string path_;
+    std::string& proxy_uri_;
+    socks::uri socks_uri_;
 };
 } // namespace wsinternal
 
-#endif /* WSCONN_H_9EDF7CB75D0C61 */
+
+#endif /* TCPCONN_H_D6AD02BDB9EF17 */

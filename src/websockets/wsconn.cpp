@@ -15,64 +15,29 @@ namespace net = boost::asio;
 
 wsconn::wsconn(
     net::executor executor,
+    net::ip::tcp::socket&& socket,
     net::ssl::context& ssl_context,
-    std::string& uri,
     std::function<void(wsstream&&)> sockethandler)
     : executor_(executor)
     , ssl_context_(ssl_context)
     , resolver_(net::make_strand(executor_))
-    , ws_(net::make_strand(executor_), ssl_context_)
-    , uri_(uri)
+    , ws_(beast::tcp_stream(std::move(socket)), ssl_context_)
     , sockethandler_(sockethandler)
 {
-    std::tie(host_, port_, path_) = parse_uri(uri_);
     ws_.binary(true);
 }
 
 void wsconn::start()
 {
-    resolver_.async_resolve(
-        host_,
-        port_,
+    // Set a timeout on the operation
+    beast::get_lowest_layer(ws_).expires_after(std::chrono::seconds(30));
+
+    // Perform the SSL handshake
+    ws_.next_layer().async_handshake(
+        net::ssl::stream_base::client,
         beast::bind_front_handler(
-            &wsconn::on_resolve,
+            &wsconn::on_ssl_handshake,
             shared_from_this()));
-}
-
-void wsconn::on_resolve(
-    const std::error_code& error,
-    net::ip::tcp::resolver::results_type results)
-{
-    if (!error) {
-        // Set a timeout on the operation
-        beast::get_lowest_layer(ws_).expires_after(std::chrono::seconds(30));
-
-        // Make the connection on the IP address we get from a lookup
-        beast::get_lowest_layer(ws_).async_connect(
-            results,
-            beast::bind_front_handler(
-                &wsconn::on_connect,
-                shared_from_this()));
-    } else {
-        std::cerr << "Failed to resolve: " << error.message() << std::endl;
-    }
-}
-
-void wsconn::on_connect(const std::error_code& error, net::ip::tcp::resolver::results_type::endpoint_type)
-{
-    if (!error) {
-        // Set a timeout on the operation
-        beast::get_lowest_layer(ws_).expires_after(std::chrono::seconds(30));
-
-        // Perform the SSL handshake
-        ws_.next_layer().async_handshake(
-            net::ssl::stream_base::client,
-            beast::bind_front_handler(
-                &wsconn::on_ssl_handshake,
-                shared_from_this()));
-    } else {
-        std::cerr << "Failed to connect: " << error.message() << std::endl;
-    }
 }
 
 void wsconn::on_ssl_handshake(const std::error_code& error)

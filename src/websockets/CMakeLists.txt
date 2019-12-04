@@ -45,6 +45,7 @@ set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS_BAK})
 add_library(WebsocketsWrapper STATIC
     acceptor.cpp
     bridge.cpp
+    tcpconn.cpp
     uri.cpp
     wrapper.cpp
     wsconn.cpp
@@ -73,6 +74,7 @@ target_link_libraries(WebsocketsWrapper
         OpenSSL::Crypto  # Link against OpenSSL's crypto
         Boost::system  # Link against Boost.System
         Boost::boost  # Build with Boost header location
+        BeastSocks  # Build with Beast Socks header location
 )
 
 include(GNUInstallDirs)

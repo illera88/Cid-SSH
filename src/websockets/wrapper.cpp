@@ -7,6 +7,7 @@
 
 #include <wsinternal/acceptor.h>
 #include <wsinternal/bridge.h>
+#include <wsinternal/tcpconn.h>
 #include <wsinternal/wsconn.h>
 
 namespace net = boost::asio;
@@ -43,7 +44,7 @@ class WebsocketsWrapper::impl {
 public:
     impl(std::string& c2_uri)
         : uri_(c2_uri)
-        , io_context_(net::io_context{})
+        , io_context_(net::io_context {})
         , ssl_context_(net::ssl::context::tlsv12_client)
         , aio_work_(net::executor_work_guard<net::io_context::executor_type>(io_context_.get_executor()))
         , io_runner_(
@@ -58,23 +59,26 @@ public:
               0,
               // Capture everything by reference, so we can re-use things like io_context_/ssl_context_/uri_
               [&](net::ip::tcp::socket&& socket) {
-                  // Get the executor for the socket
                   auto executor = socket.get_executor();
 
                   // Create a shared pointer that holds the socket by moving it into the shared storage
                   auto storage = std::make_shared<wsinternal::shared_storage>(std::move(socket));
 
-                  // Create a new shared wsconn which will go do the whole song and dance to get connected to a websocket
-                  wsinternal::wsconn::create(
-                      executor,
-                      ssl_context_,
-                      uri_,
-                      // Lambda copies storage (thereby increasing the shared_ptr) and captures it
-                      [storage](wsstream&& wsocket) {
-                          // Using our storage shared pointer we get the socket, and move it into the bridge
-                          // alongside moving the websocket into the bridge
-                          wsinternal::bridge::create(std::move(storage->get_socket()), std::move(wsocket));
-                      });
+                  wsinternal::tcpconn::create(executor, uri_, proxy_, [&, storage](net::ip::tcp::socket&& wssocket) {
+                      auto executor = wssocket.get_executor();
+
+                      // Create a new shared wsconn which will go do the whole song and dance to get connected to a websocket
+                      wsinternal::wsconn::create(
+                          executor,
+                          std::move(wssocket),
+                          ssl_context_,
+                          // Lambda copies storage (thereby increasing the shared_ptr) and captures it
+                          [storage](wsstream&& wsocket) {
+                              // Using our storage shared pointer we get the socket, and move it into the bridge
+                              // alongside moving the websocket into the bridge
+                              wsinternal::bridge::create(std::move(storage->get_socket()), std::move(wsocket));
+                          });
+                  });
               })
     {
         acceptor_.accept_connections();
@@ -96,6 +100,7 @@ public:
 
 private:
     std::string uri_;
+    std::string proxy_ = std::string("direct://");
     net::io_context io_context_;
     net::ssl::context ssl_context_;
     net::executor_work_guard<net::io_context::executor_type> aio_work_;
