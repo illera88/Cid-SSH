@@ -59,4 +59,7 @@ else()
     )
 endif()
 
+
+if(${WITH_WEBSOCKETS} OR ${WITH_WSPROXY})
 add_subdirectory(beastsocks)
+endif()
