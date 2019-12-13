@@ -13,7 +13,6 @@ public:
     ~WebsocketsWrapper();
 
 private:
-    std::list<std::string> get_proxies(std::string c2_uri);
     class impl;
     std::unique_ptr<impl> pimpl_;
 };

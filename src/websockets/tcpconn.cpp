@@ -19,7 +19,7 @@ namespace net = boost::asio;
 tcpconn::tcpconn(
     net::executor executor,
     std::string& remote_uri,
-    std::string& proxy_uri,
+    const std::string& proxy_uri,
     std::function<void(net::ip::tcp::socket&&)> sockethandler)
     : executor_(executor)
     , resolver_(net::make_strand(executor_))
