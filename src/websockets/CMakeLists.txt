@@ -1,3 +1,6 @@
+# Add libproxy
+add_subdirectory(libproxy)
+
 set(OPENSSL_USE_STATIC_LIBS TRUE)
 set(OPENSSL_MSVC_STATIC_RT TRUE)
 include(FindOpenSSL)
@@ -55,7 +58,9 @@ target_include_directories(WebsocketsWrapper
     PUBLIC
         $<INSTALL_INTERFACE:include/websocketswrapper/>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/>
+		libproxy
 )
+
 target_compile_features(WebsocketsWrapper PRIVATE cxx_std_17)
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
@@ -75,6 +80,8 @@ target_link_libraries(WebsocketsWrapper
         Boost::system  # Link against Boost.System
         Boost::boost  # Build with Boost header location
         BeastSocks  # Build with Beast Socks header location
+		libproxy
+		modman
 )
 
 include(GNUInstallDirs)
@@ -85,3 +92,4 @@ install(TARGETS WebsocketsWrapper EXPORT WebsocketsWrapper-export
 install(DIRECTORY include/ DESTINATION
     ${CMAKE_INSTALL_INCLUDEDIR}/websocketswrapper/
 )
+

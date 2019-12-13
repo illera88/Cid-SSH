@@ -10,6 +10,9 @@
 #include <wsinternal/tcpconn.h>
 #include <wsinternal/wsconn.h>
 
+/* Import libproxy API */
+#include <proxy.h>
+
 namespace net = boost::asio;
 using wsinternal::wsstream;
 
@@ -31,9 +34,32 @@ private:
 };
 } // namespace wsinternal
 
+std::list<std::string> WebsocketsWrapper::get_proxies(std::string c2_uri)
+{
+    char** proxies;
+    std::list<std::string> proxy_list;
+    /* Create the proxy factory object */
+    pxProxyFactory* pf = px_proxy_factory_new();
+    if (!pf)
+    {
+        fprintf(stderr, "An unknown error occurred!\n");
+        return proxy_list;
+    }
+
+    proxies = px_proxy_factory_get_proxies(pf, c2_uri.c_str());
+    if (proxies != nullptr)
+        for (int j = 0; proxies[j]; j++) {
+            proxy_list.push_back(proxies[j]);
+            printf("%s%s", proxies[j], proxies[j + 1] ? " " : "\n");
+        }
+   
+    px_proxy_factory_free_proxies(proxies);
+}
+
 WebsocketsWrapper::WebsocketsWrapper(std::string c2_uri)
     : pimpl_(std::make_unique<WebsocketsWrapper::impl>(c2_uri))
 {
+    get_proxies(c2_uri);
 }
 
 WebsocketsWrapper::~WebsocketsWrapper()
