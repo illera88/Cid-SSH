@@ -40,6 +40,7 @@ px_module(config_w32reg            "${WIN32}"        1)
 px_module(ignore_domain            1                 1)
 px_module(ignore_hostname          1                 1)
 px_module(ignore_ip                1                 1)
+
 if(NM_FOUND OR NMold_FOUND)
   set(NM_BUILD 1)
 endif(NM_FOUND OR NMold_FOUND)

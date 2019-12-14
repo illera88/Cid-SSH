@@ -17,4 +17,3 @@ include(cmake/devfiles.cmk)
 
 ### Main library
 include(cmake/libproxy.cmk)
-

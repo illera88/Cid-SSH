@@ -16,7 +16,7 @@ tar -xzvf dbus-1.12.16.tar.gz && cd dbus-1.12.16
             --docdir=/usr/share/doc/dbus-1.12.16 \
             --with-console-auth-dir=/run/console \
             --with-system-pid-file=/run/dbus/pid \
-            --with-system-socket=/run/dbus/system_bus_socket && make && make install && cd ..
+            --with-system-socket=/run/dbus/system_bus_socket && make -j$(nproc) && make install && cd ..
 
 
 apk add --no-cache \
@@ -35,14 +35,14 @@ apk add --no-cache \
     boost-static \
     boost-system \
     openssl \
-    openssl-libs-static \
     openssl-dev \ 
-    networkmanager-dev
+    networkmanager-dev \
+    libglib2.0-dev
 
 # Building CidSSH
 rm -rf build
 cmake -S . -B build
-cmake --build build --config Release
+cmake --build build --config Release -j$(nproc)
 
 # For Op
 #RUN mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Release -DPASSWORD_AUTH="xxxxxxxxxx" -DC2_IP="XX.XX.XX.XX" .. && make 

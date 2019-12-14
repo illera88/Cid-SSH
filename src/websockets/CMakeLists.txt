@@ -80,8 +80,9 @@ target_link_libraries(WebsocketsWrapper
         Boost::system  # Link against Boost.System
         Boost::boost  # Build with Boost header location
         BeastSocks  # Build with Beast Socks header location
-		libproxy
+                dbus-1		
 		modman
+                libproxy
 )
 
 include(GNUInstallDirs)

@@ -8,11 +8,11 @@ endif ()
 
 configure_file(config.h.cmake config.h)
 
-add_subdirectory(malware)
-
 if (${WITH_WEBSOCKETS})
     add_subdirectory(websockets)
 endif()
+
+add_subdirectory(malware)
 
 if(${WITH_WSPROXY})
 	add_subdirectory(wsproxyserver)
