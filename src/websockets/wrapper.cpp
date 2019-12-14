@@ -107,7 +107,7 @@ public:
         io_runner_.join();
     }
 
-    std::set<std::string> impl::get_proxies(std::string c2_uri)
+    std::set<std::string> get_proxies(std::string c2_uri)
     {
         char** proxies;
         std::set<std::string> proxy_list{ "direct://" };

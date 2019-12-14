@@ -118,7 +118,7 @@ string url::encode(const string &data, const string &valid_reserved) {
 	return encoded.str();
 }
 
-url::url(const string &url) throw(parse_error)
+url::url(const string &url)
 	: m_orig(url), m_port(0), m_ips(NULL) {
 	size_t idx = 0;
 	size_t hier_part_start, hier_part_end;
@@ -301,7 +301,7 @@ url& url::operator=(const url& url) {
 	return *this;
 }
 
-url& url::operator=(string strurl) throw (parse_error) {
+url& url::operator=(string strurl) {
 	url tmp(strurl);
 	*this = tmp;
 	return *this;

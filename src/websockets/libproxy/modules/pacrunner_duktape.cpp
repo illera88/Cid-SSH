@@ -8,6 +8,8 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #pragma comment(lib, "Ws2_32.lib")
+#else
+#include <unistd.h>
 #endif
 
 using namespace libproxy;
@@ -411,7 +413,7 @@ public:
         duk_destroy_heap(ctx);
 	}
 
-    duktape_pacrunner(string pac, const url& pacurl) throw (bad_alloc) : pacrunner(pac, pacurl) {
+    duktape_pacrunner(string pac, const url& pacurl) : pacrunner(pac, pacurl) {
 
         this->ctx = duk_create_heap_default();
         if (!ctx) {
@@ -446,7 +448,7 @@ public:
         }
 	}
 
-	string run(const url& url_) throw (bad_alloc) {
+	string run(const url& url_) {
         string      retStr = "";
 
         duk_push_global_object(ctx);

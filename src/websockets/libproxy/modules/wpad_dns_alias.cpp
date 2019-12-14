@@ -22,9 +22,12 @@
 #define HOST_NAME_MAX 256
 #else
 #include <limits.h> // HOST_NAME_MAX
+#include <unistd.h>
 #endif // _WIN32
 
 #include <list>
+#include <cstring>
+#include <algorithm>
 
 using namespace libproxy;
 
