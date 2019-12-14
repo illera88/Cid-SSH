@@ -14,10 +14,10 @@ if(NOT WIN32 OR MINGW)
     set (PKGCONFIG_INCLUDEDIR "\${prefix}/${INCLUDE_INSTALL_DIR}")
   endif(IS_ABSOLUTE ${INCLUDE_INSTALL_DIR})
 
-  configure_file(${CMAKE_SOURCE_DIR}/libproxy/libproxy-1.0.pc.in ${CMAKE_BINARY_DIR}/libproxy-1.0.pc @ONLY)
+  configure_file(${CMAKE_SOURCE_DIR}/src/websockets/libproxy/libproxy-1.0.pc.in ${CMAKE_BINARY_DIR}/libproxy-1.0.pc @ONLY)
   install(FILES ${CMAKE_BINARY_DIR}/libproxy-1.0.pc DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
   
   # CMake Find helper
-  configure_file(${CMAKE_SOURCE_DIR}/libproxy/Findlibproxy.cmake.in ${CMAKE_BINARY_DIR}/Findlibproxy.cmake @ONLY)
+  configure_file(${CMAKE_SOURCE_DIR}/src/websockets/libproxy/Findlibproxy.cmake.in ${CMAKE_BINARY_DIR}/Findlibproxy.cmake @ONLY)
   install(FILES ${CMAKE_BINARY_DIR}/Findlibproxy.cmake DESTINATION ${SHARE_INSTALL_DIR}/cmake/Modules)
 endif(NOT WIN32 OR MINGW)
