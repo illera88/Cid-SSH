@@ -42,7 +42,7 @@ px_module(ignore_hostname          1                 1)
 px_module(ignore_ip                1                 1)
 
 if(NM_FOUND OR NMold_FOUND)
-  set(NM_BUILD 1)
+  set(NM_BUILD 1 PARENT_SCOPE)
 endif(NM_FOUND OR NMold_FOUND)
 px_module(network_networkmanager   "${NM_BUILD}"     1       ${NM_LIBRARIES}${NMold_LIBRARIES})
 px_module(pacrunner_mozjs          "${MOZJS_FOUND}"  ${BIPR} ${MOZJS_LIBRARIES})

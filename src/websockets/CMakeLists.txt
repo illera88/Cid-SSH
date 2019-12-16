@@ -72,7 +72,11 @@ else()
     set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
 endif()
 
+add_dependencies(WebsocketsWrapper libproxy)
+
 # Find libraries after we set the LINK_SEARCH_STATIC property
+message(STATUS "daaaaaa" ${LIBPROXY_LIBRARIES}  )
+
 target_link_libraries(WebsocketsWrapper
     PUBLIC
         OpenSSL::SSL  # Link against OpenSSL
@@ -80,10 +84,14 @@ target_link_libraries(WebsocketsWrapper
         Boost::system  # Link against Boost.System
         Boost::boost  # Build with Boost header location
         BeastSocks  # Build with Beast Socks header location
-                dbus-1		
-		modman
-                libproxy
+        libproxy
+        modman
 )
+
+if (${NM_BUILD})
+    target_link_libraries(WebsocketsWrapper PUBLIC dbus-1)
+endif()
+
 
 include(GNUInstallDirs)
 install(TARGETS WebsocketsWrapper EXPORT WebsocketsWrapper-export
