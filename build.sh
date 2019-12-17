@@ -19,9 +19,9 @@ apk add --no-cache \
     boost-static \
     boost-system \
     openssl \
-    openssl-dev \ 
+    openssl-dev \
     networkmanager-dev \
-    libglib2.0-dev
+    glib-dev
 	
 echo "Installing dbus static"
 wget https://dbus.freedesktop.org/releases/dbus/dbus-1.12.16.tar.gz
