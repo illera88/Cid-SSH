@@ -43,6 +43,6 @@ px_module(network_networkmanager   "${NM_BUILD}"     1       ${NM_LIBRARIES}${NM
 px_module(pacrunner_mozjs          "${MOZJS_FOUND}"  ${BIPR} ${MOZJS_LIBRARIES})
 px_module(pacrunner_natus          "${NATUS_FOUND}"  ${BIPR} ${NATUS_LIBRARIES})
 px_module(pacrunner_webkit         "${WEBKIT_FOUND}" ${BIPR} ${WEBKIT_LIBRARIES})
-px_module(pacrunner_duktape        "${DUKTAPE_FOUND}" 1 ${DUCKTA_LIBRARIES})
+px_module(pacrunner_duktape        "${DUKTAPE_FOUND}" 1 ${DUCKTAPE_LIBRARIES})
 px_module(wpad_dns_alias           1                 1)
 message("")
