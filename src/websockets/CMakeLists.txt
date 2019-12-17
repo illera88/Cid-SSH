@@ -75,8 +75,6 @@ endif()
 add_dependencies(WebsocketsWrapper libproxy)
 
 # Find libraries after we set the LINK_SEARCH_STATIC property
-message(STATUS "daaaaaa" ${LIBPROXY_LIBRARIES}  )
-
 target_link_libraries(WebsocketsWrapper
     PUBLIC
         OpenSSL::SSL  # Link against OpenSSL

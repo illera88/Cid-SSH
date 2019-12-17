@@ -17,6 +17,3 @@ include(cmake/devfiles.cmk)
 
 ### Main library
 include(cmake/libproxy.cmk)
-
-# Make LIBPROXY_LIBRARIES reachable from websockets/CMakeLists.txt
-#set(LIBPROXY_LIBRARIES ${LIBPROXY_LIBRARIES} PARENT_SCOPE)
