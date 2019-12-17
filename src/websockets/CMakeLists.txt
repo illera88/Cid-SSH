@@ -3,7 +3,7 @@ add_subdirectory(libproxy)
 
 set(OPENSSL_USE_STATIC_LIBS TRUE)
 set(OPENSSL_MSVC_STATIC_RT TRUE)
-include(FindOpenSSL)
+find_package(OpenSSL REQUIRED)
 
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_MULTITHREADED ON)
