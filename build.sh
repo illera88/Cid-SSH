@@ -21,7 +21,8 @@ apk add --no-cache \
     openssl \
     openssl-dev \
     networkmanager-dev \
-    glib-dev
+    glib-dev \
+	expat-dev
 	
 echo "Installing dbus static"
 wget https://dbus.freedesktop.org/releases/dbus/dbus-1.12.16.tar.gz
