@@ -24,7 +24,7 @@ set(BIPR 1)
 #
 ## Module definition
 #
-message("MODULES TO BUILD:")
+message("MODULES TO BUILD IN LIBPROXY:")
 px_module(config_envvar            "${ENVVAR_FOUND}" 1)
 px_module(config_sysconfig         "${SYSCONFIG_FOUND}" 1)
 px_module(config_gnome             "${GNOME2_FOUND}" 1)

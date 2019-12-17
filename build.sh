@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 echo "Installing some dependencies we need to build"
+apk update
 
 echo "Installing dbus static"
 wget https://dbus.freedesktop.org/releases/dbus/dbus-1.12.16.tar.gz
