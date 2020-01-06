@@ -90,6 +90,16 @@ if (${NM_BUILD})
     target_link_libraries(WebsocketsWrapper PUBLIC dbus-1)
 endif()
 
+if(APPLE)
+	if (${SC_FOUND})
+		target_link_libraries(WebsocketsWrapper "-framework SystemConfiguration")
+	endif()
+	if (${CF_FOUND})
+		target_link_libraries(WebsocketsWrapper "-framework CoreFoundation")
+	endif()
+
+	set_target_properties(program PROPERTIES LINK_FLAGS "-Wl,-F/Library/Frameworks")
+endif()
 
 include(GNUInstallDirs)
 install(TARGETS WebsocketsWrapper EXPORT WebsocketsWrapper-export
