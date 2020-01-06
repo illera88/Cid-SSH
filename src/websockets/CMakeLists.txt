@@ -91,14 +91,8 @@ if (${NM_BUILD})
 endif()
 
 if(APPLE)
-	if (${SC_FOUND})
-		target_link_libraries(WebsocketsWrapper "-framework SystemConfiguration")
-	endif()
-	if (${CF_FOUND})
-		target_link_libraries(WebsocketsWrapper "-framework CoreFoundation")
-	endif()
-
-	set_target_properties(WebsocketsWrapper PROPERTIES LINK_FLAGS "-Wl,-F/Library/Frameworks")
+    target_link_libraries(WebsocketsWrapper PUBLIC "-framework SystemConfiguration")
+    target_link_libraries(WebsocketsWrapper PUBLIC "-framework CoreFoundation")
 endif()
 
 include(GNUInstallDirs)
