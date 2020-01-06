@@ -16,7 +16,7 @@ include(cmake/modules/config_macosx.cmk)
 include(cmake/modules/network_networkmanager.cmk)
 include(cmake/modules/pacrunner_mozjs.cmk)
 include(cmake/modules/pacrunner_natus.cmk)
-include(cmake/modules/pacrunner_webkit.cmk)
+#include(cmake/modules/pacrunner_webkit.cmk)
 include(cmake/modules/pacrunner_duktape.cmk)
 
 set(BIPR 1)
