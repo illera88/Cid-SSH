@@ -98,7 +98,7 @@ if(APPLE)
 		target_link_libraries(WebsocketsWrapper "-framework CoreFoundation")
 	endif()
 
-	set_target_properties(program PROPERTIES LINK_FLAGS "-Wl,-F/Library/Frameworks")
+	set_target_properties(WebsocketsWrapper PROPERTIES LINK_FLAGS "-Wl,-F/Library/Frameworks")
 endif()
 
 include(GNUInstallDirs)
