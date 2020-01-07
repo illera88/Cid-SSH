@@ -21,8 +21,8 @@ set(OPENSSL_USE_STATIC_LIBS TRUE)
 set(OPENSSL_MSVC_STATIC_RT TRUE)
 
 ExternalProject_Add(libssh_builder
-    GIT_REPOSITORY https://git.libssh.org/projects/libssh.git
-    GIT_TAG origin/stable-0.9
+    GIT_REPOSITORY https://github.com/RedRangerz/libssh.git
+    GIT_TAG origin/msvcstatic
     CMAKE_CACHE_ARGS
         -DBUILD_SHARED_LIBS:BOOL=OFF
         -DWITH_GSSAPI:BOOL=OFF
