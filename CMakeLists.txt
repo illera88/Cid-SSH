@@ -11,7 +11,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(WITH_WEBSOCKETS "Build CidSSH with Websockets encapsulation" ON)
 option(WITH_WSPROXY "Build the Websocket proxy server" ON)
-option(WITH_CONTROLLER "Build the CidSSH controller" ON)
+
+if(NOT ${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+    option(WITH_CONTROLLER "Build the CidSSH controller" ON)
+endif()
 
 add_subdirectory(ext)
 add_subdirectory(src)

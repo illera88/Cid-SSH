@@ -18,9 +18,6 @@ if(${WITH_WSPROXY})
 	add_subdirectory(wsproxyserver)
 endif()
 
-if(${BUILD_CONTROLER})
-    # Even if enabled, we don't build this on Windows
-    if(NOT ${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-		add_subdirectory(controller)
-	endif()	
+if(${WITH_CONTROLLER})
+    add_subdirectory(controller)
 endif()
