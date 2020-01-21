@@ -1,6 +1,9 @@
+# Add libproxy
+add_subdirectory(libproxy)
+
 set(OPENSSL_USE_STATIC_LIBS TRUE)
 set(OPENSSL_MSVC_STATIC_RT TRUE)
-include(FindOpenSSL)
+find_package(OpenSSL REQUIRED)
 
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_MULTITHREADED ON)
@@ -55,7 +58,9 @@ target_include_directories(WebsocketsWrapper
     PUBLIC
         $<INSTALL_INTERFACE:include/websocketswrapper/>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/>
+		libproxy
 )
+
 target_compile_features(WebsocketsWrapper PRIVATE cxx_std_17)
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
@@ -67,6 +72,8 @@ else()
     set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
 endif()
 
+add_dependencies(WebsocketsWrapper libproxy)
+
 # Find libraries after we set the LINK_SEARCH_STATIC property
 target_link_libraries(WebsocketsWrapper
     PUBLIC
@@ -75,7 +82,18 @@ target_link_libraries(WebsocketsWrapper
         Boost::system  # Link against Boost.System
         Boost::boost  # Build with Boost header location
         BeastSocks  # Build with Beast Socks header location
+        libproxy
+        modman
 )
+
+if (${NM_BUILD})
+    target_link_libraries(WebsocketsWrapper PUBLIC dbus-1)
+endif()
+
+if(APPLE)
+    target_link_libraries(WebsocketsWrapper PUBLIC "-framework SystemConfiguration")
+    target_link_libraries(WebsocketsWrapper PUBLIC "-framework CoreFoundation")
+endif()
 
 include(GNUInstallDirs)
 install(TARGETS WebsocketsWrapper EXPORT WebsocketsWrapper-export
@@ -85,3 +103,4 @@ install(TARGETS WebsocketsWrapper EXPORT WebsocketsWrapper-export
 install(DIRECTORY include/ DESTINATION
     ${CMAKE_INSTALL_INCLUDEDIR}/websocketswrapper/
 )
+

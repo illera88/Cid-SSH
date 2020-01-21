@@ -24,6 +24,7 @@ ExternalProject_Add(libssh_builder
     GIT_REPOSITORY https://github.com/RedRangerz/libssh.git
     GIT_TAG origin/msvcstatic
     CMAKE_CACHE_ARGS
+        -DBUILD_SHARED_LIBS:BOOL=OFF
         -DWITH_GSSAPI:BOOL=OFF
         -DWITH_ZLIB:BOOL=OFF
         -DWITH_SFTP:BOOL=ON
@@ -59,4 +60,7 @@ else()
     )
 endif()
 
-add_subdirectory(beastsocks)
+
+if(${WITH_WEBSOCKETS} OR ${WITH_WSPROXY})
+    add_subdirectory(beastsocks)
+endif()

@@ -15,7 +15,7 @@ class tcpconn : public std::enable_shared_from_this<tcpconn> {
     tcpconn(
         net::executor,
         std::string&,
-        std::string&,
+        const std::string&,
         std::function<void(net::ip::tcp::socket&&)>);
 
 public:
@@ -49,7 +49,7 @@ private:
     std::string host_;
     std::string port_;
     std::string path_;
-    std::string& proxy_uri_;
+    const std::string& proxy_uri_;
     socks::uri socks_uri_;
 };
 } // namespace wsinternal

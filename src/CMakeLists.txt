@@ -8,19 +8,15 @@ endif ()
 
 configure_file(config.h.cmake config.h)
 
-add_subdirectory(malware)
-
 if (${WITH_WEBSOCKETS})
     add_subdirectory(websockets)
+	if(${WITH_WSPROXY})
+	    add_subdirectory(wsproxyserver)
+	endif()
 endif()
 
-if(${WITH_WSPROXY})
-	add_subdirectory(wsproxyserver)
-endif()
+add_subdirectory(malware)
 
-if(${BUILD_CONTROLER})
-    # Even if enabled, we don't build this on Windows
-    if(NOT ${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-		add_subdirectory(controller)
-	endif()	
+if(${WITH_CONTROLLER})
+    add_subdirectory(controller)
 endif()

@@ -2,10 +2,11 @@
 #define WRAPPER_H_3511F0B7194DD8
 
 #include <memory>
+#include <list>
 #include <string>
 
 class WebsocketsWrapper {
-public:
+public: 
     WebsocketsWrapper(std::string);
     std::string& local_ip();
     unsigned int local_port();

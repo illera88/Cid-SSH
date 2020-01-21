@@ -28,7 +28,12 @@ test_script:
         echo. >> c:\tools\vcpkg\triplets\x86-windows-static.cmake
         echo set(VCPKG_BUILD_TYPE release) >> c:\tools\vcpkg\triplets\x86-windows-static.cmake
         vcpkg install --triplet x86-windows-static openssl boost-beast boost-asio boost-system
-        git submodule update --init --recursive
+        git submodule update --init --recursive       
         cmake --version
-        cmake -S . -B build -G %generator% -A %arch% -DVCPKG_TARGET_TRIPLET="x86-windows-static" -DCMAKE_TOOLCHAIN_FILE=c:/tools/vcpkg/scripts/buildsystems/vcpkg.cmake
+        
+        cmake -S . -B build -G %generator% -A %arch% -DWITH_WEBSOCKETS=OFF -DVCPKG_TARGET_TRIPLET="x86-windows-static" -DCMAKE_TOOLCHAIN_FILE=c:/tools/vcpkg/scripts/buildsystems/vcpkg.cmake
         cmake --build build --config %CONFIGURATION%
+        
+        cmake -S . -B build_ws -G %generator% -A %arch% -DWITH_WEBSOCKETS=ON -DVCPKG_TARGET_TRIPLET="x86-windows-static" -DCMAKE_TOOLCHAIN_FILE=c:/tools/vcpkg/scripts/buildsystems/vcpkg.cmake
+        cmake --build build_ws --config %CONFIGURATION%
+        

