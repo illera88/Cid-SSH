@@ -9,28 +9,6 @@ This tool can be used as a fast initial compromise tool that can be used not onl
 
 Windows systems lack of a proper TTY but thanks to [this](https://blogs.msdn.microsoft.com/commandline/2018/08/02/windows-command-line-introducing-the-windows-pseudo-console-conpty/) we can in recent Windows versions get a fully functional TTY. In the case that the target system does not support `CreatePseudoConsole` it will downgrade to a simple, not interactive shell.
 
-## Cid-Controller
-**CidSSH** C2 will receive standar reverse SSH connections. You can see mentioned connecteions by running `netstat -pln`. The problem about `netstat` is that if you receive multiple connections from different victims you won't know which binded local port correspond with each of the victims. To overcome this problem `Cid-SSH` provides `Cid-Controller`. It is used for:
-- Log information sent by the victims when they get infected. This is done by setting the `anonymous` shell to be `Cid-controller`.
-- As a dashboard to list a history of victims and a way to easily jump into a shell in them.
-
-To use it you just need to set the C2 user shell used by the malware (by default it is `anonymous`) to `Cid-Controller`. You can do that with:
-
-```
-sudo usermod -s /path/to/Cid-Controller anonymous
-```
-
-To list and interact with active connections you just have to call the same binary:
-
-```
-/path/to/Cid-Controller
-```
-
-`Cid-Controller` relies on `lsof` to get the info about the existent connections. Since `lsof` needs to be run as root to provide the information we need, we have to set the setgid bit to `lsof`. To do so:
-
-```
-sudo chmod +s /usr/bin/lsof
-```
 
 ## Setup instructions
 ### C2 server
