@@ -49,37 +49,36 @@ You can just use the prebuilt binaries that are in [Release](https://github.com/
 
 If you want to compile from source keep reading below.
 
+## Compilation
+
 ### Compilation on Windows
 You can use the `CMakeLists.txt` along with `CMake` to create a Visual Studio project.
 
-To generate mentioned project, just make sure you set in `CMake` the proper include and library paths for:
-- libssh 
-- openssl
+To easy things installing dependencies you can use `vcpkg`:
+```
+# Install dependencies with vcpkg (static)
+git clone https://github.com/Microsoft/vcpkg.git
+cd vcpkg
+bootstrap-vcpkg.bat
+vcpkg install --triplet x86-windows-static openssl boost-beast boost-asio boost-system
 
-You can find both of them already statically prebuilt for Windows [here](https://github.com/illera88/PrecompiledLibraries/).
+git submodule update --init --recursive
+# Configure and compile project
+cd Cid-SSH
+mkdir build_x86
+cd build_x86
+cmake -G "Visual Studio 16 2019" -A Win32 -DCMAKE_TOOLCHAIN_FILE=C:/Users/alberto.garcia/Documents/code/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x86-windows-static ..
+cmake --build . --config Release
+```
+
 
 ### Compilation on Linux
 CidSSH is compiled statically for linux using musl (a replacement for libc) from an Alpine distribution `x86_64`. 
-We have a dockerfile to do the compilation more easy `Dockerfile_linux_static`.
-These are the steps to build and get the compiled binary from the container:
-```
-# Build the image, install dependencies and compile CidSSH
-sudo docker build -t alpine_cid_ssh -f Dockerfile_linux_static .
-# Copy Cid malware from docker container to the current folder
-sudo docker run -v `pwd`:/data_out -i -t alpine_cid_ssh:latest /bin/sh -c "cp /Cid-SSH/build/malware/CidSSH /data_out/"
-# Copy Cid controller from docker container to the current folder
-sudo docker run -v `pwd`:/data_out -i -t alpine_cid_ssh:latest /bin/sh -c "cp /Cid-SSH/build/controller/Cid-Controller /data_out/"
-```
+
+There is a `build.sh` command that can be used to build everything. Just do `sh build.sh` from an Alpine system or docker container.
 
 ### Compilation on MacOs
-Compile CidSSH:
-```
-cd ~/shared/SSHIUU/src/
-mkdir build && cd build
-git clone https://github.com/illera88/PrecompiledLibraries
-cmake -DCMAKE_BUILD_TYPE=Release -DLIBSSH_STATIC_PATH=PrecompiledLibraries/macos/libssh_mod/ ..
-make
-```
+There is a `build.sh` command that can be used to build everything. Just do `sh build.sh`
 
 ## Using it
 
