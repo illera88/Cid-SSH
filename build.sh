@@ -23,13 +23,16 @@ apk add --no-cache \
     networkmanager-dev \
     glib-dev \
     expat-dev \
-    openssl-libs-static
+    openssl-libs-static \
+    libc6-compat \
+    cmake \
+    ninja
 
 echo "Installing vcpkg"
 git clone https://github.com/Microsoft/vcpkg.git
 cd vcpkg
-./bootstrap-vcpkg.sh                  
-./vcpkg install libssh
+./bootstrap-vcpkg.sh --useSystemBinaries                  
+VCPKG_FORCE_SYSTEM_BINARIES=1  /tmp/vcpkg/.vcpkg install libssh
 	
 echo "Installing dbus static"
 wget https://dbus.freedesktop.org/releases/dbus/dbus-1.12.16.tar.gz
