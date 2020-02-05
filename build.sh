@@ -24,6 +24,12 @@ apk add --no-cache \
     glib-dev \
     expat-dev \
     openssl-libs-static
+
+echo "Installing vcpkg"
+git clone https://github.com/Microsoft/vcpkg.git
+cd vcpkg
+./bootstrap-vcpkg.sh                  
+./vcpkg install libssh
 	
 echo "Installing dbus static"
 wget https://dbus.freedesktop.org/releases/dbus/dbus-1.12.16.tar.gz
@@ -49,11 +55,11 @@ rm -rf build
 rm -rf build_ws
 
 # Build normal version
-cmake -S . -B build -DWITH_WEBSOCKETS=OFF
+cmake -S . -B build -DWITH_WEBSOCKETS=OFF -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT\scripts\buildsystems\vcpkg.cmake"
 cmake --build build --config Release -j$(nproc)
 
 # Build websocket version
-cmake -S . -B build_ws -DWITH_WEBSOCKETS=ON
+cmake -S . -B build_ws -DWITH_WEBSOCKETS=ON -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT\scripts\buildsystems\vcpkg.cmake"
 cmake --build build_ws --config Release -j$(nproc)
 
 # For Op

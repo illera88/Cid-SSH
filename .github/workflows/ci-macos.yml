@@ -10,8 +10,14 @@ jobs:
                   submodules: true
             - name: Install OpenSSL/Boost from Homebrew
               run: |
-                  brew install openssl pkg-config cmake boost
+                  brew install openssl pkg-config cmake boost git
                   brew info openssl
+            - name: Install vcpkg and libssh
+              run: |
+                  git clone https://github.com/Microsoft/vcpkg.git
+                  cd vcpkg
+                  ./bootstrap-vcpkg.sh                  
+                  ./vcpkg install libssh
             - name: Create build directory
               run: |
                   export LDFLAGS="-L/usr/local/opt/openssl/lib"
@@ -24,7 +30,7 @@ jobs:
                   export LDFLAGS="-L/usr/local/opt/openssl/lib"
                   export CPPFLAGS="-I/usr/local/opt/openssl/include"
                   export PKG_CONFIG_PATH="/usr/local/opt/openssl/lib/pkgconfig"
-                  cmake --build build --config release
+                  cmake --build build --config release -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT\scripts\buildsystems\vcpkg.cmake"
             - uses: actions/upload-artifact@master
               with:
                   name: CidSSH-macos
