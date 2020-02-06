@@ -29,28 +29,31 @@ apk add --no-cache \
     ninja
 
 echo "Installing vcpkg"
-git clone https://github.com/Microsoft/vcpkg.git
-cd vcpkg
-./bootstrap-vcpkg.sh --useSystemBinaries                  
-VCPKG_FORCE_SYSTEM_BINARIES=1  /tmp/vcpkg/.vcpkg install libssh
+(	cd /tmp
+	git clone https://github.com/Microsoft/vcpkg.git
+	cd vcpkg
+	./bootstrap-vcpkg.sh --useSystemBinaries                  
+	VCPKG_FORCE_SYSTEM_BINARIES=1  /tmp/vcpkg/.vcpkg install libssh
+)
 	
 echo "Installing dbus static"
-wget https://dbus.freedesktop.org/releases/dbus/dbus-1.12.16.tar.gz
-tar -xzvf dbus-1.12.16.tar.gz && cd dbus-1.12.16
-./configure --prefix=/usr                        \
-            --sysconfdir=/etc                    \
-            --localstatedir=/var                 \
-            --enable-user-session                \
-            --disable-doxygen-docs               \
-            --disable-xml-docs                   \
-            --with-systemduserunitdir=no         \
-            --with-systemdsystemunitdir=no       \
-            --docdir=/usr/share/doc/dbus-1.12.16 \
-            --with-console-auth-dir=/run/console \
-            --with-system-pid-file=/run/dbus/pid \
-            --with-system-socket=/run/dbus/system_bus_socket && make -j$(nproc) && make install && cd ..
-
-
+(
+	cd /tmp
+	wget https://dbus.freedesktop.org/releases/dbus/dbus-1.12.16.tar.gz
+	tar -xzvf dbus-1.12.16.tar.gz && cd dbus-1.12.16
+	./configure --prefix=/usr                        \
+				--sysconfdir=/etc                    \
+				--localstatedir=/var                 \
+				--enable-user-session                \
+				--disable-doxygen-docs               \
+				--disable-xml-docs                   \
+				--with-systemduserunitdir=no         \
+				--with-systemdsystemunitdir=no       \
+				--docdir=/usr/share/doc/dbus-1.12.16 \
+				--with-console-auth-dir=/run/console \
+				--with-system-pid-file=/run/dbus/pid \
+				--with-system-socket=/run/dbus/system_bus_socket && make -j$(nproc) && make install
+)
 
 
 # Building CidSSH
@@ -58,11 +61,11 @@ rm -rf build
 rm -rf build_ws
 
 # Build normal version
-cmake -S . -B build -DWITH_WEBSOCKETS=OFF -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT\scripts\buildsystems\vcpkg.cmake"
+cmake -S . -B build -DWITH_WEBSOCKETS=OFF -DCMAKE_TOOLCHAIN_FILE="tmp/vcpkg/scripts/buildsystems/vcpkg.cmake"
 cmake --build build --config Release -j$(nproc)
 
 # Build websocket version
-cmake -S . -B build_ws -DWITH_WEBSOCKETS=ON -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT\scripts\buildsystems\vcpkg.cmake"
+cmake -S . -B build_ws -DWITH_WEBSOCKETS=ON -DCMAKE_TOOLCHAIN_FILE="tmp/vcpkg/scripts/buildsystems/vcpkg.cmake"
 cmake --build build_ws --config Release -j$(nproc)
 
 # For Op
