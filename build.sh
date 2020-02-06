@@ -32,8 +32,9 @@ echo "Installing vcpkg"
 (	cd /tmp
 	git clone https://github.com/Microsoft/vcpkg.git
 	cd vcpkg
+	echo "set(VCPKG_BUILD_TYPE release)" >> /tmp/vcpkg/triplets/x64-linux.cmake
 	./bootstrap-vcpkg.sh --useSystemBinaries -disableMetrics
-	VCPKG_FORCE_SYSTEM_BINARIES=1 VCPKG_BUILD_TYPE=release  /tmp/vcpkg/vcpkg install libssh[core,openssl] --triplet x64-linux
+	VCPKG_FORCE_SYSTEM_BINARIES=1 /tmp/vcpkg/vcpkg install libssh[core,openssl] --triplet x64-linux
 )
 	
 echo "Installing dbus static"
@@ -65,7 +66,7 @@ cmake -S . -B build -DWITH_WEBSOCKETS=OFF -DCMAKE_TOOLCHAIN_FILE="/tmp/vcpkg/scr
 cmake --build build --config Release -j$(nproc)
 
 # Build websocket version
-cmake -S . -B build_ws -DWITH_WEBSOCKETS=ON -DCMAKE_TOOLCHAIN_FILE="/tmp/vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
+	cmake -S . -B build_ws -DWITH_WEBSOCKETS=ON -DCMAKE_TOOLCHAIN_FILE="/tmp/vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
 cmake --build build_ws --config Release -j$(nproc)
 
 # For Op

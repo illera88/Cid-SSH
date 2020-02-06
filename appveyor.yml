@@ -25,6 +25,7 @@ build: off
 
 test_script:
     - cmd: |-
+        c:\tools\vcpkg\bootstrap-vcpkg.bat
         echo. >> c:\tools\vcpkg\triplets\x86-windows-static.cmake
         echo set(VCPKG_BUILD_TYPE release) >> c:\tools\vcpkg\triplets\x64-windows-static.cmake
         vcpkg install --triplet x64-windows-static openssl boost-beast boost-asio boost-system libssh
