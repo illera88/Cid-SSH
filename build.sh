@@ -33,7 +33,7 @@ echo "Installing vcpkg"
 	git clone https://github.com/Microsoft/vcpkg.git
 	cd vcpkg
 	./bootstrap-vcpkg.sh --useSystemBinaries                  
-	VCPKG_FORCE_SYSTEM_BINARIES=1  /tmp/vcpkg/.vcpkg install libssh
+	VCPKG_FORCE_SYSTEM_BINARIES=1  /tmp/vcpkg/vcpkg install libssh[core,openssl] --triplet x64-linux
 )
 	
 echo "Installing dbus static"
