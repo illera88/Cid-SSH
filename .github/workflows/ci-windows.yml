@@ -17,7 +17,7 @@ jobs:
             - name: Create build directory
               run: |
                   cmake --version
-                  cmake -S . -B build -G "Visual Studio 16 2019" -A x64 -DVCPKG_TARGET_TRIPLET="x64-windows-static" -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT\scripts\buildsystems\vcpkg.cmake"
+                  cmake -S . -B build -G "Visual Studio 16 2019" -A x64 -DVCPKG_TARGET_TRIPLET="x64-windows-static" -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT\scripts\buildsystems\vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
             - name: Build CidSSH in Release mode
               run: |
                   cmake --build build --config Release

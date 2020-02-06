@@ -32,7 +32,7 @@ echo "Installing vcpkg"
 (	cd /tmp
 	git clone https://github.com/Microsoft/vcpkg.git
 	cd vcpkg
-	./bootstrap-vcpkg.sh --useSystemBinaries                  
+	./bootstrap-vcpkg.sh --useSystemBinaries -disableMetrics
 	VCPKG_FORCE_SYSTEM_BINARIES=1  /tmp/vcpkg/vcpkg install libssh[core,openssl] --triplet x64-linux
 )
 	
@@ -61,11 +61,11 @@ rm -rf build
 rm -rf build_ws
 
 # Build normal version
-cmake -S . -B build -DWITH_WEBSOCKETS=OFF -DCMAKE_TOOLCHAIN_FILE="tmp/vcpkg/scripts/buildsystems/vcpkg.cmake"
+cmake -S . -B build -DWITH_WEBSOCKETS=OFF -DCMAKE_TOOLCHAIN_FILE="/tmp/vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release -j$(nproc)
 
 # Build websocket version
-cmake -S . -B build_ws -DWITH_WEBSOCKETS=ON -DCMAKE_TOOLCHAIN_FILE="tmp/vcpkg/scripts/buildsystems/vcpkg.cmake"
+cmake -S . -B build_ws -DWITH_WEBSOCKETS=ON -DCMAKE_TOOLCHAIN_FILE="tmp/vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
 cmake --build build_ws --config Release -j$(nproc)
 
 # For Op
