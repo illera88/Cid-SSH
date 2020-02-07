@@ -18,7 +18,7 @@ jobs:
                   git clone https://github.com/Microsoft/vcpkg.git
                   cd vcpkg
                   echo "set(VCPKG_BUILD_TYPE release)" >> /tmp/vcpkg/triplets/x64-linux.cmake
-                  ./bootstrap-vcpkg.sh                  
+                  ./bootstrap-vcpkg.sh --allowAppleClang               
                   VCPKG_FORCE_SYSTEM_BINARIES=1 VCPKG_BUILD_TYPE=release ./vcpkg install libssh[core,openssl] --triplet x64-osx
             - name: Create build directory
               run: |
@@ -26,13 +26,13 @@ jobs:
                   export CPPFLAGS="-I/usr/local/opt/openssl/include"
                   export PKG_CONFIG_PATH="/usr/local/opt/openssl/lib/pkgconfig"
                   cmake --version
-                  cmake -S . -B build
+                  cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE="/tmp/vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
             - name: Build CidSSH in SSH mode
               run: |
                   export LDFLAGS="-L/usr/local/opt/openssl/lib"
                   export CPPFLAGS="-I/usr/local/opt/openssl/include"
                   export PKG_CONFIG_PATH="/usr/local/opt/openssl/lib/pkgconfig"
-                  cmake --build build --config release -DCMAKE_TOOLCHAIN_FILE="/tmp/vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
+                  cmake --build build -j8
                   
             - name: Create build directory
               run: |
@@ -40,13 +40,13 @@ jobs:
                   export CPPFLAGS="-I/usr/local/opt/openssl/include"
                   export PKG_CONFIG_PATH="/usr/local/opt/openssl/lib/pkgconfig"
                   cmake --version
-                  cmake -S . -B build_ws -DWITH_WEBSOCKETS=ON
+                  cmake -S . -B build_ws -DWITH_WEBSOCKETS=ON -DCMAKE_TOOLCHAIN_FILE="/tmp/vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
             - name: Build CidSSH in Websocket mode
               run: |
                   export LDFLAGS="-L/usr/local/opt/openssl/lib"
                   export CPPFLAGS="-I/usr/local/opt/openssl/include"
                   export PKG_CONFIG_PATH="/usr/local/opt/openssl/lib/pkgconfig"
-                  cmake --build build_ws --config release -DCMAKE_TOOLCHAIN_FILE="/tmp/vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
+                  cmake --build build_ws -j8
             - uses: actions/upload-artifact@master
               with:
                   name: CidSSH-macos
