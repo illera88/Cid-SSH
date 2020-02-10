@@ -31,7 +31,12 @@ jobs:
                   name: Cid_wsproxy_lnx_x64
                   path: build_ws/src/wsproxyserver/wsproxy
                   
-                  
+            - name: Strip symbols from created malware
+              run: |
+                  strip -s build/src/malware/CidSSH
+                  strip -s build_ws/src/malware/CidSSH
+              
+            
             - name: Create Release
               id: create_release
               uses: actions/create-release@v1
