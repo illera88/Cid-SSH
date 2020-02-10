@@ -28,6 +28,7 @@ test_script:
         c:\tools\vcpkg\bootstrap-vcpkg.bat
         echo. >> c:\tools\vcpkg\triplets\x86-windows-static.cmake
         echo set(VCPKG_BUILD_TYPE release) >> c:\tools\vcpkg\triplets\x64-windows-static.cmake
+        vcpkg version
         vcpkg install --triplet x64-windows-static boost-beast boost-asio boost-system libssh[core,openssl]
         git submodule update --init --recursive       
         cmake --version
