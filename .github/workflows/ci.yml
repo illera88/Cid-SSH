@@ -12,7 +12,12 @@ jobs:
               uses: docker://alpine:edge
               with: 
                   args: sh ./build.sh
+                  
             - uses: actions/upload-artifact@master
               with:
-                  name: CidSSH-linux-static
-                  path: build/src/malware/CidSSH
+                  name: CidSSH_lnx_ssh_x64
+                  path: build/src/malware/CidSSH                 
+            - uses: actions/upload-artifact@master
+              with:
+                  name: CidSSH_lnx_ws_x64
+                  path: build_ws/src/malware/CidSSH

@@ -47,8 +47,13 @@ jobs:
                   export CPPFLAGS="-I/usr/local/opt/openssl/include"
                   export PKG_CONFIG_PATH="/usr/local/opt/openssl/lib/pkgconfig"
                   cmake --build build_ws -j8
+                  
             - uses: actions/upload-artifact@master
               with:
-                  name: CidSSH-macos
-                  path: build/src/malware/CidSSH
+                  name: CidSSH_osx_ssh_x64
+                  path: build/src/malware/CidSSH                 
+            - uses: actions/upload-artifact@master
+              with:
+                  name: CidSSH_osx_ws_x64
+                  path: build_ws/src/malware/CidSSH
 
