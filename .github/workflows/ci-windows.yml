@@ -13,7 +13,9 @@ jobs:
                   "`r`nset(VCPKG_BUILD_TYPE release)" | Add-Content "$env:VCPKG_INSTALLATION_ROOT\triplets\x64-windows-static.cmake"
             - name: Install OpenSSL/Boost from vcpkg
               run: |
-                  dir $env:VCPKG_INSTALLATION_ROOT
+                  C:\vcpkg
+                  vcpkg version
+                  git pull
                   C:\vcpkg\bootstrap-vcpkg.bat
                   vcpkg version
                   vcpkg install --triplet x64-windows-static boost-beast boost-asio boost-system libssh[core,openssl]
