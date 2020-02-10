@@ -65,7 +65,7 @@ jobs:
                 asset_name: CidSSH_lnx_ws_x64
                 asset_content_type: application/octet-stream      
                   
-             - name: Upload controller
+            - name: Upload controller
               id: upload-release-asset 
               uses: actions/upload-release-asset@v1
               env:
@@ -76,7 +76,7 @@ jobs:
                 asset_name: Cid_Controller_lnx_x64
                 asset_content_type: application/octet-stream     
                   
-             - name: Upload ws proxy
+            - name: Upload ws proxy
               id: upload-release-asset 
               uses: actions/upload-release-asset@v1
               env:
