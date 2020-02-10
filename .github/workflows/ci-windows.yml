@@ -14,8 +14,6 @@ jobs:
             - name: Install OpenSSL/Boost from vcpkg
               run: |
                   dir $env:VCPKG_INSTALLATION_ROOT
-                  $env:VCPKG_INSTALLATION_ROOT/bootstrap-vcpkg.bat
-                  $env:VCPKG_INSTALLATION_ROOT\bootstrap-vcpkg.bat
                   C:\vcpkg\bootstrap-vcpkg.bat
                   vcpkg version
                   vcpkg install --triplet x64-windows-static boost-beast boost-asio boost-system libssh[core,openssl]
