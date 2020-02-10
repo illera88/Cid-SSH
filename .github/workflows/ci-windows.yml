@@ -13,14 +13,19 @@ jobs:
                   "`r`nset(VCPKG_BUILD_TYPE release)" | Add-Content "$env:VCPKG_INSTALLATION_ROOT\triplets\x64-windows-static.cmake"
             - name: Install OpenSSL/Boost from vcpkg
               run: |
-                  vcpkg install --triplet x64-windows-static openssl boost-beast boost-asio boost-system libssh
-            - name: Create build directory
+                  vcpkg install --triplet x64-windows-static boost-beast boost-asio boost-system libssh[core,openssl]
+            - name: Create ssh version
               run: |
-                  cmake --version
-                  cmake -S . -B build -G "Visual Studio 16 2019" -A x64 -DVCPKG_TARGET_TRIPLET="x64-windows-static" -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT\scripts\buildsystems\vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
+                  cmake -S . -B build -DWITH_WEBSOCKETS=OFF -G "Visual Studio 16 2019" -A x64 -DVCPKG_TARGET_TRIPLET="x64-windows-static" -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT\scripts\buildsystems\vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
             - name: Build CidSSH in Release mode
               run: |
                   cmake --build build --config Release
+            - name: Create ws version
+              run: |
+                  cmake -S . -B build_ws -DWITH_WEBSOCKETS=OFF -G "Visual Studio 16 2019" -A x64 -DVCPKG_TARGET_TRIPLET="x64-windows-static" -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT\scripts\buildsystems\vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
+            - name: Build CidSSH in Release mode
+              run: |
+                  cmake --build build_ws --config Release
             - uses: actions/upload-artifact@master
               with:
                   name: CidSSH.exe
