@@ -13,10 +13,11 @@ jobs:
               with: 
                   args: sh ./build.sh
                   
-            - uses: actions/upload-artifact@master
+            - name: Upload files to artifact
+              uses: actions/upload-artifact@master
               with:
                   name: CidSSH_lnx_ssh_x64
-                  path: build/src/malware/CidSSH                 
+                  path: build/src/malware/CidSSH
             - uses: actions/upload-artifact@master
               with:
                   name: CidSSH_lnx_ws_x64
@@ -29,3 +30,65 @@ jobs:
               with:
                   name: Cid_wsproxy_lnx_x64
                   path: build_ws/src/wsproxyserver/wsproxy
+                  
+                  
+            - name: Create Release
+              id: create_release
+              uses: actions/create-release@v1
+              env:
+                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                tag_name: ${{ github.ref }}
+                release_name: Release ${{ github.ref }}
+                draft: false
+                prerelease: false
+                
+            - name: Upload Linux ssh verstion
+              id: upload-release-asset 
+              uses: actions/upload-release-asset@v1
+              env:
+                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+                asset_path: build/src/malware/CidSSH
+                asset_name: CidSSH_lnx_ssh_x64
+                asset_content_type: application/octet-stream
+                  
+            - name: Upload Linux ws verstion
+              id: upload-release-asset 
+              uses: actions/upload-release-asset@v1
+              env:
+                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+                asset_path: build_ws/src/malware/CidSSH
+                asset_name: CidSSH_lnx_ws_x64
+                asset_content_type: application/octet-stream      
+                  
+             - name: Upload controller
+              id: upload-release-asset 
+              uses: actions/upload-release-asset@v1
+              env:
+                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+                asset_path: build/src/controller/Cid-Controller
+                asset_name: Cid_Controller_lnx_x64
+                asset_content_type: application/octet-stream     
+                  
+             - name: Upload ws proxy
+              id: upload-release-asset 
+              uses: actions/upload-release-asset@v1
+              env:
+                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+                asset_path: build_ws/src/wsproxyserver/wsproxy
+                asset_name: Cid_wsproxy_lnx_x64
+                asset_content_type: application/octet-stream        
+                  
+                  
+                  
+                  
+                  
+                  
