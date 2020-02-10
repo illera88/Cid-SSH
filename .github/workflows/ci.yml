@@ -21,3 +21,11 @@ jobs:
               with:
                   name: CidSSH_lnx_ws_x64
                   path: build_ws/src/malware/CidSSH
+            - uses: actions/upload-artifact@master
+              with:
+                  name: Cid_Controller_lnx_x64
+                  path: build/src/controller/Cid-Controller
+            - uses: actions/upload-artifact@master
+              with:
+                  name: Cid_wsproxy_lnx_x64
+                  path: build_ws/src/wsproxyserver/wsproxy
