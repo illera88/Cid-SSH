@@ -33,7 +33,7 @@ jobs:
             - name: Create ws version
               run: |
                   #cmake -S . -B build_ws -DWITH_WEBSOCKETS=ON -G "Visual Studio 16 2019" -A x64 -DVCPKG_TARGET_TRIPLET="x64-windows-static" -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT\scripts\buildsystems\vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
-                  cmake -S . -B build_ws -DWITH_WEBSOCKETS=ON -G "Visual Studio 16 2019" -A x64 -DVCPKG_TARGET_TRIPLET="x64-windows-static" -DCMAKE_TOOLCHAIN_FILE="C\my_vcpkg\scripts\buildsystems\vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
+                  cmake -S . -B build_ws -DWITH_WEBSOCKETS=ON -G "Visual Studio 16 2019" -A x64 -DVCPKG_TARGET_TRIPLET="x64-windows-static" -DCMAKE_TOOLCHAIN_FILE="C:\my_vcpkg\scripts\buildsystems\vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
             - name: Build CidSSH in Release mode
               run: |
                   cmake --build build_ws --config Release
