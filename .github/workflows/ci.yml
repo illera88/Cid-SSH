@@ -50,13 +50,13 @@ jobs:
             - name: Download the artifacts we want to release
               uses: actions/download-artifact@v1
               with:
-                  name: CidSSH_osx_ssh_x64
+                  name: CidSSH_lnx_ssh_x64
             - name: Upload release arifacts to Github release
               uses: actions/upload-release-asset@v1
               env:
                     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               with:
                   upload_url: ${{ github.event.release.outputs.upload_url }}
-                  asset_path: ./CidSSH_osx_ssh_x64
-                  asset_name: CidSSH_osx_ssh_x64
+                  asset_path: ./CidSSH_lnx_ssh_x64
+                  asset_name: CidSSH_lnx_ssh_x64
                   asset_content_type: application/octet-stream          
