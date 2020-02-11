@@ -12,7 +12,29 @@ jobs:
               uses: docker://alpine:edge
               with: 
                   args: sh ./build.sh
+                
+            #- name: Strip symbols from created malware
+            #  run: |
+            #      strip -s build/src/malware/CidSSH
+            #      strip -s build_ws/src/malware/CidSSH
+                  
+            - name: Upload files to artifact
+              uses: actions/upload-artifact@master
+              with:
+                  name: CidSSH_lnx_ssh_x64
+                  path: build/src/malware/CidSSH
             - uses: actions/upload-artifact@master
               with:
-                  name: CidSSH-linux-static
-                  path: build/src/malware/CidSSH
+                  name: CidSSH_lnx_ws_x64
+                  path: build_ws/src/malware/CidSSH
+            - uses: actions/upload-artifact@master
+              with:
+                  name: Cid_Controller_lnx_x64
+                  path: build/src/controller/Cid-Controller
+            - uses: actions/upload-artifact@master
+              with:
+                  name: Cid_wsproxy_lnx_x64
+                  path: build_ws/src/wsproxyserver/wsproxy
+                  
+            
+              

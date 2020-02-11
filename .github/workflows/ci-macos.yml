@@ -10,23 +10,55 @@ jobs:
                   submodules: true
             - name: Install OpenSSL/Boost from Homebrew
               run: |
-                  brew install openssl pkg-config cmake boost
+                  brew install openssl pkg-config cmake boost git cmake
                   brew info openssl
+            - name: Install vcpkg and libssh
+              run: |
+                  cd /tmp
+                  git clone https://github.com/Microsoft/vcpkg.git
+                  cd vcpkg
+                  echo "set(VCPKG_BUILD_TYPE release)" >> /tmp/vcpkg/triplets/x64-linux.cmake
+                  ./bootstrap-vcpkg.sh --allowAppleClang               
+                  VCPKG_FORCE_SYSTEM_BINARIES=1 VCPKG_BUILD_TYPE=release ./vcpkg install libssh[core,openssl] --triplet x64-osx
             - name: Create build directory
               run: |
                   export LDFLAGS="-L/usr/local/opt/openssl/lib"
                   export CPPFLAGS="-I/usr/local/opt/openssl/include"
                   export PKG_CONFIG_PATH="/usr/local/opt/openssl/lib/pkgconfig"
                   cmake --version
-                  cmake -S . -B build
-            - name: Build CidSSH in Release mode
+                  cmake -S . -B build -DWITH_WEBSOCKETS=OFF -DCMAKE_TOOLCHAIN_FILE="/tmp/vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
+            - name: Build CidSSH in SSH mode
               run: |
                   export LDFLAGS="-L/usr/local/opt/openssl/lib"
                   export CPPFLAGS="-I/usr/local/opt/openssl/include"
                   export PKG_CONFIG_PATH="/usr/local/opt/openssl/lib/pkgconfig"
-                  cmake --build build --config release
+                  cmake --build build -j8
+                  
+            - name: Create build directory
+              run: |
+                  export LDFLAGS="-L/usr/local/opt/openssl/lib"
+                  export CPPFLAGS="-I/usr/local/opt/openssl/include"
+                  export PKG_CONFIG_PATH="/usr/local/opt/openssl/lib/pkgconfig"
+                  cmake --version
+                  cmake -S . -B build_ws -DWITH_WEBSOCKETS=ON -DCMAKE_TOOLCHAIN_FILE="/tmp/vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
+            - name: Build CidSSH in Websocket mode
+              run: |
+                  export LDFLAGS="-L/usr/local/opt/openssl/lib"
+                  export CPPFLAGS="-I/usr/local/opt/openssl/include"
+                  export PKG_CONFIG_PATH="/usr/local/opt/openssl/lib/pkgconfig"
+                  cmake --build build_ws -j8
+            
+            #- name: Strip symbols from created malware
+            #  run: |
+            #      strip -s build/src/malware/CidSSH
+            #      strip -s build_ws/src/malware/CidSSH
+            
             - uses: actions/upload-artifact@master
               with:
-                  name: CidSSH-macos
-                  path: build/src/malware/CidSSH
+                  name: CidSSH_osx_ssh_x64
+                  path: build/src/malware/CidSSH                 
+            - uses: actions/upload-artifact@master
+              with:
+                  name: CidSSH_osx_ws_x64
+                  path: build_ws/src/malware/CidSSH
 
