@@ -48,10 +48,10 @@ jobs:
                   export PKG_CONFIG_PATH="/usr/local/opt/openssl/lib/pkgconfig"
                   cmake --build build_ws -j8
             
-            - name: Strip symbols from created malware
-              run: |
-                  strip -s build/src/malware/CidSSH
-                  strip -s build_ws/src/malware/CidSSH
+            #- name: Strip symbols from created malware
+            #  run: |
+            #      strip -s build/src/malware/CidSSH
+            #      strip -s build_ws/src/malware/CidSSH
             
             - uses: actions/upload-artifact@master
               with:

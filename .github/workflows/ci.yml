@@ -13,10 +13,10 @@ jobs:
               with: 
                   args: sh ./build.sh
                 
-            - name: Strip symbols from created malware
-              run: |
-                  strip -s build/src/malware/CidSSH
-                  strip -s build_ws/src/malware/CidSSH
+            #- name: Strip symbols from created malware
+            #  run: |
+            #      strip -s build/src/malware/CidSSH
+            #      strip -s build_ws/src/malware/CidSSH
                   
             - name: Upload files to artifact
               uses: actions/upload-artifact@master

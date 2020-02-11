@@ -22,7 +22,7 @@ jobs:
                   
             - name: Install libssh and Boost with vcpkg
               run: |
-                  vcpkg install --triplet x64-windows-static boost-beast boost-asio boost-system libssh[core,openssl]
+                  C:\my_vcpkg\vcpkg install --triplet x64-windows-static boost-beast boost-asio boost-system libssh[core,openssl]
             - name: Create ssh version
               run: |
                   #cmake -S . -B build -DWITH_WEBSOCKETS=OFF -G "Visual Studio 16 2019" -A x64 -DVCPKG_TARGET_TRIPLET="x64-windows-static" -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT\scripts\buildsystems\vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
