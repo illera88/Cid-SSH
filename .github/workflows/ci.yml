@@ -43,7 +43,7 @@ jobs:
                   
             
     release:
-        if: if: github.event_name == 'release' && github.event.action == 'unassigned'
+        if: github.event_name == 'release' && github.event.action == 'unassigned'
         needs: build
         steps:
             - name: Download the artifacts we want to release
