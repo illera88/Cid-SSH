@@ -43,6 +43,7 @@ jobs:
                   
             
     release:
+        runs-on: ubuntu-latest
         if: github.event_name == 'release' && github.event.action == 'unassigned'
         needs: build
         steps:
