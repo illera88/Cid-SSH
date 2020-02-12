@@ -82,8 +82,8 @@ jobs:
                     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               with:
                   upload_url: ${{ github.event.release.upload_url }}
-                  asset_path: CidSSH_lnx_osx_x64/CidSSH
-                  asset_name: CidSSH_lnx_osx_x64
+                  asset_path: CidSSH_osx_ssh_x64/CidSSH
+                  asset_name: CidSSH_osx_ssh_x64
                   asset_content_type: application/octet-stream
                   
             - name: Download CidSSH ws version
