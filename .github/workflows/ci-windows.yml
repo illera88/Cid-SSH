@@ -60,7 +60,7 @@ jobs:
             - name: Download CidSSH ssh version
               uses: actions/download-artifact@v1
               with:
-                  name: CidSSH_win_ssh_x64
+                  name: CidSSH_win_ssh_x64.exe
             - name: Upload ssh arifact to Github release
               uses: actions/upload-release-asset@v1
               env:
@@ -68,13 +68,13 @@ jobs:
               with:
                   upload_url: ${{ github.event.release.upload_url }}
                   asset_path: CidSSH_win_ssh_x64/CidSSH
-                  asset_name: CidSSH_win_ssh_x64
+                  asset_name: CidSSH_win_ssh_x64.exe
                   asset_content_type: application/octet-stream
                   
             - name: Download CidSSH ws version
               uses: actions/download-artifact@v1
               with:
-                  name: CidSSH_lnx_ws_x64
+                  name: CidSSH_win_ws_x64.exe
             - name: Upload ws arifact to Github release
               uses: actions/upload-release-asset@v1
               env:
@@ -82,5 +82,5 @@ jobs:
               with:
                   upload_url: ${{ github.event.release.upload_url }}
                   asset_path: CidSSH_win_ws_x64/CidSSH
-                  asset_name: CidSSH_win_ws_x64
+                  asset_name: CidSSH_win_ws_x64.exe
                   asset_content_type: application/octet-stream      
