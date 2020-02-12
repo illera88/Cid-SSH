@@ -1,5 +1,10 @@
 name: Build for Windows
-on: [push]
+on: 
+    push:
+    pull_request:
+    release:
+      types: # This configuration does not affect the page_build event above
+        - created
 
 jobs:
     build:
@@ -47,3 +52,36 @@ jobs:
                   name: CidSSH_win_ws_x64.exe
                   path: build_ws/src/malware/Release/CidSSH.exe
 
+    release:
+        runs-on: ubuntu-latest
+        if: github.event_name == 'release'
+        needs: build
+        steps:
+            - name: Download CidSSH ssh version
+              uses: actions/download-artifact@v1
+              with:
+                  name: CidSSH_win_ssh_x64.exe
+            
+            - name: Upload ssh arifact to Github release
+              uses: actions/upload-release-asset@v1
+              env:
+                    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                  upload_url: ${{ github.event.release.upload_url }}
+                  asset_path: CidSSH_win_ssh_x64.exe/CidSSH.exe
+                  asset_name: CidSSH_win_ssh_x64.exe
+                  asset_content_type: application/octet-stream
+                  
+            - name: Download CidSSH ws version
+              uses: actions/download-artifact@v1
+              with:
+                  name: CidSSH_win_ws_x64.exe
+            - name: Upload ws arifact to Github release
+              uses: actions/upload-release-asset@v1
+              env:
+                    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                  upload_url: ${{ github.event.release.upload_url }}
+                  asset_path: CidSSH_win_ws_x64.exe/CidSSH.exe
+                  asset_name: CidSSH_win_ws_x64.exe
+                  asset_content_type: application/octet-stream      
