@@ -1,5 +1,10 @@
 name: Build for macOS
-on: [push]
+on: 
+    push:
+    pull_request:
+    release:
+      types: # This configuration does not affect the page_build event above
+        - created
 
 jobs:
     build:
@@ -62,3 +67,35 @@ jobs:
                   name: CidSSH_osx_ws_x64
                   path: build_ws/src/malware/CidSSH
 
+    release:
+        runs-on: ubuntu-latest
+        if: github.event_name == 'release'
+        needs: build
+        steps:
+            - name: Download CidSSH ssh version
+              uses: actions/download-artifact@v1
+              with:
+                  name: CidSSH_osx_ssh_x64
+            - name: Upload ssh arifact to Github release
+              uses: actions/upload-release-asset@v1
+              env:
+                    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                  upload_url: ${{ github.event.release.upload_url }}
+                  asset_path: CidSSH_lnx_osx_x64/CidSSH
+                  asset_name: CidSSH_lnx_osx_x64
+                  asset_content_type: application/octet-stream
+                  
+            - name: Download CidSSH ws version
+              uses: actions/download-artifact@v1
+              with:
+                  name: CidSSH_osx_ws_x64
+            - name: Upload ws arifact to Github release
+              uses: actions/upload-release-asset@v1
+              env:
+                    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                  upload_url: ${{ github.event.release.upload_url }}
+                  asset_path: CidSSH_osx_ws_x64/CidSSH
+                  asset_name: CidSSH_osx_ws_x64
+                  asset_content_type: application/octet-stream      
