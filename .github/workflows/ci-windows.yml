@@ -62,9 +62,6 @@ jobs:
               with:
                   name: CidSSH_win_ssh_x64.exe
             
-            - name: list files
-              run: ls -lR .
-            
             - name: Upload ssh arifact to Github release
               uses: actions/upload-release-asset@v1
               env:
