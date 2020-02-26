@@ -27,6 +27,8 @@ Allow blank passwords for SSH sessions for the `anonymous` user and restrict `an
 ```
 sudo cat <<EOT >> /etc/ssh/sshd_config
 PermitEmptyPasswords yes
+ClientAliveInterval 120
+ClientAliveCountMax 3
 
 Match User anonymous
    AllowTcpForwarding remote
@@ -36,8 +38,6 @@ Match User anonymous
    AllowAgentForwarding no
    AllowStreamLocalForwarding no
    ForceCommand echo 'This is a disabled account'
-   ClientAliveInterval 120
-   ClientAliveCountMax 3
 EOT
 ```
 
