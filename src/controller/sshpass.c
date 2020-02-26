@@ -48,6 +48,7 @@
 #define PACKAGE_NAME "aaa"
 #define PACKAGE_STRING "r"
 #define PASSWORD_PROMPT "prom"
+
 #define	SIG_SETMASK   2		 /* Set the set of blocked signals.  */
 
 enum program_return_codes {
