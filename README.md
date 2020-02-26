@@ -60,15 +60,15 @@ To easy things installing dependencies you can use `vcpkg`:
 git clone https://github.com/Microsoft/vcpkg.git
 cd vcpkg
 bootstrap-vcpkg.bat
-vcpkg install --triplet x86-windows-static openssl boost-beast boost-asio boost-system
+vcpkg install --triplet x86-windows-static boost-beast boost-asio boost-system libssh[core,openssl]
 
 git submodule update --init --recursive
 # Configure and compile project
 cd Cid-SSH
-mkdir build_x86
-cd build_x86
-cmake -G "Visual Studio 16 2019" -A Win32 -DCMAKE_TOOLCHAIN_FILE=C:/Users/alberto.garcia/Documents/code/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x86-windows-static ..
-cmake --build . --config Release
+cmake -S . -B build_ssh -G "Visual Studio 16 2019" -A x64 -DWITH_WEBSOCKETS=OFF -DCMAKE_TOOLCHAIN_FILE=C:/Users/alberto.garcia/Documents/code/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x86-windows-static ..
+cmake --build_ssh . --config Release
+cmake -S . -B build_wss -G "Visual Studio 16 2019" -A x64 -DWITH_WEBSOCKETS=ON -DCMAKE_TOOLCHAIN_FILE=C:/Users/alberto.garcia/Documents/code/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x86-windows-static ..
+cmake --build_wss . --config Release
 ```
 
 
