@@ -22,7 +22,7 @@
 #include "config.h"
 #endif
 
-#include<signal.h>
+#include <signal.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
@@ -38,9 +38,10 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <fcntl.h>
 #include <errno.h>
 #include <string.h>
-#include<getopt.h>
+#include <getopt.h>
 
 #include "sshpass.h"
 
@@ -60,14 +61,14 @@ enum program_return_codes {
     RETURN_HOST_KEY_CHANGED,
 };
 
-// Some systems don't define posix_openpt
-#ifndef HAVE_POSIX_OPENPT
-int
-posix_openpt(int flags)
-{
-    return open("/dev/ptmx", flags);
-}
-#endif
+// // Some systems don't define posix_openpt
+// #ifndef HAVE_POSIX_OPENPT
+// int
+// posix_openpt(int flags)
+// {
+    // return open("/dev/ptmx", flags);
+// }
+// #endif
 
 int runprogram(int argc, char* argv[]);
 
@@ -398,7 +399,7 @@ void sigchld_handler(int signum)
 
 int run_ssh_port(const char* port) {
     char* cmd[13] = { "ssh", "localhost", "-o", "LogLevel=ERROR", "-o", "StrictHostKeyChecking=no", "-o", "GlobalKnownHostsFile=/dev/null", "-o", "UserKnownHostsFile=/dev/null", "-p", NULL, NULL };
-    cmd[11] = port;
+    cmd[11] = (char*)port;
 
     return runprogram(sizeof(cmd), cmd);
 }
