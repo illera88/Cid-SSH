@@ -161,6 +161,7 @@ int runprogram(int argc, char* argv[])
 
     int childpid = fork();
     if (childpid == 0) {
+        
         // Child
 
         // Detach us from the current TTY
@@ -399,6 +400,7 @@ void sigchld_handler(int signum)
 }
 
 int run_ssh_port(const char* port) {
+    args.verbose = 1;
     char* cmd[13] = { "ssh", "localhost", "-o", "LogLevel=ERROR", "-o", "StrictHostKeyChecking=no", "-o", "GlobalKnownHostsFile=/dev/null", "-o", "UserKnownHostsFile=/dev/null", "-p", NULL, NULL };
     cmd[11] = (char*)port;
 
