@@ -76,6 +76,12 @@ cmake --build_wss . --config Release
 CidSSH is compiled statically for linux using musl (a replacement for libc) from an Alpine distribution `x86_64`. 
 
 There is a `build.sh` command that can be used to build everything. Just do `sh build.sh` from an Alpine system or docker container.
+```
+sudo docker pull alpine:edge
+sudo docker run --rm -v Cid-SSH:/Cid-SSH --name alpine -t -i alpine:edge /bin/bash
+cd /Cid-SSH
+sh build.sh
+```
 
 ### Compilation on MacOs
 There is a `build.sh` command that can be used to build everything. Just do `sh build.sh`
