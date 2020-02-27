@@ -19,7 +19,9 @@ jobs:
               with: 
                   args: sh ./build.sh
             - name: Install libstdc++
-               run: apk --update add libstdc++
+               run: |
+                   apk --update add libstdc++
+               
             #- name: Strip symbols from created malware
             #  run: |
             #      strip -s build/src/malware/CidSSH
