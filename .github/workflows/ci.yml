@@ -17,7 +17,9 @@ jobs:
             - name: Build CidSSH
               uses: docker://alpine:edge
               with: 
-                  args: apk --update add libstdc++ && sh ./build.sh
+                  args: |
+                   apk --update add libstdc++
+                   sh ./build.sh
                
             #- name: Strip symbols from created malware
             #  run: |
