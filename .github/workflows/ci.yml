@@ -19,7 +19,7 @@ jobs:
               with: 
                   args: sh ./build.sh
             - name: Install libstdc++
-               run: |
+              run: |
                    apk --update add libstdc++
                
             #- name: Strip symbols from created malware
