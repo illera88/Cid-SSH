@@ -50,8 +50,8 @@ vector<string> split(const string& s, char delim) {
     return result;
 }
 
-void print_table(std::vector<std::tuple<tm, std::string, std::string, unsigned int, std::string, bool>> log_vector) {
-    VariadicTable<unsigned int, std::string, std::string, std::string, unsigned int, std::string, std::string> vt({ "#", "Timestamp", "Username", "Hostname", "Port", "Public IP", "Active" });
+void print_table(std::vector<std::tuple<tm, std::string, std::string, unsigned int, std::string, bool, std::string>> log_vector) {
+    VariadicTable<unsigned int, std::string, std::string, std::string, unsigned int, std::string, std::string, std::string> vt({ "#", "Timestamp", "Username", "Hostname", "Port", "Public IP", "Active", "Conn Type" });
 
     unsigned int index = 1;
     for (auto& entry : log_vector) {
@@ -59,7 +59,7 @@ void print_table(std::vector<std::tuple<tm, std::string, std::string, unsigned i
         ss << std::put_time(&std::get<0>(entry), "%c");
         std::string timestamp_string = ss.str();
 
-        vt.addRow({ index, timestamp_string, std::get<1>(entry), std::get<2>(entry), std::get<3>(entry), std::get<4>(entry), std::get<5>(entry) ? "Yes" : "No" });
+        vt.addRow({ index, timestamp_string, std::get<1>(entry), std::get<2>(entry), std::get<3>(entry), std::get<4>(entry), std::get<5>(entry) ? "Yes" : "No", std::get<6>(entry)});
         index++;
     }
 
@@ -199,7 +199,7 @@ int log_new_victim(int argc, char** argv) {
     get_timestamp(ts);
     vector<string> v = split(argv[2], DELIMETER);
 
-    if (v.size() != 3) {
+    if (v.size() != 4) {
         char tmp[500] = { 0 };
         snprintf(tmp, sizeof tmp, "Some error happened spliting %s\n", argv[2]);
         log(tmp);
@@ -210,7 +210,15 @@ int log_new_victim(int argc, char** argv) {
         std::string username = v[0];
         std::string hostname = v[1];
         std::string port = v[2];
+		std::string type = v[3];
 
+		// Security check since port will be passed as argument to lsof
+        if (!isInteger(type) || std::stoi(type) != 0 || std::stoi(type) != 1) {
+            printf("Type can only be 0(ssh) or 1(wss)\n");
+            log("type not valid integuer");
+            return 1;
+        }
+		
         // Security check since port will be passed as argument to lsof
         if (!isInteger(port) || std::stoi(port) > 65535) {
             printf("Port is not an integuer\n");
@@ -228,7 +236,7 @@ int log_new_victim(int argc, char** argv) {
             public_IP = "UNKNOWN";
         }
 
-        fprintf(f, "%s %s %s %s %s\n", ts, username.c_str(), hostname.c_str(), port.c_str(), public_IP.c_str());
+        fprintf(f, "%s %s %s %s %s %s\n", ts, username.c_str(), hostname.c_str(), port.c_str(), public_IP.c_str(), std::stoi(type)==0 ? "ssh" : "wss");
     }
     fclose(f);
 
@@ -262,7 +270,7 @@ std::vector<std::tuple<tm, std::string, std::string, unsigned int, std::string, 
 
         for (auto& line : split(cmd_result, '\n')) {
             if (line.find(to_search) != std::string::npos) {
-                // get the pid (1366 in the example) that no we need to find in the line that says (ESTABLISHED)
+                // get the pid (1366 in the example) that now we need to find in the line that says (ESTABLISHED)
                 auto pid = split(line, ' ')[1];
                 for (auto& line2 : split(cmd_result, '\n')) {
                     if (line2.find("(ESTABLISHED)") != std::string::npos && split(line2, ' ')[1] == pid) {
@@ -318,7 +326,7 @@ int exec_ssh(std::string port)
 int show_existent_victims() {
     print_banner();
     std::ifstream infile(LOG_PATH);
-    std::vector<std::tuple<tm, std::string, std::string, unsigned int, std::string, bool>> log_vector;
+    std::vector<std::tuple<tm, std::string, std::string, unsigned int, std::string, bool, std::string>> log_vector;
     
     unsigned int port;
     tm ts = { 0 };
@@ -327,8 +335,8 @@ int show_existent_victims() {
     while (std::getline(infile, line))
     {
         std::istringstream iss(line);
-        std::string date, username1, hostname, public_IP;
-        if (!(iss >> date >> username1 >> hostname >> port >> public_IP)) {
+        std::string date, username1, hostname, public_IP, type;
+        if (!(iss >> date >> username1 >> hostname >> port >> public_IP >> type)) {
             continue; //can't parse this line 
         } 
         // parsing went fine. Last step parse time
@@ -341,7 +349,7 @@ int show_existent_victims() {
         else {
             // std::cout << std::put_time(&ts, "%c") << '\n';
         }
-        log_vector.push_back(std::make_tuple(ts, username1, hostname, port, public_IP, false));
+        log_vector.push_back(std::make_tuple(ts, username1, hostname, port, public_IP, false, type));
     }
 
     //while (infile >> date >> username1 >> hostname >> port >> public_IP)
