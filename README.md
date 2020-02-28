@@ -37,7 +37,6 @@ Match User anonymous
    GatewayPorts no
    AllowAgentForwarding no
    AllowStreamLocalForwarding no
-   ForceCommand echo 'This is a disabled account'
 EOT
 ```
 
