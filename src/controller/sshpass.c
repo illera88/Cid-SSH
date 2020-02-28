@@ -47,7 +47,7 @@
 
 #define PACKAGE_NAME "aaa"
 #define PACKAGE_STRING "r"
-#define PASSWORD_PROMPT "prom"
+#define PASSWORD_PROMPT "password"
 
 #define	SIG_SETMASK   2		 /* Set the set of blocked signals.  */
 
