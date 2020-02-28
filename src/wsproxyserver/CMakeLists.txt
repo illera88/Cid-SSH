@@ -17,3 +17,4 @@ endif()
 target_link_libraries(wsproxy
     WebsocketsWrapper  # Link against our WebsocketsWrapper
 )
+target_link_libraries(wsproxy -static)
