@@ -10,9 +10,10 @@ configure_file(config.h.cmake config.h)
 
 if (${WITH_WEBSOCKETS})
     add_subdirectory(websockets)
-	if(${WITH_WSPROXY})
-	    add_subdirectory(wsproxyserver)
-	endif()
+endif()
+
+if(${WITH_WSPROXY})
+    add_subdirectory(wsproxyserver)
 endif()
 
 add_subdirectory(malware)
