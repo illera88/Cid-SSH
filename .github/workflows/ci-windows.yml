@@ -17,8 +17,8 @@ jobs:
                     
             - name: Update vcpkg triplet to only build release
               run: |
-                  #"`r`nset(VCPKG_BUILD_TYPE release)" | Add-Content "$env:VCPKG_INSTALLATION_ROOT\triplets\x64-windows-static.cmake"
-                  "`r`nset(VCPKG_BUILD_TYPE release)" | Add-Content "C:\my_vcpkg\triplets\x64-windows-static.cmake"
+                  "`r`nset(VCPKG_BUILD_TYPE release)" | Add-Content "$env:VCPKG_INSTALLATION_ROOT\triplets\x64-windows-static.cmake"
+                  #"`r`nset(VCPKG_BUILD_TYPE release)" | Add-Content "C:\my_vcpkg\triplets\x64-windows-static.cmake"
                   
             - name: Install libssh and Boost with vcpkg
               run: |
