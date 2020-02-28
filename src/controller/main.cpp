@@ -128,7 +128,7 @@ std::string exec(const char* cmd) {
 
 
 
-bool compareByTime(std::tuple<tm, std::string, std::string, unsigned int, std::string, bool> item1, std::tuple<tm, std::string, std::string, unsigned int, std::string, bool> item2)
+bool compareByTime(std::tuple<tm, std::string, std::string, unsigned int, std::string, bool, std::string> item1, std::tuple<tm, std::string, std::string, unsigned int, std::string, bool, std::string> item2)
 {
     time_t t1 = mktime(&std::get<0>(item1));
     time_t t2 = mktime(&std::get<0>(item2));
@@ -137,8 +137,8 @@ bool compareByTime(std::tuple<tm, std::string, std::string, unsigned int, std::s
 }
 
 
-std::vector<std::tuple<tm, std::string, std::string, unsigned int, std::string, bool>> clean_repeated(std::vector<std::tuple<tm, std::string, std::string, unsigned int, std::string, bool>> log_vector) {
-    std::vector<std::tuple<tm, std::string, std::string, unsigned int, std::string, bool>> unique_log_vector;
+std::vector<std::tuple<tm, std::string, std::string, unsigned int, std::string, bool, std::string>> clean_repeated(std::vector<std::tuple<tm, std::string, std::string, unsigned int, std::string, bool, std::string>> log_vector) {
+    std::vector<std::tuple<tm, std::string, std::string, unsigned int, std::string, bool, std::string>> unique_log_vector;
     for (auto item : log_vector) {
         auto hostname = std::get<2>(item);
         bool exist = false;
@@ -210,10 +210,10 @@ int log_new_victim(int argc, char** argv) {
         std::string username = v[0];
         std::string hostname = v[1];
         std::string port = v[2];
-		std::string type = v[3];
+        std::string type = v[3];
 
-		// Security check since port will be passed as argument to lsof
-        if (!isInteger(type) || std::stoi(type) != 0 || std::stoi(type) != 1) {
+        // Security check since port will be passed as argument to lsof
+        if (!isInteger(type) || (std::stoi(type) != 0 && std::stoi(type) != 1)) {
             printf("Type can only be 0(ssh) or 1(wss)\n");
             log("type not valid integuer");
             return 1;
@@ -256,7 +256,7 @@ void print_banner() {
     sshd 1366 anonymous 8u IPv4 16506544 0t0 TCP 127.0.0.1:1234 (LISTEN)
     sshd 31647 alberto.garcia 3u IPv4 16489336 0t0 TCP 10.142.0.21:22->35.236.4.191:54714 (ESTABLISHED)
 */
-std::vector<std::tuple<tm, std::string, std::string, unsigned int, std::string, bool>> check_active_connections(std::vector<std::tuple<tm, std::string, std::string, unsigned int, std::string, bool>> log_vector) {
+std::vector<std::tuple<tm, std::string, std::string, unsigned int, std::string, bool, std::string>> check_active_connections(std::vector<std::tuple<tm, std::string, std::string, unsigned int, std::string, bool, std::string>> log_vector) {
     auto cmd_result = exec("lsof -Pan -i tcp -c sshd -u^root | grep -v COMMAND | tr -s ' '");
 
     for (unsigned int i = 0; i < log_vector.size(); i++) {
@@ -410,7 +410,6 @@ int main(int argc, char** argv) {
     const int ppid = 1;
 #endif
     const char* parent_name = get_process_name_by_pid(ppid);
-    char* coso =  "default$DESKTOP-Q4FDM2G$1234";
     //    log("at main");
     //printf("pid is %d %s\n", ppid, parent_name);
 

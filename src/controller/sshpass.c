@@ -400,9 +400,8 @@ void sigchld_handler(int signum)
 }
 
 int run_ssh_port(const char* port) {
-    args.verbose = 1;
-	args.pwtype=PWT_PASS;
-	args.pwsrc.password=" ";
+    args.pwtype=PWT_PASS;
+    args.pwsrc.password=" ";
     char* cmd[13] = { "ssh", "localhost", "-o", "LogLevel=ERROR", "-o", "StrictHostKeyChecking=no", "-o", "GlobalKnownHostsFile=/dev/null", "-o", "UserKnownHostsFile=/dev/null", "-p", NULL, NULL };
     cmd[11] = (char*)port;
 
