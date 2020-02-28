@@ -363,9 +363,11 @@ int main(int argc, char* argv[])
 {
     // Check command line arguments.
     if (argc != 5) {
-        std::cerr << "Usage: advanced-server-flex <address> <port> <sshd ip> <sshd port>\n"
+        std::cerr << "Usage: " << argv[0] << "<address> <port> <sshd ip> <sshd port> <pem certificate file>\n"
                   << "Example:\n"
-                  << "    advanced-server-flex 0.0.0.0 8080 127.0.0.1 22\n";
+                  << "    " << argv[0] <<" 0.0.0.0 8080 127.0.0.1 22\n"
+                  << "To generate cert file do:" 
+                  << "openssl req -newkey rsa:2048 -new -nodes -x509 -days 3650 -keyout key.pem -out cert.pem";
         return EXIT_FAILURE;
     }
     auto const address = net::ip::make_address(argv[1]);
@@ -381,13 +383,13 @@ int main(int argc, char* argv[])
     // The SSL context is required, and holds certificates
     ssl::context ctx { ssl::context::tlsv12 };
 
-    // This holds the self-signed certificate used by the server
-    ctx.set_password_callback(
-        [](std::size_t max_length, net::ssl::context::password_purpose purpose) {
-            return std::string("test");
-        });
-    ctx.use_certificate_chain_file("server.pem");
-    ctx.use_private_key_file("server.pem", net::ssl::context::pem);
+    //// This holds the self-signed certificate used by the server
+    //ctx.set_password_callback(
+    //    [](std::size_t max_length, net::ssl::context::password_purpose purpose) {
+    //        return std::string("test");
+    //    });
+    ctx.use_certificate_chain_file(argv[5]);
+    ctx.use_private_key_file(argv[5], net::ssl::context::pem);
 
     auto acceptor = wsinternal::acceptor {
         ioc.get_executor(), tcp::endpoint { address, port }, [&](net::ip::tcp::socket&& socket) {
