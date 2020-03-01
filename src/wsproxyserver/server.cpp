@@ -30,6 +30,35 @@ namespace net = boost::asio; // from <boost/asio.hpp>
 namespace ssl = boost::asio::ssl; // from <boost/asio/ssl.hpp>
 using tcp = boost::asio::ip::tcp; // from <boost/asio/ip/tcp.hpp>
 
+
+const char* nginx_default_page = R"V0G0N(
+             <!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+<style>
+    body {
+        width: 35em;
+        margin: 0 auto;
+        font-family: Tahoma, Verdana, Arial, sans-serif;
+    }
+</style>
+</head>
+<body>
+<h1>Welcome to nginx!</h1>
+<p>If you see this page, the nginx web server is successfully installed and
+working. Further configuration is required.</p>
+
+<p>For online documentation and support please refer to
+<a href="http://nginx.org/">nginx.org</a>.<br/>
+Commercial support is available at
+<a href="http://nginx.com/">nginx.com</a>.</p>
+
+<p><em>Thank you for using nginx.</em></p>
+</body>
+</html>
+)V0G0N";
+
 namespace wsinternal {
 class shared_storage {
 public:
@@ -168,7 +197,7 @@ private:
         // Set a decorator to change the Server of the handshake
         ws_.set_option(
             websocket::stream_base::decorator([](websocket::response_type& res) {
-                res.set(http::field::server, "Teapot/1.0");
+                res.set(http::field::server, "nginx/1.9.15");
             }));
 
         // Accept the websocket handshake
@@ -289,16 +318,15 @@ private:
 
         res = http::response<http::string_body> {};
         res.version(req.version());
-        res.reason("I'm a teapot");
-        res.result(418);
-        res.set(http::field::server, "Teapot/1.0");
-        res.set(http::field::content_type, "text/plain");
+        res.result(200);
+        res.set(http::field::server, "nginx/1.9.15");
+        res.set(http::field::content_type, "text/html");
         res.set(http::field::connection, "close");
         res.keep_alive(false);
-        res.body() = "Tea pot is not yet ready.\r\n";
+        res.body() = nginx_default_page;
         res.prepare_payload();
 
-        // We are always a teapot that is not ready
+        // We are always a ngnix
         http::async_write(stream_, res,
             beast::bind_front_handler(&http_session::on_write,
                 shared_from_this(),
