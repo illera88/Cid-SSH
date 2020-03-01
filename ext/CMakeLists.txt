@@ -12,6 +12,6 @@ else()
     set(LIBSUFFIX "")
 endif()
 
-if(${WITH_WEBSOCKETS} OR ${WITH_WSPROXY})
+if((DEFINED WITH_WEBSOCKETS AND ${WITH_WEBSOCKETS}) OR (DEFINED WITH_WSPROXY AND ${WITH_WSPROXY}))
     add_subdirectory(beastsocks)
 endif()

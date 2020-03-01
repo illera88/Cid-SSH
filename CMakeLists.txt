@@ -10,9 +10,9 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(WITH_WEBSOCKETS "Build CidSSH with Websockets encapsulation" ON)
+option(WITH_CONTROLLER "Build the CidSSH controller" ON)
 
-if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-    option(WITH_CONTROLLER "Build the CidSSH controller" ON)
+if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")    
 	option(WITH_WSPROXY "Build the Websocket proxy server" ON)
 endif()
 
