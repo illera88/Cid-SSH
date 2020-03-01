@@ -364,12 +364,12 @@ int main(int argc, char* argv[])
 {
     auto const filename = std::filesystem::path(argv[0]).filename().string();
     // Check command line arguments.
-    if (argc != 5) {
+    if (argc != 6) {
         std::cerr << "Usage: " << filename << " <address> <port> <sshd ip> <sshd port> <pem certificate file>\n"
                   << "Example:\n"
                   << "    " << filename <<" 0.0.0.0 8080 127.0.0.1 22 server.pem\n"
                   << "To generate cert file do:\n" 
-                  << "     openssl req -newkey rsa:2048 -new -nodes -x509 -days 3650 -keyout key.pem -out cert.pem";
+                  << "     openssl req -newkey rsa:2048 -new -nodes -x509 -days 3650 -keyout key.pem -out cert.pem\n";
         return EXIT_FAILURE;
     }
     auto const address = net::ip::make_address(argv[1]);

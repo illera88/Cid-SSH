@@ -44,10 +44,6 @@ jobs:
                   name: CidSSH_win_ws_x64.exe
                   path: build_ws/src/malware/Release/CidSSH.exe
                   
-            - uses: actions/upload-artifact@master
-              with:
-                  name: wsproxy_win.exe
-                  path: build_ws/src/wsproxyserver/wsproxy.exe
     release:
         runs-on: ubuntu-latest
         if: github.event_name == 'release'
