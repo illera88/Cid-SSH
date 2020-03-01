@@ -368,8 +368,8 @@ int main(int argc, char* argv[])
         std::cerr << "Usage: " << filename << " <address> <port> <sshd ip> <sshd port> <pem certificate file>\n"
                   << "Example:\n"
                   << "    " << filename <<" 0.0.0.0 8080 127.0.0.1 22 server.pem\n"
-                  << "To generate cert file do:" 
-                  << "openssl req -newkey rsa:2048 -new -nodes -x509 -days 3650 -keyout key.pem -out cert.pem";
+                  << "To generate cert file do:\n" 
+                  << "     openssl req -newkey rsa:2048 -new -nodes -x509 -days 3650 -keyout key.pem -out cert.pem";
         return EXIT_FAILURE;
     }
     auto const address = net::ip::make_address(argv[1]);
