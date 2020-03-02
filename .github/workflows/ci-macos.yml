@@ -15,6 +15,7 @@ jobs:
               run: echo ::set-env name=C2_IP::1.2.3.4
             - name: Hardcode the C2 SSH password if you want here
               run: echo ::set-env name=PASSWORD_AUTH::paSSw0rD
+              
             - uses: actions/checkout@v1
               with:
                   submodules: true

