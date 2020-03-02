@@ -96,8 +96,8 @@ Syntaxis:
 Examples:
 ```
 Cid-SSH.exe 192.168.15.135
-Cid-SSH.exe user@192.168.15.135 1234
 Cid-SSH.exe user@192.168.15.135
+Cid-SSH.exe -t 3232239495
 ```
 
 You could also specify the IP address as an integer so it's not that obvious if `ps` is run:
