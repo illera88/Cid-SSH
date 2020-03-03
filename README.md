@@ -50,7 +50,7 @@ If you want to compile from source keep reading below.
 
 ## Using it
 
-Defaults: user is `anonymous`
+Defaults: user is `anonymous`.
 
 Syntaxis:
 
@@ -67,11 +67,11 @@ You could also specify the IP address as an integer so it's not that obvious if 
 ```
 Cid-SSH.exe -t 3232239495
 ```
-Page to do the conversion: http://www.aboutmyip.com/AboutMyXApp/IP2Integer.jsp
+[Page to do the conversion](http://www.aboutmyip.com/AboutMyXApp/IP2Integer.jsp).
 
 ## Compilation
 
-You can find more info about compilation [here](COMPILATION.md)
+You can find more info about compilation [here](COMPILATION.md).
 
 ## Authors
 - Alberto Garcia Illera (alberto.garcia@getcruise.com)
