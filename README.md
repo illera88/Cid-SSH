@@ -50,11 +50,11 @@ If you want to compile from source keep reading below.
 
 ## Using it
 
-Defaults: user is `anonymous` and default `LOCAL_SSH_SERVER_PORT` is 2222
+Defaults: user is `anonymous`
 
 Syntaxis:
 
-`Cid-SSH.exe [user@]C2_hostname [LOCAL_SSH_SERVER_PORT]`
+`Cid-SSH.exe [user@]C2_hostname`
 
 Examples:
 ```
