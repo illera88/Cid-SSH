@@ -1,6 +1,6 @@
 #include <iostream>
-#include <thread>
 #include <set>
+#include <thread>
 
 #include <boost/asio/executor_work_guard.hpp>
 
@@ -13,7 +13,6 @@
 
 /* Import libproxy API */
 #include <proxy.h>
-
 
 namespace net = boost::asio;
 using wsinternal::wsstream;
@@ -109,23 +108,29 @@ public:
 
     std::set<std::string> get_proxies(std::string c2_uri)
     {
-        char** proxies;
-        std::set<std::string> proxy_list{ "direct://" };
+        std::set<std::string> proxy_list { "direct://" };
+
         /* Create the proxy factory object */
-        pxProxyFactory* pf = px_proxy_factory_new();
-        if (!pf)
-        {
-            fprintf(stderr, "An unknown error occurred!\n");
-            return proxy_list;
+        std::unique_ptr<pxProxyFactory, std::function<void(pxProxyFactory*)>> pf {
+            px_proxy_factory_new(),
+            [](pxProxyFactory* self) {
+                px_proxy_factory_free(self);
+            }
+        };
+
+        /* Get the list of valid proxies */
+        std::unique_ptr<char*, std::function<void(char**)>> proxies {
+            px_proxy_factory_get_proxies(pf.get(), c2_uri.c_str()),
+            [](char** proxies) {
+                px_proxy_factory_free_proxies(proxies);
+            }
+        };
+
+        /* Loop over the list until we get to a nullptr */
+        for (char** proxyitem = proxies.get(); *proxyitem != nullptr; ++proxyitem) {
+            proxy_list.insert(*proxyitem);
         }
 
-        proxies = px_proxy_factory_get_proxies(pf, c2_uri.c_str());
-        if (proxies != nullptr)
-            for (int j = 0; proxies[j]; j++) {
-                proxy_list.insert(proxies[j]);
-            }
-
-        px_proxy_factory_free_proxies(proxies);
         return proxy_list;
     }
 
