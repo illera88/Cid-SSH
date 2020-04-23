@@ -70,23 +70,7 @@ public:
                   // Create a shared pointer that holds the socket by moving it into the shared storage
                   auto storage = std::make_shared<wsinternal::shared_storage>(std::move(socket));
 
-                  // ToDo: Right now we are just using the first proxy on proxy_list but we should be trying all of the ones present
-                  // in proxy_list because some of them may not reach the C2
-                  wsinternal::tcpconn::create(executor, uri_, (*proxy_list_.begin()), [&, storage](net::ip::tcp::socket&& wssocket) {
-                      auto executor = wssocket.get_executor();
-
-                      // Create a new shared wsconn which will go do the whole song and dance to get connected to a websocket
-                      wsinternal::wsconn::create(
-                          executor,
-                          std::move(wssocket),
-                          ssl_context_,
-                          // Lambda copies storage (thereby increasing the shared_ptr) and captures it
-                          [storage](wsstream&& wsocket) {
-                              // Using our storage shared pointer we get the socket, and move it into the bridge
-                              // alongside moving the websocket into the bridge
-                              wsinternal::bridge::create(std::move(storage->get_socket()), std::move(wsocket));
-                          });
-                  });
+                  create_connection(storage, executor);
               })
     {
 
@@ -105,6 +89,35 @@ public:
 
         // Now we wait on the thread to finish what its doing
         io_runner_.join();
+    }
+
+    void create_connection(std::shared_ptr<wsinternal::shared_storage> storage, boost::asio::executor& executor)
+    {
+        wsinternal::tcpconn::create(
+            executor, uri_, *proxy_iter_, [&, storage](net::ip::tcp::socket&& wssocket) {
+                      auto executor = wssocket.get_executor();
+
+                      // Create a new shared wsconn which will go do the whole song and dance to get connected to a websocket
+                      wsinternal::wsconn::create(
+                          executor,
+                          std::move(wssocket),
+                          ssl_context_,
+                          // Lambda copies storage (thereby increasing the shared_ptr) and captures it
+                          [storage](wsstream&& wsocket) {
+                              // Using our storage shared pointer we get the socket, and move it into the bridge
+                              // alongside moving the websocket into the bridge
+                              wsinternal::bridge::create(std::move(storage->get_socket()), std::move(wsocket));
+                          }); },
+            [&, storage](const std::error_code& error) {
+                std::cerr << "Received an error: " << error.message() << std::endl;
+
+                if (++proxy_iter_ == proxy_list_.cend()) {
+                    std::cerr << "Exhausted list of proxies" << std::endl;
+                    return;
+                }
+
+                create_connection(storage, executor);
+            });
     }
 
     std::vector<std::string> get_proxies(std::string c2_uri)
