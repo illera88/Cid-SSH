@@ -16,7 +16,8 @@ class tcpconn : public std::enable_shared_from_this<tcpconn> {
         net::executor,
         std::string&,
         const std::string&,
-        std::function<void(net::ip::tcp::socket&&)>);
+        std::function<void(net::ip::tcp::socket&&)>,
+        std::function<void(const std::error_code&)>);
 
 public:
     // Ah, C++ templating can be such a joy
@@ -43,6 +44,7 @@ private:
     net::executor executor_;
     net::ip::tcp::resolver resolver_;
     std::function<void(net::ip::tcp::socket&&)> sockethandler_;
+    std::function<void(const std::error_code&)> errorhandler_;
     net::ip::tcp::socket socket_;
 
     std::string& remote_uri_;

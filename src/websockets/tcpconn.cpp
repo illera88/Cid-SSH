@@ -20,12 +20,14 @@ tcpconn::tcpconn(
     net::executor executor,
     std::string& remote_uri,
     const std::string& proxy_uri,
-    std::function<void(net::ip::tcp::socket&&)> sockethandler)
+    std::function<void(net::ip::tcp::socket&&)> sockethandler,
+    std::function<void(const std::error_code&)> errorhandler)
     : executor_(executor)
     , resolver_(net::make_strand(executor_))
     , remote_uri_(remote_uri)
     , proxy_uri_(proxy_uri)
     , sockethandler_(sockethandler)
+    , errorhandler_(errorhandler)
     , socket_(net::make_strand(executor_))
 {
     std::tie(host_, port_, path_) = parse_uri(remote_uri_);
@@ -75,6 +77,7 @@ void tcpconn::on_resolve(
                 std::placeholders::_2));
     } else {
         std::cerr << "Failed to resolve: " << error.message() << std::endl;
+        errorhandler_(error);
     }
 }
 
@@ -135,6 +138,7 @@ void tcpconn::on_connect(const std::error_code& error, net::ip::tcp::resolver::r
         }
     } else {
         std::cerr << "Failed to connect: " << error.message() << std::endl;
+        errorhandler_(error);
     }
 }
 
@@ -144,6 +148,7 @@ void tcpconn::handshake(const std::error_code& error)
         sockethandler_(std::move(socket_));
     } else {
         std::cerr << "Failed to handshake the proxy: " << error.message() << std::endl;
+        errorhandler_(error);
     }
 }
 

