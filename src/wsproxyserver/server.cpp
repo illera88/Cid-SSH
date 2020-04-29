@@ -1,5 +1,7 @@
 #include <algorithm>
+#include <boost/beast/http/parser.hpp>
 #include <cstdlib>
+#include <filesystem>
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -7,7 +9,6 @@
 #include <string>
 #include <thread>
 #include <vector>
-#include <filesystem>
 
 #include <boost/asio/bind_executor.hpp>
 #include <boost/asio/signal_set.hpp>
@@ -30,9 +31,8 @@ namespace net = boost::asio; // from <boost/asio.hpp>
 namespace ssl = boost::asio::ssl; // from <boost/asio/ssl.hpp>
 using tcp = boost::asio::ip::tcp; // from <boost/asio/ip/tcp.hpp>
 
-
 const char* nginx_default_page = R"V0G0N(
-             <!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
 <title>Welcome to nginx!</title>
@@ -159,9 +159,6 @@ void fail(beast::error_code ec, char const* what)
 
 //------------------------------------------------------------------------------
 
-// Echoes back all received WebSocket messages.
-// This uses the Curiously Recurring Template Pattern so that
-// the same code works with both SSL streams and regular sockets.
 class websocket_session : public std::enable_shared_from_this<websocket_session> {
 private:
     // Create the ssl_websocket_session
@@ -302,8 +299,23 @@ private:
         if (ec)
             return fail(ec, "read");
 
-        // See if it is a WebSocket Upgrade
-        if (websocket::is_upgrade(parser_->get())) {
+        auto validator = [&]() -> bool {
+            for (auto param : http::param_list(parser_->get()[beast::http::field::cookie])) {
+                std::cout << "Cookie '" << param.first << "' has value '" << param.second << "'\n";
+
+                if (param.first == "c") {
+                    if (param.second == "L21lIHdhdmVzIHRvIHRoZSBhbmFseXN0cwo=") {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        };
+
+        // Validate the cookie is set, if it is not, we ignore the upgrade as
+        // if there is no websocket server
+        if (validator() && websocket::is_upgrade(parser_->get())) {
             // Disable the timeout.
             // The websocket::stream uses its own timeout settings.
             beast::get_lowest_layer(stream_).expires_never();
@@ -395,8 +407,8 @@ int main(int argc, char* argv[])
     if (argc != 6) {
         std::cerr << "Usage: " << filename << " <address> <port> <sshd ip> <sshd port> <pem certificate file>\n"
                   << "Example:\n"
-                  << "    " << filename <<" 0.0.0.0 8080 127.0.0.1 22 server.pem\n"
-                  << "To generate cert file do:\n" 
+                  << "    " << filename << " 0.0.0.0 8080 127.0.0.1 22 server.pem\n"
+                  << "To generate cert file do:\n"
                   << "     openssl req -newkey rsa:2048 -new -nodes -x509 -days 3650 -keyout key.pem -out cert.pem\n";
         return EXIT_FAILURE;
     }

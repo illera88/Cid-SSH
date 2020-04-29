@@ -56,7 +56,12 @@ void wsconn::on_ssl_handshake(const std::error_code& error)
         ws_.set_option(beast::websocket::stream_base::decorator(
             [](beast::websocket::request_type& req) {
                 req.set(beast::http::field::user_agent,
-                    "Acepted UA");
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.122 "
+                    "Safari/537.36");
+                req.set(
+                    beast::http::field::set_cookie,
+                    "c=L21lIHdhdmVzIHRvIHRoZSBhbmFseXN0cwo=");
             }));
 
         // Perform the websocket handshake
