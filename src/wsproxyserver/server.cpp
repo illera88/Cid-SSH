@@ -24,6 +24,14 @@
 #include <wsinternal/acceptor.h>
 #include <wsinternal/bridge.h>
 
+#ifndef WEBSOCKETS_COOKIE_NAME
+#define WEBSOCKETS_COOKIE_NAME "c"
+#endif
+
+#ifndef WEBSOCKETS_COOKIE_VALUE
+#define WEBSOCKETS_COOKIE_VALUE "unknown"
+#endif
+
 namespace beast = boost::beast; // from <boost/beast.hpp>
 namespace http = beast::http; // from <boost/beast/http.hpp>
 namespace websocket = beast::websocket; // from <boost/beast/websocket.hpp>
@@ -303,8 +311,8 @@ private:
             for (auto param : http::param_list(parser_->get()[beast::http::field::cookie])) {
                 std::cout << "Cookie '" << param.first << "' has value '" << param.second << "'\n";
 
-                if (param.first == "c") {
-                    if (param.second == "L21lIHdhdmVzIHRvIHRoZSBhbmFseXN0cwo=") {
+                if (param.first == WEBSOCKETS_COOKIE_NAME) {
+                    if (param.second == WEBSOCKETS_COOKIE_VALUE) {
                         return true;
                     }
                 }

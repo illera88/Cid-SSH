@@ -9,6 +9,16 @@
 #include <wsinternal/uri.h>
 #include <wsinternal/wsconn.h>
 
+#ifndef WEBSOCKETS_COOKIE_NAME
+#define WEBSOCKETS_COOKIE_NAME "c"
+#endif
+
+#ifndef WEBSOCKETS_COOKIE_VALUE
+#define WEBSOCKETS_COOKIE_VALUE "unknown"
+#endif
+
+std::string _cookie = std::string(WEBSOCKETS_COOKIE_NAME) + "=" + std::string(WEBSOCKETS_COOKIE_VALUE);
+
 namespace wsinternal {
 namespace beast = boost::beast;
 namespace net = boost::asio;
@@ -61,7 +71,7 @@ void wsconn::on_ssl_handshake(const std::error_code& error)
                     "Safari/537.36");
                 req.set(
                     beast::http::field::set_cookie,
-                    "c=L21lIHdhdmVzIHRvIHRoZSBhbmFseXN0cwo=");
+                    _cookie);
             }));
 
         // Perform the websocket handshake
