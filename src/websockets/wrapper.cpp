@@ -113,6 +113,10 @@ public:
 
                 if (++proxy_iter_ == proxy_list_.cend()) {
                     std::cerr << "Exhausted list of proxies" << std::endl;
+
+                    // Close the remote socket, so that SSH can retry
+                    storage->get_socket().close();
+                    proxy_iter_ = proxy_list_.cbegin();
                     return;
                 }
 
