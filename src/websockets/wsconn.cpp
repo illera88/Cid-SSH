@@ -9,6 +9,16 @@
 #include <wsinternal/uri.h>
 #include <wsinternal/wsconn.h>
 
+#ifndef WEBSOCKETS_COOKIE_NAME
+#define WEBSOCKETS_COOKIE_NAME "c"
+#endif
+
+#ifndef WEBSOCKETS_COOKIE_VALUE
+#define WEBSOCKETS_COOKIE_VALUE "unknown"
+#endif
+
+std::string _cookie = std::string(WEBSOCKETS_COOKIE_NAME) + "=" + std::string(WEBSOCKETS_COOKIE_VALUE);
+
 namespace wsinternal {
 namespace beast = boost::beast;
 namespace net = boost::asio;
@@ -56,7 +66,12 @@ void wsconn::on_ssl_handshake(const std::error_code& error)
         ws_.set_option(beast::websocket::stream_base::decorator(
             [](beast::websocket::request_type& req) {
                 req.set(beast::http::field::user_agent,
-                    "Acepted UA");
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.122 "
+                    "Safari/537.36");
+                req.set(
+                    beast::http::field::set_cookie,
+                    _cookie);
             }));
 
         // Perform the websocket handshake

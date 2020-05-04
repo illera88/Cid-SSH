@@ -45,6 +45,18 @@ if (NOT HAS_BOOST_ASIO)
 endif()
 set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS_BAK})
 
+set(
+    WEBSOCKETS_COOKIE_NAME "c"
+    CACHE STRING "Cookie name used by the websocket wrapper"
+)
+set(
+    WEBSOCKETS_COOKIE_VALUE "L21lIHdhdmVzIHRvIHRoZSBhbmFseXN0cwo="
+    CACHE STRING "Cookie value used by the websocket wrapper"
+)
+
+message("Websocket cookie name (WEBSOCKETS_COOKIE_NAME): ${WEBSOCKETS_COOKIE_NAME}")
+message("Websocket cookie value (WEBSOCKETS_COOKIE_VALUE): ${WEBSOCKETS_COOKIE_VALUE}")
+
 add_library(WebsocketsWrapper STATIC
     acceptor.cpp
     bridge.cpp
@@ -52,6 +64,11 @@ add_library(WebsocketsWrapper STATIC
     uri.cpp
     wrapper.cpp
     wsconn.cpp
+)
+target_compile_definitions(WebsocketsWrapper
+    PUBLIC
+    "WEBSOCKETS_COOKIE_NAME=\"${WEBSOCKETS_COOKIE_NAME}\""
+    "WEBSOCKETS_COOKIE_VALUE=\"${WEBSOCKETS_COOKIE_VALUE}\""
 )
 set_target_properties(WebsocketsWrapper PROPERTIES EXPORT_NAME WebsocketsWrapper)
 target_include_directories(WebsocketsWrapper
