@@ -1,5 +1,5 @@
 # Cid SSH
-![alt text](http://equestrianstatue.org/wp-content/uploads/2016/04/Spain-Burgos-El-Cid-4-525x394.jpg)
+![alt text](http://equestrianstatue.org/wp-content/uploads/2016/04/Spain-Burgos-El-Cid-4-525x394.jpg) 
 
 Let's face it, there is no better shell than SSH. It just not only provides a rich encrypted shell communication but it can be used to create a socks proxy to browse the internal network of a system.
 
