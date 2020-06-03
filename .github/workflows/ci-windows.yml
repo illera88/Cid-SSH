@@ -29,13 +29,13 @@ jobs:
                   vcpkg install --triplet x64-windows-static boost-beast boost-asio boost-system libssh[core,openssl]
             - name: Create ssh version
               run: |
-                  cmake -S . -B build -DWITH_WEBSOCKETS=OFF -DC2_IP=$C2_IP -DPASSWORD_AUTH=$PASSWORD_AUTH -G "Visual Studio 16 2019" -A x64 -DVCPKG_TARGET_TRIPLET="x64-windows-static" -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT\scripts\buildsystems\vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
+                  cmake -S . -B build -DWITH_WEBSOCKETS=OFF -G "Visual Studio 16 2019" -A x64 -DVCPKG_TARGET_TRIPLET="x64-windows-static" -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT\scripts\buildsystems\vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
             - name: Build CidSSH in Release mode
               run: |
                   cmake --build build --config Release
             - name: Create ws version
               run: |
-                  cmake -S . -B build_ws -DWITH_WEBSOCKETS=ON -DC2_IP=$C2_IP -DPASSWORD_AUTH=$PASSWORD_AUTH -G "Visual Studio 16 2019" -A x64 -DVCPKG_TARGET_TRIPLET="x64-windows-static" -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT\scripts\buildsystems\vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
+                  cmake -S . -B build_ws -DWITH_WEBSOCKETS=ON -G "Visual Studio 16 2019" -A x64 -DVCPKG_TARGET_TRIPLET="x64-windows-static" -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT\scripts\buildsystems\vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
             - name: Build CidSSH in Release mode
               run: |
                   cmake --build build_ws --config Release
