@@ -1,11 +1,14 @@
-# Cid SSH
-![alt text](http://equestrianstatue.org/wp-content/uploads/2016/04/Spain-Burgos-El-Cid-4-525x394.jpg) 
+<p align="center">
+  <img src="http://equestrianstatue.org/wp-content/uploads/2016/04/Spain-Burgos-El-Cid-4-525x394.jpg">
+</p>
 
 <p align="center">
   <a href="https://github.com/RedRangerz/Cid-SSH/actions?query=workflow%3A%22Build+for+Windows%22"><img alt="Build for Windows" src="https://github.com/RedRangerz/Cid-SSH/workflows/Build%20for%20Windows/badge.svg"></a>
-  <a href="https://github.com/RedRangerz/Cid-SSH/actions?query=workflow%3A%22Build+for+OSX%22"><img alt="Build for OSX" src="https://github.com/RedRangerz/Cid-SSH/workflows/Build%20for%20OSX/badge.svg"></a>
+  <a href="https://github.com/RedRangerz/Cid-SSH/actions?query=workflow%3A%22Build+for+macOS%22"><img alt="Build for macOS" src="https://github.com/RedRangerz/Cid-SSH/workflows/Build%20for%20macOS/badge.svg"></a>
   <a href="https://github.com/RedRangerz/Cid-SSH/actions?query=workflow%3A%22Build+for+Linux%22"><img alt="Build for Linux" src="https://github.com/RedRangerz/Cid-SSH/workflows/Build%20for%20Linux/badge.svg"></a>
 </p>
+
+# Cid SSH
 
 Let's face it, there is no better shell than SSH. It just not only provides a rich encrypted shell communication but it can be used to create a socks proxy to browse the internal network of a system.
 
