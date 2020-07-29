@@ -1,6 +1,12 @@
 # Cid SSH
 ![alt text](http://equestrianstatue.org/wp-content/uploads/2016/04/Spain-Burgos-El-Cid-4-525x394.jpg) 
 
+<p align="center">
+  <a href="https://github.com/RedRangerz/Cid-SSH/actions?query=workflow%3A%22Build+for+Windows%22"><img alt="Build for Windows" src="https://github.com/RedRangerz/Cid-SSH/workflows/Build%20for%20Windows/badge.svg"></a>
+  <a href="https://github.com/RedRangerz/Cid-SSH/actions?query=workflow%3A%22Build+for+OSX%22"><img alt="Build for OSX" src="https://github.com/RedRangerz/Cid-SSH/workflows/Build%20for%20OSX/badge.svg"></a>
+  <a href="https://github.com/RedRangerz/Cid-SSH/actions?query=workflow%3A%22Build+for+Linux%22"><img alt="Build for Linux" src="https://github.com/RedRangerz/Cid-SSH/workflows/Build%20for%20Linux/badge.svg"></a>
+</p>
+
 Let's face it, there is no better shell than SSH. It just not only provides a rich encrypted shell communication but it can be used to create a socks proxy to browse the internal network of a system.
 
 **CidSSH** is a statically compiled tool (no dependencies needed) that can be used to create an SSH server and a SSH client within just one binary. It will firstly, create RSA certificates, spin up an SSH server (listening in `localhost` and by default on port 2222),and finally create a reverse SSH tunnel with a C2 host specify by command lone. Due to the fact that the SSH server listens at `localhost`, external scanners won't detect it. 
