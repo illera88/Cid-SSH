@@ -1,5 +1,4 @@
-#ifndef BRIDGE_H_000F58BF269299
-#define BRIDGE_H_000F58BF269299
+#pragma once
 
 #include <iostream>
 
@@ -66,4 +65,3 @@ private:
 };
 } // namespace wsinternal
 
-#endif /* BRIDGE_H_000F58BF269299 */

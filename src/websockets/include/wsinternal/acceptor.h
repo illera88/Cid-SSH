@@ -1,5 +1,4 @@
-#ifndef ACCEPTOR_H_4ADCB5B556AEB7
-#define ACCEPTOR_H_4ADCB5B556AEB7
+#pragma once
 
 #include <boost/asio/executor.hpp>
 #include <boost/asio/ip/address.hpp>
@@ -34,4 +33,3 @@ private:
 };
 } // namespace wsinternal
 
-#endif /* ACCEPTOR_H_4ADCB5B556AEB7 */

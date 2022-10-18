@@ -1,5 +1,4 @@
-#ifndef WSCONN_H_9EDF7CB75D0C61
-#define WSCONN_H_9EDF7CB75D0C61
+#pragma once
 
 #include <memory>
 
@@ -51,5 +50,3 @@ private:
     std::function<void(wsstream&&)> sockethandler_;
 };
 } // namespace wsinternal
-
-#endif /* WSCONN_H_9EDF7CB75D0C61 */

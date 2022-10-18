@@ -1,5 +1,4 @@
-#ifndef WRAPPER_H_3511F0B7194DD8
-#define WRAPPER_H_3511F0B7194DD8
+#pragma once
 
 #include <memory>
 #include <list>
@@ -16,5 +15,3 @@ private:
     class impl;
     std::unique_ptr<impl> pimpl_;
 };
-
-#endif /* WRAPPER_H_3511F0B7194DD8 */

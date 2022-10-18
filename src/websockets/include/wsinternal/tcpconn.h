@@ -1,5 +1,4 @@
-#ifndef TCPCONN_H_D6AD02BDB9EF17
-#define TCPCONN_H_D6AD02BDB9EF17
+#pragma once
 
 #include <memory>
 
@@ -56,5 +55,3 @@ private:
 };
 } // namespace wsinternal
 
-
-#endif /* TCPCONN_H_D6AD02BDB9EF17 */
