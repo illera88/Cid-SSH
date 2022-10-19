@@ -36,7 +36,7 @@ jobs:
             
             - name: Install OpenSSL/Boost from Homebrew
               run: |
-                  brew install openssl pkg-config cmake boost git cmake
+                  brew install ninja openssl pkg-config cmake boost git cmake
             
             - name: Install libssh
               run: |
