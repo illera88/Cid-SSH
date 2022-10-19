@@ -71,7 +71,7 @@ cmake -S . -B build -DWITH_WEBSOCKETS=OFF $PASSWORD_AUTH $C2_IP -DCMAKE_TOOLCHAI
 cmake --build build --config Release -j$(nproc)
 
 # Build websocket version
-	cmake -S . -B build_ws -DWITH_WEBSOCKETS=ON -DCMAKE_TOOLCHAIN_FILE="/tmp/vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
+cmake -S . -B build_ws -DWITH_WEBSOCKETS=ON -DCMAKE_TOOLCHAIN_FILE="/tmp/vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
 cmake --build build_ws --config Release -j$(nproc)
 
 # For Op
