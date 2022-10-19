@@ -91,7 +91,7 @@ public:
         io_runner_.join();
     }
 
-    void create_connection(std::shared_ptr<wsinternal::shared_storage> storage, boost::asio::executor& executor)
+    void create_connection(std::shared_ptr<wsinternal::shared_storage> storage, boost::asio::any_io_executor& executor)
     {
         wsinternal::tcpconn::create(
             executor, uri_, *proxy_iter_, [&, storage](net::ip::tcp::socket&& wssocket) {

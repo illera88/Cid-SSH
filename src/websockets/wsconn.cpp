@@ -24,7 +24,7 @@ namespace beast = boost::beast;
 namespace net = boost::asio;
 
 wsconn::wsconn(
-    net::executor executor,
+    net::any_io_executor executor,
     net::ip::tcp::socket&& socket,
     net::ssl::context& ssl_context,
     std::function<void(wsstream&&)> sockethandler)

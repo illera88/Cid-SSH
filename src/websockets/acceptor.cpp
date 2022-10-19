@@ -7,7 +7,7 @@
 
 namespace wsinternal {
 acceptor::acceptor(
-    net::executor executor,
+    net::any_io_executor executor,
     const net::ip::address& local_host,
     unsigned short local_port,
     std::function<void(net::ip::tcp::socket&&)> sockethandler)
@@ -22,7 +22,7 @@ acceptor::acceptor(
 }
 
 acceptor::acceptor(
-    net::executor executor,
+    net::any_io_executor executor,
     net::ip::tcp::endpoint endpoint,
     std::function<void(net::ip::tcp::socket&&)> sockethandler)
     : executor_(executor)

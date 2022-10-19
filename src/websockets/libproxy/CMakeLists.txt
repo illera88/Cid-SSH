@@ -2,6 +2,7 @@
 ### Add a global compilation stuff
 if (WIN32)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS=1)
+  add_definitions(/MP)
 else(WIN32)
   add_definitions(-D_POSIX_C_SOURCE=200112L)
   set(CMAKE_CXX_FLAGS "-fvisibility=hidden ${CMAKE_CXX_FLAGS}")

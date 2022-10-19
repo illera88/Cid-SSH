@@ -13,6 +13,7 @@ find_package(Boost 1.70 REQUIRED COMPONENTS system)
 # Add Multi-processor compilation
 if(MSVC)
   add_definitions(/MP)
+  add_definitions(/bigobj) # error C1128: number of sections exceeded object file format limit : compile with /bigobj
 endif()
 
 include(CheckIncludeFileCXX)

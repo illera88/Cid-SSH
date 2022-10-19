@@ -15,7 +15,7 @@ typedef beast::websocket::stream<beast::ssl_stream<beast::tcp_stream>> wsstream;
 
 class wsconn : public std::enable_shared_from_this<wsconn> {
     wsconn(
-        net::executor,
+        net::any_io_executor,
         net::ip::tcp::socket&& socket,
         net::ssl::context&,
         std::function<void(wsstream&&)>);
@@ -43,7 +43,7 @@ private:
     void on_ssl_handshake(const std::error_code&);
     void on_handshake(const std::error_code&);
 
-    net::executor executor_;
+    net::any_io_executor executor_;
     net::ssl::context& ssl_context_;
     net::ip::tcp::resolver resolver_;
     wsstream ws_;

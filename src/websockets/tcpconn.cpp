@@ -17,7 +17,7 @@ namespace wsinternal {
 namespace net = boost::asio;
 
 tcpconn::tcpconn(
-    net::executor executor,
+    net::any_io_executor executor,
     std::string& remote_uri,
     const std::string& proxy_uri,
     std::function<void(net::ip::tcp::socket&&)> sockethandler,

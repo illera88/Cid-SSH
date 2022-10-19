@@ -12,7 +12,7 @@ namespace net = boost::asio;
 
 class tcpconn : public std::enable_shared_from_this<tcpconn> {
     tcpconn(
-        net::executor,
+        net::any_io_executor,
         std::string&,
         const std::string&,
         std::function<void(net::ip::tcp::socket&&)>,
@@ -40,7 +40,7 @@ private:
         net::ip::tcp::resolver::results_type::endpoint_type);
     void handshake(const std::error_code&);
 
-    net::executor executor_;
+    net::any_io_executor executor_;
     net::ip::tcp::resolver resolver_;
     std::function<void(net::ip::tcp::socket&&)> sockethandler_;
     std::function<void(const std::error_code&)> errorhandler_;

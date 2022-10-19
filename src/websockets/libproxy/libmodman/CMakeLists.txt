@@ -2,6 +2,7 @@
 # Flags / Definitions / Environment
 if (WIN32)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS=1)
+  add_definitions(/MP)
 else(WIN32)
   set(CMAKE_CXX_FLAGS "-fvisibility=hidden -fPIC ${CMAKE_CXX_FLAGS}")
 endif(WIN32)

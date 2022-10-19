@@ -10,13 +10,13 @@ namespace net = boost::asio;
 class acceptor {
 public:
     acceptor(
-        net::executor executor,
+        net::any_io_executor executor,
         const net::ip::address& local_host,
         unsigned short local_port,
         std::function<void(net::ip::tcp::socket&&)> sockethandler);
 
     acceptor(
-        net::executor executor,
+        net::any_io_executor executor,
         net::ip::tcp::endpoint endpoint,
         std::function<void(net::ip::tcp::socket&&)> sockethandler);
 
@@ -26,7 +26,7 @@ public:
 private:
     void handle_accept(const std::error_code& error, net::ip::tcp::socket);
 
-    net::executor executor_;
+    net::any_io_executor executor_;
     net::ip::address localhost_address;
     net::ip::tcp::acceptor acceptor_;
     std::function<void(net::ip::tcp::socket&&)> sockethandler_;
