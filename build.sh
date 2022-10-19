@@ -67,7 +67,7 @@ rm -rf build
 rm -rf build_ws
 
 # Build normal version
-cmake -S . -B build -DWITH_WEBSOCKETS=OFF -DCMAKE_TOOLCHAIN_FILE="/tmp/vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
+cmake -S . -B build -DWITH_WEBSOCKETS=OFF $PASSWORD_AUTH $C2_IP -DCMAKE_TOOLCHAIN_FILE="/tmp/vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release -j$(nproc)
 
 # Build websocket version
