@@ -34,7 +34,6 @@ jobs:
                 if_true: ""
                 if_false: "-DPASSWORD_AUTH=${{ env.PASSWORD_AUTH }}"
 
-            # ToDo: what if only 
             - name: Build CidSSH
               uses: docker://alpine:edge
               with: 
