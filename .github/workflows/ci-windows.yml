@@ -41,15 +41,19 @@ jobs:
             - name: Install libssh and Boost with vcpkg
               run: |
                   vcpkg install --triplet x64-windows-static boost-beast boost-asio boost-system libssh[core,openssl]
+            
             - name: Create ssh version
               run: |
                   cmake -S . -B build -DWITH_WEBSOCKETS=OFF ${{ steps.c2IPCondval.outputs.value }} ${{ steps.passwordCondval.outputs.value }} -G "Visual Studio 16 2019" -A x64 -DVCPKG_TARGET_TRIPLET="x64-windows-static" -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT\scripts\buildsystems\vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
+            
             - name: Build CidSSH in Release mode
               run: |
                   cmake --build build --config Release
+            
             - name: Create ws version
               run: |
                   cmake -S . -B build_ws -DWITH_WEBSOCKETS=ON -G "Visual Studio 16 2019" -A x64 -DVCPKG_TARGET_TRIPLET="x64-windows-static" -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT\scripts\buildsystems\vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
+            
             - name: Build CidSSH in Release mode
               run: |
                   cmake --build build_ws --config Release
@@ -58,6 +62,7 @@ jobs:
               with:
                   name: CidSSH_win_ssh_x64.exe
                   path: build/src/malware/Release/CidSSH.exe                 
+            
             - uses: actions/upload-artifact@master
               with:
                   name: CidSSH_win_ws_x64.exe
