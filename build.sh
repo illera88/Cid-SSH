@@ -73,9 +73,9 @@ rm -rf build_ws
 cmake -S . -B build -DWITH_WEBSOCKETS=OFF $PASSWORD_AUTH $C2_IP -DCMAKE_TOOLCHAIN_FILE="/tmp/vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release -j$(nproc)
 
-# Build websocket version
-cmake -S . -B build_ws -DWITH_WEBSOCKETS=ON -DCMAKE_TOOLCHAIN_FILE="/tmp/vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
-cmake --build build_ws --config Release -j$(nproc)
+# Build websocket version (wait for vcpkg version of libproxy)
+#cmake -S . -B build_ws -DWITH_WEBSOCKETS=ON -DCMAKE_TOOLCHAIN_FILE="/tmp/vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
+#cmake --build build_ws --config Release -j$(nproc)
 
 # For Op
 #RUN mkdir build_custom && cd build_custom && cmake -DCMAKE_BUILD_TYPE=Release -DPASSWORD_AUTH="xxxxxxxxxx" -DC2_IP="XX.XX.XX.XX" .. && make 
