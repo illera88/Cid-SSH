@@ -41,7 +41,7 @@ jobs:
             - name: Install libssh
               run: |
                   echo "set(VCPKG_BUILD_TYPE release)" >> $VCPKG_INSTALLATION_ROOT/triplets/x64-linux.cmake
-                  VCPKG_FORCE_SYSTEM_BINARIES=1 VCPKG_BUILD_TYPE=release vcpkg install libssh[core,openssl] --triplet x64-osx
+                  VCPKG_FORCE_SYSTEM_BINARIES=1 vcpkg install libssh[core,openssl] --triplet x64-osx
             
             - name: Create build directory
               run: |
@@ -49,7 +49,7 @@ jobs:
                   export CPPFLAGS="-I/usr/local/opt/openssl/include"
                   export PKG_CONFIG_PATH="/usr/local/opt/openssl/lib/pkgconfig"
                   cmake --version
-                  cmake -S . -B build -DWITH_WEBSOCKETS=OFF ${{ steps.c2IPCondval.outputs.value }} ${{ steps.passwordCondval.outputs.value }} -DCMAKE_TOOLCHAIN_FILE="/tmp/vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
+                  cmake -S . -B build -DWITH_WEBSOCKETS=OFF ${{ steps.c2IPCondval.outputs.value }} ${{ steps.passwordCondval.outputs.value }} -DCMAKE_TOOLCHAIN_FILE="$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
             
             - name: Build CidSSH in SSH mode
               run: |
@@ -64,7 +64,7 @@ jobs:
                   export CPPFLAGS="-I/usr/local/opt/openssl/include"
                   export PKG_CONFIG_PATH="/usr/local/opt/openssl/lib/pkgconfig"
                   cmake --version
-                  cmake -S . -B build_ws -DWITH_WEBSOCKETS=ON -DCMAKE_TOOLCHAIN_FILE="/tmp/vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
+                  cmake -S . -B build_ws -DWITH_WEBSOCKETS=ON -DCMAKE_TOOLCHAIN_FILE="$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
             
             - name: Build CidSSH in Websocket mode
               run: |
