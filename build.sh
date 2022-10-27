@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 
-PASSWORD_AUTH=$1
-C2_IP=$2
+CID_C2_HOST=$1
+CID_C2_USER=$2
+CID_C2_PASSWORD=$2
  
-echo "*** Current value of \$PASSWORD_AUTH is '$PASSWORD_AUTH' and \$C2_IP is '$C2_IP' ***"
+echo "*** Config: \$CID_C2_HOST is '$CID_C2_HOST' \$CID_C2_USER is '$CID_C2_USER' \$CID_C2_PASSWORD is '$CID_C2_PASSWORD'***"
 
 echo "Installing some dependencies we need to build"
 apk update
@@ -69,7 +70,7 @@ rm -rf build
 rm -rf build_ws
 
 # Build normal version
-cmake -S . -B build -DWITH_WEBSOCKETS=OFF $PASSWORD_AUTH $C2_IP -DCMAKE_TOOLCHAIN_FILE="/tmp/vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
+cmake -S . -B build -DWITH_WEBSOCKETS=OFF $CID_C2_HOST $CID_C2_USER $CID_C2_PASSWORD -DCMAKE_TOOLCHAIN_FILE="/tmp/vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release -j$(nproc)
 
 # Build websocket version (wait for vcpkg version of libproxy)

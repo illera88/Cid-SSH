@@ -8,8 +8,9 @@ on:
 
 # Hardcode C2_HOST and C2 SSH password so the CI builds everything for you (keep quotes)
 env:
-  C2_HOST: "104.155.189.242"
-  PASSWORD_AUTH: "testtest"
+  CID_C2_HOST: "104.155.189.242"
+  CID_C2_USER: ""
+  CID_C2_PASSWORD: "testtest"
 
 jobs:
     build:
@@ -17,18 +18,25 @@ jobs:
         runs-on: windows-2019
         steps:
             - uses: haya14busa/action-cond@v1
-              id: c2HostCondval
+              id: CidC2HostCondval
               with:
-                cond: "${{ env.C2_HOST == '' }}"
+                cond: "${{ env.CID_C2_HOST == '' }}"
                 if_true: ""
-                if_false: "-C2_HOST=\"${{ env.C2_HOST }}\""
+                if_false: "-DCID_C2_HOST=\"${{ env.CID_C2_HOST }}\""
 
             - uses: haya14busa/action-cond@v1
-              id: passwordCondval
+              id: CidUserCondval
               with:
-                cond: "${{ env.PASSWORD_AUTH == '' }}"
+                cond: "${{ env.CID_C2_USER == '' }}"
                 if_true: ""
-                if_false: "-DPASSWORD_AUTH=\"${{ env.PASSWORD_AUTH }}\""
+                if_false: "-DCID_C2_USER=\"${{ env.CID_C2_USER }}\""
+
+            - uses: haya14busa/action-cond@v1
+              id: CidPasswordCondval
+              with:
+                cond: "${{ env.CID_C2_PASSWORD == '' }}"
+                if_true: ""
+                if_false: "-DCID_C2_PASSWORD=\"${{ env.CID_C2_PASSWORD }}\""
 
             - uses: actions/checkout@v1
               with:
@@ -48,7 +56,7 @@ jobs:
             
             - name: Create ssh version
               run: |
-                  cmake -S . -B build -DWITH_WEBSOCKETS=OFF ${{ steps.c2HostCondval.outputs.value }} ${{ steps.passwordCondval.outputs.value }} -G "Visual Studio 16 2019" -A x64 -DVCPKG_TARGET_TRIPLET="x64-windows-static" -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT\scripts\buildsystems\vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
+                  cmake -S . -B build -DWITH_WEBSOCKETS=OFF ${{ steps.CidC2HostCondval.outputs.value }} ${{ steps.CidUserCondval.outputs.value }} ${{ steps.CidPasswordCondval.outputs.value }} -G "Visual Studio 16 2019" -A x64 -DVCPKG_TARGET_TRIPLET="x64-windows-static" -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT\scripts\buildsystems\vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
             
             - name: Build CidSSH in Release mode
               run: |

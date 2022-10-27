@@ -8,8 +8,9 @@ on:
 
 # Hardcode C2_IP and C2 SSH password so the CI builds everything for you. Keep quotes
 env:
-  C2_HOST: ""
-  PASSWORD_AUTH: ""
+  CID_C2_HOST: ""
+  CID_C2_USER: ""
+  CID_C2_PASSWORD: ""
 
 jobs:
     build:
@@ -17,18 +18,25 @@ jobs:
         runs-on: macos-latest
         steps:
             - uses: haya14busa/action-cond@v1
-              id: c2HostCondval
+              id: CidC2HostCondval
               with:
-                cond: "${{ env.C2_HOST == '' }}"
+                cond: "${{ env.CID_C2_HOST == '' }}"
                 if_true: ""
-                if_false: "-DC2_HOST=\"${{ env.C2_HOST }}\""
+                if_false: "-DCID_C2_HOST=\"${{ env.CID_C2_HOST }}\""
 
             - uses: haya14busa/action-cond@v1
-              id: passwordCondval
+              id: CidUserCondval
               with:
-                cond: "${{ env.PASSWORD_AUTH == '' }}"
+                cond: "${{ env.CID_C2_USER == '' }}"
                 if_true: ""
-                if_false: "-DPASSWORD_AUTH=\"${{ env.PASSWORD_AUTH }}\""
+                if_false: "-DCID_C2_USER=\"${{ env.CID_C2_USER }}\""
+
+            - uses: haya14busa/action-cond@v1
+              id: CidPasswordCondval
+              with:
+                cond: "${{ env.CID_C2_PASSWORD == '' }}"
+                if_true: ""
+                if_false: "-DCID_C2_PASSWORD=\"${{ env.CID_C2_PASSWORD }}\""
               
             - uses: actions/checkout@v1
               with:
@@ -54,7 +62,7 @@ jobs:
                   export CPPFLAGS="-I/usr/local/opt/openssl/include"
                   export PKG_CONFIG_PATH="/usr/local/opt/openssl/lib/pkgconfig"
                   cmake --version
-                  cmake -S . -B build -DWITH_WEBSOCKETS=OFF ${{ steps.c2HostCondval.outputs.value }} ${{ steps.passwordCondval.outputs.value }} -DCMAKE_TOOLCHAIN_FILE="$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
+                  cmake -S . -B build -DWITH_WEBSOCKETS=OFF ${{ steps.CidC2HostCondval.outputs.value }} ${{ steps.CidUserCondval.outputs.value }} ${{ steps.CidPasswordCondval.outputs.value }} -DCMAKE_TOOLCHAIN_FILE="$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
             
             - name: Build CidSSH in SSH mode
               run: |

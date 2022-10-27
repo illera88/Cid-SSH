@@ -4,7 +4,7 @@ set(CONTROLLER_SOURCE_FILES
     sshpass.c
 )
 
-SET(CONTROLLER_HEADER_FILES
+set(CONTROLLER_HEADER_FILES
     sshpass.h
     VariadicTable.h
 )
