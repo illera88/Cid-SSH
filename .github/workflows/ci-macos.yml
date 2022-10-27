@@ -40,6 +40,11 @@ jobs:
             
             - name: Install libssh
               run: |
+                  cd $VCPKG_INSTALLATION_ROOT
+                  git reset --hard
+                  git pull
+                  ./bootstrap-vcpkg.sh
+                  
                   echo "set(VCPKG_BUILD_TYPE release)" >> $VCPKG_INSTALLATION_ROOT/triplets/x64-linux.cmake
                   VCPKG_FORCE_SYSTEM_BINARIES=1 vcpkg install libssh[core,openssl] --triplet x64-osx
             

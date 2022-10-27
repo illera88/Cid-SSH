@@ -34,8 +34,12 @@ jobs:
               with:
                   submodules: true
                     
-            - name: Update vcpkg triplet to only build release
+            - name: Update vcpkg and the triplet to only build release
               run: |
+                  cd $env:VCPKG_INSTALLATION_ROOT
+                  git reset --hard
+                  git pull
+                  ".\bootstrap-vcpkg.bat"
                   "`r`nset(VCPKG_BUILD_TYPE release)" | Add-Content "$env:VCPKG_INSTALLATION_ROOT\triplets\x64-windows-static.cmake"
                   
             - name: Install libssh and Boost with vcpkg
