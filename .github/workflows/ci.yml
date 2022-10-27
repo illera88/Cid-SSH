@@ -8,7 +8,7 @@ on:
 
 # Hardcode C2_IP and C2 SSH password so the CI builds everything for you
 env:
-  C2_IP: ""
+  C2_HOST: ""
   PASSWORD_AUTH: ""
 
 jobs:
@@ -21,23 +21,23 @@ jobs:
                   submodules: true
 
             - uses: haya14busa/action-cond@v1
-              id: c2IPCondval
+              id: c2HostCondval
               with:
-                cond: "${{ env.C2_IP == '' }}"
+                cond: "${{ env.C2_HOST == '' }}"
                 if_true: ""
-                if_false: "-DC2_IP=${{ env.C2_IP }}"
+                if_false: "-DC2_HOST=\"${{ env.C2_HOST }}\""
 
             - uses: haya14busa/action-cond@v1
               id: passwordCondval
               with:
                 cond: "${{ env.PASSWORD_AUTH == '' }}"
                 if_true: ""
-                if_false: "-DPASSWORD_AUTH=${{ env.PASSWORD_AUTH }}"
+                if_false: "-DPASSWORD_AUTH=\"${{ env.PASSWORD_AUTH }}\""
 
             - name: Build CidSSH
               uses: docker://alpine:edge
               with: 
-                  args: sh ./build.sh ${{ steps.c2IPCondval.outputs.value }} ${{ steps.passwordCondval.outputs.value }}
+                  args: sh ./build.sh ${{ steps.c2HostCondval.outputs.value }} ${{ steps.passwordCondval.outputs.value }}
                
             #- name: Strip symbols from created malware
             #  run: |

