@@ -70,8 +70,8 @@ rm -rf build
 rm -rf build_ws
 
 # Build normal version
-cmake -S . -B build -DWITH_WEBSOCKETS=OFF $CID_C2_HOST $CID_C2_USER $CID_C2_PASSWORD -DCMAKE_TOOLCHAIN_FILE="/tmp/vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
-cmake --build build --config Release -j$(nproc)
+cmake -S . -B build -DWITH_WEBSOCKETS=OFF $CID_C2_HOST $CID_C2_USER $CID_C2_PASSWORD -DCMAKE_TOOLCHAIN_FILE="/tmp/vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Debug
+cmake --build build --config Debug -j$(nproc)
 
 # Build websocket version (wait for vcpkg version of libproxy)
 #cmake -S . -B build_ws -DWITH_WEBSOCKETS=ON -DCMAKE_TOOLCHAIN_FILE="/tmp/vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
