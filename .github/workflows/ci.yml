@@ -8,9 +8,9 @@ on:
 
 # Hardcode C2_IP and C2 SSH password so the CI builds everything for you
 env:
-  CID_C2_HOST: ""
+  CID_C2_HOST: "104.155.189.242"
   CID_C2_USER: ""
-  CID_C2_PASSWORD: ""
+  CID_C2_PASSWORD: "D0ntGetInYouMate!!"
 
 jobs:
     build:
