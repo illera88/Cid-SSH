@@ -83,6 +83,6 @@ Cid-SSH.exe -t 3232239495
 You can find more info about compilation [here](COMPILATION.md).
 
 ## Authors
-- Alberto Garcia Illera (alberto.garcia@getcruise.com)
-- Francisco Oca (foca@getcruise.com)
-- Bert JW Regeer (bert.regeer@getcruise.com)
+- Alberto Garcia Illera
+- Francisco Oca
+- Bert JW Regeer
